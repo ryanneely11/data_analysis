@@ -6,14 +6,14 @@ import spectrum as spec
 from progressbar import *
 from scipy.stats.mstats import zscore
 from scipy.stats import sem
-import DataSet3 as ds
+#import DataSet3 as ds
 import h5py
-import gc
+#import gc
 import scipy.stats as stats
 import matplotlib as mp
 import scipy as sp
 import math
-import h5py
+#import h5py
 
 
 def gauss_convolve(array, sigma):
@@ -226,8 +226,8 @@ def spike_field_cohgram(spikes, lfp, movingwin=[0.75,0.05], Fs = 1000.0, fpass =
 def mp_cohgrams_sf(args):
 	spikes = args[0]
 	lfp = args[1]
-	thin_spikes(spikes[0:spikes.shape[0]/2,:], spikes[spikes.shape[0]/2:,:])
-	C, phi, S12, S1, S2, t, f, confc, phistd, Cerr= spike_field_cohgram(spikes,lfp)
+	thin_spikes(spikes[0:spikes.shape[0]/2,:], spikes[spikes.shape[0]/2:,:],10)
+	C, phi, S12, S1, S2, t, f, zerosp, confc, phistd, Cerr= spike_field_cohgram(spikes,lfp)
 	return C
 
 

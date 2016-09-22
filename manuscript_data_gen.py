@@ -1,12 +1,12 @@
 import h5py 
-import DataSet3 as ds
+#import DataSet3 as ds
 import numpy as np
-import matplotlib.pyplot as plt
+#import matplotlib.pyplot as plt
 import os.path
 import SpikeStats2 as ss
 from scipy import stats
-import pandas as pd
-import seaborn as sns
+#import pandas as pd
+#import seaborn as sns
 import multiprocessing as mp
 	
 def get_performance_data():
@@ -2530,7 +2530,7 @@ def save_V1_ds_ff_cohgram_data():
 	results_file.close()
 
 def save_e1_V1_sf_cohgram_data():	
-	f = h5py.File(r"C:\Users\Ryan\Documents\data\t1_triggered.hdf5",'r')
+	f = h5py.File("/home/lab/Documents/data/t1_triggered.hdf5",'r')
 	sessions = f.keys()
 	e1_data = []
 	V1_data = []
@@ -2547,19 +2547,19 @@ def save_e1_V1_sf_cohgram_data():
 	        pass
 	    if (e1 != None and v1 != None):
 	        e1_data.append(e1)
-	        V1_data.append(dms)
+	        V1_data.append(v1)
 	        session_names.append(s)
 	f.close()
 	##let's put all this on disc since it's gonna be a lot of data...
-	g = h5py.File(r"C:\Users\Ryan\Documents\data\paired_e1_v1_sf_t1.hdf5",'w-')
+	g = h5py.File("/home/lab/Documents/data/paired_e1_v1_sf_t1.hdf5",'w-')
 	for i, name in enumerate(session_names):
 	    gp=g.create_group(name)
 	    gp.create_dataset("e1", data=e1_data[i])
 	    gp.create_dataset("v1",data=V1_data[i])
 	g.close()
 	e1_data = None; V1_data = None
-	g = h5py.File(r"C:\Users\Ryan\Documents\data\paired_e1_v1_sf_t1.hdf5",'r')
-	results_file = h5py.File(r"C:\Users\Ryan\Documents\data\e1_v1_cohgrams_t1.hdf5",'w-')
+	g = h5py.File("/home/lab/Documents/data/paired_e1_v1_sf_t1.hdf5",'r')
+	results_file = h5py.File("/home/lab/Documents/data/e1_v1_cohgrams_t1.hdf5",'w-')
 	##shape is trials x time x channels
 	##let's just do a pairwise comparison of EVERYTHING
 	##do this one sesssion at a time to not overload the memory
