@@ -2477,55 +2477,56 @@ def plot_light_change_sessions():
 	fig.suptitle("Light change training", fontsize = 18)
 
 def save_V1_ds_ff_cohgram_data():	
-	f = h5py.File(r"C:\Users\Ryan\Documents\data\t1_triggered.hdf5",'r')
+	f = h5py.File("/home/lab/Documents/data/t1_triggered.hdf5",'r')
 	sessions = f.keys()
 	V1_data = []
 	DMS_data = []
 	session_names = []
 	for s in sessions:
-	    try:
-	        v1 = None
-	        dms = None
-	        name = None
-	        v1 = np.asarray(f[s]['V1_lfp'][:,3000:,:])
-	        dms = np.asarray(f[s]['Str_lfp'][:,3000:,:])
-	        name = s
-	    except KeyError:
-	        pass
-	    if (v1 != None and dms != None):
-	        V1_data.append(v1)
-	        DMS_data.append(dms)
-	        session_names.append(s)
+		try:
+			v1 = None
+			dms = None
+			name = None
+			v1 = np.asarray(f[s]['V1_lfp'][:,2000:,:])
+			dms = np.asarray(f[s]['Str_lfp'][:,2000:,:])
+			name = s
+		except KeyError:
+			pass
+		if (v1 != None and dms != None):
+			if (v1.shape[0] > 2 and dms.shape == v1.shape): ##need at least 2 trials
+				V1_data.append(v1)
+				DMS_data.append(dms)
+				session_names.append(s)
 	f.close()
 	##let's put all this on disc since it's gonna be a lot of data...
-	g = h5py.File(r"C:\Users\Ryan\Documents\data\paired_v1_dms_lfp_t1.hdf5",'w-')
+	g = h5py.File("/home/lab/Documents/data/paired_v1_dms_lfp_t1.hdf5",'w-')
 	for i, name in enumerate(session_names):
-	    gp=g.create_group(name)
-	    gp.create_dataset("v1", data=V1_data[i])
-	    gp.create_dataset("dms",data=DMS_data[i])
+		gp=g.create_group(name)
+		gp.create_dataset("v1", data=V1_data[i])
+		gp.create_dataset("dms",data=DMS_data[i])
 	g.close()
 	DMS_data = None; V1_data = None
-	g = h5py.File(r"C:\Users\Ryan\Documents\data\paired_v1_dms_lfp_t1.hdf5",'r')
-	results_file = h5py.File(r"C:\Users\Ryan\Documents\data\v1_dms_cohgrams_t12.hdf5",'w-')
+	g = h5py.File("/home/lab/Documents/data/paired_v1_dms_lfp_t1.hdf5",'r')
+	results_file = h5py.File("/home/lab/Documents/data/v1_dms_cohgrams_t12.hdf5",'w-')
 	##shape is trials x time x channels
 	##let's just do a pairwise comparison of EVERYTHING
 	##do this one sesssion at a time to not overload the memory
 	for session in session_names:
-	    group = g[session]
-	    v1_data = np.asarray(group['v1'])
-	    dms_data = np.asarray(group['dms'])
-	    data = []
-	    for v in range(v1_data.shape[2]):
-	        for d in range(dms_data.shape[2]):
-	            lfp_1 = v1_data[:,:,v].T
-	            lfp_2 = dms_data[:,:,d].T
-	            data.append([lfp_1,lfp_2])
-	    pool = mp.Pool(processes=mp.cpu_count())
-	    async_result = pool.map_async(ss.mp_cohgrams,data)
-	    pool.close()
-	    pool.join()
-	    cohgrams = async_result.get()
-	    results_file.create_dataset(session,data = np.asarray(cohgrams))
+		group = g[session]
+		v1_data = np.asarray(group['v1'])
+		dms_data = np.asarray(group['dms'])
+		data = []
+		for v in range(v1_data.shape[2]):
+			for d in range(dms_data.shape[2]):
+				lfp_1 = v1_data[:,:,v].T
+				lfp_2 = dms_data[:,:,d].T
+				data.append([lfp_1,lfp_2])
+		pool = mp.Pool(processes=mp.cpu_count())
+		async_result = pool.map_async(ss.mp_cohgrams,data)
+		pool.close()
+		pool.join()
+		cohgrams = async_result.get()
+		results_file.create_dataset(session,data = np.asarray(cohgrams))
 	g.close()
 	results_file.close()
 
@@ -2536,26 +2537,27 @@ def save_e1_V1_sf_cohgram_data():
 	V1_data = []
 	session_names = []
 	for s in sessions:
-	    try:
-	        e1 = None
-	        v1 = None
-	        name = None
-	        e1 = np.asarray(f[s]['e1_units'][:,:,:])
-	        v1 = np.asarray(f[s]['V1_lfp'][:,:,:])
-	        name = s
-	    except KeyError:
-	        pass
-	    if (e1 != None and v1 != None):
-	        e1_data.append(e1)
-	        V1_data.append(v1)
-	        session_names.append(s)
+		try:
+			e1 = None
+			v1 = None
+			name = None
+			e1 = np.asarray(f[s]['e1_units'][:,:,:])
+			v1 = np.asarray(f[s]['V1_lfp'][:,:,:])
+			name = s
+		except KeyError:
+			pass
+		if (e1 != None and v1 != None):
+			if (e1.shape[0] > 2 and e1.shape == v1.shape:): ##need at least 2 trials
+				e1_data.append(e1)
+				V1_data.append(v1)
+				session_names.append(s)
 	f.close()
 	##let's put all this on disc since it's gonna be a lot of data...
 	g = h5py.File("/home/lab/Documents/data/paired_e1_v1_sf_t1.hdf5",'w-')
 	for i, name in enumerate(session_names):
-	    gp=g.create_group(name)
-	    gp.create_dataset("e1", data=e1_data[i])
-	    gp.create_dataset("v1",data=V1_data[i])
+		gp=g.create_group(name)
+		gp.create_dataset("e1", data=e1_data[i])
+		gp.create_dataset("v1",data=V1_data[i])
 	g.close()
 	e1_data = None; V1_data = None
 	g = h5py.File("/home/lab/Documents/data/paired_e1_v1_sf_t1.hdf5",'r')
@@ -2564,21 +2566,21 @@ def save_e1_V1_sf_cohgram_data():
 	##let's just do a pairwise comparison of EVERYTHING
 	##do this one sesssion at a time to not overload the memory
 	for session in session_names:
-	    group = g[session]
-	    e1_data = np.asarray(group['e1'])
-	    v1_data = np.asarray(group['v1'])
-	    data = []
-	    for v in range(e1_data.shape[2]):
-	        for d in range(v1_data.shape[2]):
-	            spikes = e1_data[:,:,v].T
-	            lfp = v1_data[:,:,d].T
-	            data.append([spikes,lfp])
-	    pool = mp.Pool(processes=mp.cpu_count())
-	    async_result = pool.map_async(ss.mp_cohgrams_sf,data)
-	    pool.close()
-	    pool.join()
-	    cohgrams = async_result.get()
-	    results_file.create_dataset(session,data = np.asarray(cohgrams))
+		group = g[session]
+		e1_data = np.asarray(group['e1'])
+		v1_data = np.asarray(group['v1'])
+		data = []
+		for v in range(e1_data.shape[2]):
+			for d in range(v1_data.shape[2]):
+				spikes = e1_data[:,:,v].T
+				lfp = v1_data[:,:,d].T
+				data.append([spikes,lfp])
+		pool = mp.Pool(processes=mp.cpu_count())
+		async_result = pool.map_async(ss.mp_cohgrams_sf,data)
+		pool.close()
+		pool.join()
+		cohgrams = async_result.get()
+		results_file.create_dataset(session,data = np.asarray(cohgrams))
 	g.close()
 	results_file.close()
 
