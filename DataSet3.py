@@ -279,9 +279,9 @@ def load_event_arrays(f_in, event_type, session_range = None, binary = True):
 			sessions_list = animal_group.keys()
 		##otherwise, only add sessions that are in the correct range
 		else:
-			for session in animal_group.keys():
-				if int(session[5:7]) in range(session_range[0], session_range[1]):
-					sessions_list.append(session)
+			for s in animal_group.keys():
+				if int(s[5:7]) in range(session_range[0], session_range[1]):
+					sessions_list.append(s)
 		##now that you have the list of sessions, grab the appropriate event array data for that 
 		##session
 		for current_session in sessions_list:
@@ -297,7 +297,7 @@ def load_event_arrays(f_in, event_type, session_range = None, binary = True):
 		##convert arrays to binary
 		for i in range(len(all_arrays)):
 			##convert the ts array to a binary array
-			all_arrays[i] = np.histogram(all_arrays[i], bins = max_len, range =(0,max_len))[0].astype(bool).astype(int)
+			all_arrays[i] = np.histogram(all_arrays[i], bins = max_len, range =(0,max_len+1))[0].astype(bool).astype(int)
 		##make it all into a nice numpy array
 		all_arrays = np.asarray(all_arrays)
 	return all_arrays
@@ -1063,9 +1063,9 @@ def get_cursor_vals(f_in, session_range = None, animal = None, session = None, b
 		##otherwise, only add sessions that are in the correct range
 		elif session is None and session_range is not None:
 			sessions_list = []
-			for session in animal_group.keys():
-				if int(session[5:7]) in range(session_range[0], session_range[1]):
-					sessions_list.append(session)
+			for s in animal_group.keys():
+				if int(s[5:7]) in range(session_range[0], session_range[1]):
+					sessions_list.append(s)
 		elif session_range is None and session is not None:
 			sessions_list = [session]
 		##now that you have the list of sessions, grab the appropriate array data for that 

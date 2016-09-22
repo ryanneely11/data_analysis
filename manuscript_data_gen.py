@@ -5,6 +5,9 @@ import matplotlib.pyplot as plt
 import os.path
 import SpikeStats2 as ss
 from scipy import stats
+import pandas as pd
+import seaborn as sns
+import multiprocessing as mp
 	
 def get_performance_data():
 	##functions to generate data for the manuscript
@@ -1810,7 +1813,7 @@ def get_light_data():
 	print "Done!"
 	
 def plot_cr_data():
-	f = h5py.File(r"J:\Ryan\processed_data\V1_BMI_final\raw_data\R7_thru_V13_CR_data.hdf5", 'r')
+	f = h5py.File(r"Z:\Data\processed_data\V1_BMI_final\raw_data\R7_thru_V13_CR_data.hdf5", 'r')
 	data = np.asarray(f['chunks_by_animal'])
 
 	means = np.array([data[:,0].mean(), data[:,1].mean(), data[:,2].mean()])
@@ -1842,15 +1845,17 @@ def plot_cr_data():
 	x_axis = np.linspace(0,75, all_t1.shape[1])
 
 	fig, ax = plt.subplots()
-	ax.errorbar(x_axis, mean, yerr = sem, linewidth = 3, color = 'g', label = "Rewarded target")
+	ax.plot(x_axis, mean, linewidth = 2, color = 'r', label = "Rewarded target")
+	ax.fill_between(x_axis, mean-sem, mean+sem, 
+		alpha = 0.5, facecolor = 'r')
 	#ax.set_xlim([0,10])
 	for tick in ax.xaxis.get_major_ticks():
 		tick.label.set_fontsize(14)
 	for tick in ax.yaxis.get_major_ticks():
 		tick.label.set_fontsize(14)
-	ax.axvspan(15, 28, alpha = 0.5, color = 'lightblue')
-	ax.axvspan(60, 75, alpha = 0.5, color = 'royalblue')
-	ax.axvspan(32, 48, alpha = 0.5, color = 'orange')
+#	ax.axvspan(15, 28, alpha = 0.5, color = 'lightblue')
+#	ax.axvspan(60, 75, alpha = 0.5, color = 'royalblue')
+#	ax.axvspan(32, 48, alpha = 0.5, color = 'orange')
 	plt.vlines(28, 0, 1, linestyle = 'dashed')	
 	ax.set_xlabel("Time, mins", fontsize = 16)
 	ax.set_ylabel("Percent of events", fontsize = 16)
@@ -1859,7 +1864,7 @@ def plot_cr_data():
 
 
 def plot_light_data():
-	f = h5py.File(r"J:\Ryan\processed_data\V1_BMI_final\raw_data\R7_thru_V13_light_data.hdf5", 'r')
+	f = h5py.File(r"Z:\Data\processed_data\V1_BMI_final\raw_data\R7_thru_V13_light_data.hdf5", 'r')
 	data = np.asarray(f['chunks_by_session'])
 
 	means = np.array([data[:,0].mean(), data[:,1].mean()])
@@ -2056,7 +2061,7 @@ def get_mod_depth():
 	pass
 
 def get_mean_frs():
-	path = r"J:\Ryan\processed_data\V1_BMI_final\raw_data\R7_thru_V13_all_data.hdf5"
+	path = r"C:\Users\Ryan\Documents\data\R7_thru_V13_all_data.hdf5"
 	animal_list = ["R13", "R11", "V02", "V03", "V04", "V05", "V11", "V13", "R7", "R8"]
 	session_dict_late = {
 	"R13":["BMI_D05.plx", "BMI_D06.plx", "BMI_D07.plx", "BMI_D08.plx", "BMI_D09.plx", "BMI_D10.plx"],
@@ -2107,18 +2112,73 @@ def get_mean_frs():
 	all_e2 = np.asarray(all_e2)
 	all_ind = np.asarray(all_ind)
 
-	e1_early = all_e1[:,0:15*60*10].mean(axis = 1)/(15.0*60)
-	e1_late = all_e1[:,35*60*10:50*60*10].mean(axis = 1)/(15.0*60)
+	e1_early = all_e1[:,0:5*60*10].mean(axis = 1)/(5.0*60)
+	e1_late = all_e1[:,45*60*10:50*60*10].mean(axis = 1)/(5.0*60)
 
-	e2_early = all_e2[:,0:15*60*10].mean(axis = 1)/(15.0*60)
-	e2_late = all_e2[:,35*60*10:50*60*10].mean(axis = 1)/(15.0*60)
+	e2_early = all_e2[:,0:5*60*10].mean(axis = 1)/(5.0*60)
+	e2_late = all_e2[:,50*60*10:55*60*10].mean(axis = 1)/(5.0*60)
 
-	ind_early = all_ind[:,0:15*60*10].mean(axis = 1)/(15.0*60)
-	ind_late = all_ind[:,35*60*10:50*60*10].mean(axis = 1)/(15.0*60)
+	ind_early = all_ind[:,0:5*60*10].mean(axis = 1)/(5.0*60)
+	ind_late = all_ind[:,50*60*10:55*60*10].mean(axis = 1)/(5.0*60)
 
-	f_out = h5py.create_dataset()
+	f_out = h5py.File(r"C:\Users\Ryan\Documents\data\R7_thru_V13_spike_rates.hdf5",'w-')
+	
+	f_out.create_dataset("all_e1", data = all_e1)
+	f_out.create_dataset("all_e2", data = all_e2)
+	f_out.create_dataset("all_ind", data = all_ind)
 
-	return [e1_early, e1_late], [e2_early, e2_late], [ind_early, ind_late]
+	f_out.create_dataset("e1_early", data = e1_early)
+	f_out.create_dataset("e2_early", data = e2_early)
+	f_out.create_dataset("ind_early", data = ind_early)
+
+	f_out.create_dataset("e1_late", data = e1_late)
+	f_out.create_dataset("e2_late", data = e2_late)
+	f_out.create_dataset("ind_late", data = ind_late)
+
+	f_out.close()
+
+def plot_fr_data():
+	f = h5py.File(r"Z:\Data\processed_data\V1_BMI_final\raw_data\R7_thru_V13_spike_rates.hdf5", 'r')
+
+	e1_early = np.asarray(f['e1_early'])
+	e1_late = np.asarray(f['e1_late'])
+	e2_early = np.asarray(f['e2_early'])
+	e2_late = np.asarray(f['e2_late'])
+	ind_early = np.asarray(f['ind_early'])
+	ind_late = np.asarray(f['ind_late'])
+	f.close()
+
+	labels = np.array(['e1_early', 'e1_late', 'e2_early', 'e2_late', 'ind_early', 'ind_late'])
+	means = np.array([np.nanmean(e1_early), np.nanmean(e1_late), np.nanmean(e2_early), 
+		np.nanmean(e2_late),np.nanmean(ind_early), np.nanmean(ind_late)])
+	sem = np.array([np.nanstd(e1_early)/np.sqrt(94), np.nanstd(e1_late)/np.sqrt(94), 
+		np.nanstd(e2_early)/np.sqrt(92), np.nanstd(e2_late)/np.sqrt(92),
+		np.nanstd(ind_early)/np.sqrt(182), np.nanstd(ind_late)/np.sqrt(182)])
+
+	p_val_e1 = stats.ttest_rel(e1_early, e1_late, nan_policy='omit')[1]
+	p_val_e2 = stats.ttest_rel(e2_early, e2_late, nan_policy='omit')[1]
+	p_val_ind = stats.ttest_rel(ind_early, ind_late, nan_policy='omit')[1]
+
+	p_val_e1_e2_early = stats.ttest_ind(e1_early, e2_early, nan_policy='omit')[1]
+	p_val_e1_e2_late = stats.ttest_ind(e1_late, e2_late, nan_policy='omit')[1]
+	p_val_e1_ind_early = stats.ttest_ind(e1_early, ind_early, nan_policy='omit')[1]
+	p_val_e1_ind_late = stats.ttest_ind(e1_late, ind_late, nan_policy='omit')[1]
+	p_val_e2_ind_early = stats.ttest_ind(e2_early, ind_early, nan_policy='omit')[1]
+	p_val_e2_ind_late = stats.ttest_ind(e2_late, ind_late, nan_policy='omit')[1]
+
+
+	idx = np.arange(6)
+	width = 1.0
+	fig, ax = plt.subplots()
+	bars = ax.bar(idx, means, yerr = sem, ecolor = 'k')
+	#ax.set_ylim(0,0.9)
+	#ax.set_xlim(-0.5, 3.5)
+	ax.set_xticks(idx+0.5)
+	ax.set_xticklabels(labels)
+	# for i in range(data.shape[0]):
+	# 	plt.plot((idx+0.5), data[i,:], alpha = 0.5, color = np.random.rand(3,), marker = 'o', linewidth = 2)
+	ax.set_ylabel("firing rate", fontsize = 14)
+	ax.set_xlabel("Condition", fontsize = 14)
 
 def get_ensemble_correlations():
 	path_in = r"J:\Ryan\processed_data\V1_BMI_final\raw_data\R7_thru_V13_all_data.hdf5"
@@ -2162,10 +2222,407 @@ def get_ensemble_correlations():
 	f_out.close()
 	print "complete!"
 
+def plot_cursor_states():
+	f = h5py.File(r"Z:\Data\processed_data\V1_BMI_final\raw_data\R7_thru_V13_ensemble_state_data.hdf5", 'r')
+	data = {'early':np.asarray(f['early_cvals']),'late':np.asarray(f['late_cvals'])}
+	n_late, bins_late, patches_late = plt.hist(data['late'], bins = 50, facecolor = 'green', alpha = 0.4, log=False)
+	plt.figure()
+	n_early, bins_early, patches_early = plt.hist(data['early'], bins = bins_late, facecolor = 'red', alpha = 0.4,log=False)
+	plt.figure()
+	ax1=sns.distplot(np.asarray(f['late_cvals']),bins=bins_late, kde=False,color ='g')
+	plt.figure()
+	ax2=sns.distplot(np.asarray(f['early_cvals']),bins=bins_late, kde=False, color = 'r')
+	ax1.set_yscale("log")
+	ax2.set_yscale("log")
 
 
 
+def get_dark_session_data():
+	source_file = r"Z:\Data\processed_data\V1_BMI_final\raw_data\R7_thru_V13_learning_event_data2.hdf5"
+	f = h5py.File(source_file, 'r+') 
+	animal_list = ["V01", "V02", "V03", "V04", "V05", "V11", "V13"]
+	for animal in animal_list: 
+		arrays = []
+		try:
+			t1 = np.asarray(f[animal]['t1'])
+			arrays.append(t1)
+		except KeyError:
+			print "No t1's."
+		try:
+			t2 = np.asarray(f[animal]['t2'])
+			arrays.append(t2)
+		except KeyError:
+			print "No t2's."
+			t2 = np.zeros(t1.shape)
+			arrays.append(t2)
+		try:
+			miss = np.asarray(f[animal]['miss'])
+			arrays.append(miss)
+		except KeyError:
+			print "No Misses."
+			miss = np.zeros(t1.shape)
+			arrays.append(miss)
+		##figure out the size of the largest array
+		longest = 0
+		for array in arrays:
+			if array.shape[1] > longest: 
+				longest = array.shape[1]
+		##append some zeros on to the other arrays to make them all the same shape
+		for idx in range(len(arrays)):
+			difference = longest - arrays[idx].shape[1]
+			if difference > 0:
+				arrays[idx] = np.hstack((arrays[idx], np.zeros((arrays[idx].shape[0], difference))))
+		##get the success rate using a sliding window for each session
+		N = longest
+		num_sessions = t1.shape[0]
+		Nwin = 1000*60*3
+		Nstep = 1000*30
+		winstart = np.arange(0,N-Nwin, Nstep)
+		nw = winstart.shape[0]
+		result = np.zeros((num_sessions, nw))
+		result2 = np.zeros((num_sessions, nw))
+		for session in range(num_sessions):
+			t1_counts = arrays[0][session,:]
+			t2_counts = arrays[1][session,:]
+			total_counts = arrays[0][session,:] + arrays[1][session,:] + arrays[2][session,:]
+			for n in range(nw):
+				idx = np.arange(winstart[n], winstart[n]+Nwin)
+				t1_win = t1_counts[idx]
+				t2_win = t2_counts[idx]
+				total_win = total_counts[idx]
+				if total_win.sum() != 0:
+					result[session, n] = t1_win.sum()/total_win.sum()
+					result2[session, n] = t2_win.sum()/total_win.sum()
+		if "/"+animal+"/correct_within_dark_only" in f:
+			del(f[animal]['correct_within_dark_only'])
+		f[animal].create_dataset("correct_within_dark_only", data = result)
+		if "/"+animal+"/t2_within_dark_only" in f:
+			del(f[animal]['t2_within_dark_only'])
+		f[animal].create_dataset("t2_within_dark_only", data = result2)
+	##figure out the shape of the combined dataset
+	total_sessions = 0
+	longest_session = 0
+	for animal in animal_list:
+		total_sessions += f[animal]['correct_within_dark_only'].shape[0]
+		if f[animal]['correct_within_dark_only'].shape[1] > longest_session:
+			longest_session = f[animal]['correct_within_dark_only'].shape[1]
+	all_sessions = np.zeros((total_sessions, longest_session))
+	all_sessions_t2 = np.zeros((total_sessions, longest_session))
+	current_session = 0
+	for animal in animal_list:
+		data = np.asarray(f[animal]['correct_within_dark_only'])
+		data_t2 = np.asarray(f[animal]['t2_within_dark_only'])
+		##add some NANs to equalize array length
+		if data.shape[1] < longest_session:
+			add = np.empty((data.shape[0], longest_session-data.shape[1]))
+			add[:] = np.nan
+			data = np.hstack((data, add))
+			data_t2 = np.hstack((data_t2,add))
+		all_sessions[current_session:current_session+data.shape[0], 0:longest_session] = data
+		all_sessions_t2[current_session:current_session+data.shape[0], 0:longest_session] = data_t2
+		current_session += data.shape[0]
+	if "/dark_sessions" in f:
+		del(f['dark_sessions'])
+	f.create_dataset('dark_sessions', data = all_sessions)
+	if "/dark_sessions_t2" in f:
+		del(f['dark_sessions_t2'])
+	f.create_dataset('dark_sessions_t2', data = all_sessions_t2)
+	f.close()
 
+def get_light_session_data():
+	source_file = r"Z:\Data\processed_data\V1_BMI_final\raw_data\R7_thru_V13_learning_event_data2.hdf5"
+	f = h5py.File(source_file, 'r+') 
+	animal_list = ["R13", "R11", "R7", "R8"]
+	for animal in animal_list: 
+		arrays = []
+		try:
+			t1 = np.asarray(f[animal]['t1'])
+			arrays.append(t1)
+		except KeyError:
+			print "No t1's."
+		try:
+			t2 = np.asarray(f[animal]['t2'])
+			arrays.append(t2)
+		except KeyError:
+			print "No t2's."
+			t2 = np.zeros(t1.shape)
+			arrays.append(t2)
+		try:
+			miss = np.asarray(f[animal]['miss'])
+			arrays.append(miss)
+		except KeyError:
+			print "No Misses."
+			miss = np.zeros(t1.shape)
+			arrays.append(miss)
+		##figure out the size of the largest array
+		longest = 0
+		for array in arrays:
+			if array.shape[1] > longest: 
+				longest = array.shape[1]
+		##append some zeros on to the other arrays to make them all the same shape
+		for idx in range(len(arrays)):
+			difference = longest - arrays[idx].shape[1]
+			if difference > 0:
+				arrays[idx] = np.hstack((arrays[idx], np.zeros((arrays[idx].shape[0], difference))))
+		##get the success rate using a sliding window for each session
+		N = longest
+		num_sessions = t1.shape[0]
+		Nwin = 1000*60*3
+		Nstep = 1000*30
+		winstart = np.arange(0,N-Nwin, Nstep)
+		nw = winstart.shape[0]
+		result = np.zeros((num_sessions, nw))
+		result2 = np.zeros((num_sessions, nw))
+		for session in range(num_sessions):
+			t1_counts = arrays[0][session,:]
+			t2_counts = arrays[1][session,:]
+			total_counts = arrays[0][session,:] + arrays[1][session,:] + arrays[2][session,:]
+			for n in range(nw):
+				idx = np.arange(winstart[n], winstart[n]+Nwin)
+				t1_win = t1_counts[idx]
+				t2_win = t2_counts[idx]
+				total_win = total_counts[idx]
+				if total_win.sum() != 0:
+					result[session, n] = t1_win.sum()/total_win.sum()
+					result2[session, n] = t2_win.sum()/total_win.sum()
+		if "/"+animal+"/correct_within_light_only" in f:
+			del(f[animal]['correct_within_light_only'])
+		f[animal].create_dataset("correct_within_light_only", data = result)
+		if "/"+animal+"/t2_within_light_only" in f:
+			del(f[animal]['t2_within_light_only'])
+		f[animal].create_dataset("t2_within_light_only", data = result2)
+	##figure out the shape of the combined dataset
+	total_sessions = 0
+	longest_session = 0
+	for animal in animal_list:
+		total_sessions += f[animal]['correct_within_light_only'].shape[0]
+		if f[animal]['correct_within_light_only'].shape[1] > longest_session:
+			longest_session = f[animal]['correct_within_light_only'].shape[1]
+	all_sessions = np.zeros((total_sessions, longest_session))
+	all_sessions_t2 = np.zeros((total_sessions, longest_session))
+	current_session = 0
+	for animal in animal_list:
+		data = np.asarray(f[animal]['correct_within_light_only'])
+		data_t2 = np.asarray(f[animal]['t2_within_light_only'])
+		##add some NANs to equalize array length
+		if data.shape[1] < longest_session:
+			add = np.empty((data.shape[0], longest_session-data.shape[1]))
+			add[:] = np.nan
+			data = np.hstack((data, add))
+			data_t2 = np.hstack((data_t2,add))
+		all_sessions[current_session:current_session+data.shape[0], 0:longest_session] = data
+		all_sessions_t2[current_session:current_session+data.shape[0], 0:longest_session] = data_t2
+		current_session += data.shape[0]
+	if "/light_sessions" in f:
+		del(f['light_sessions'])
+	f.create_dataset('light_sessions', data = all_sessions)
+	if "/light_sessions_t2" in f:
+		del(f['light_sessions_t2'])
+	f.create_dataset('light_sessions_t2', data = all_sessions_t2)
+	f.close()
+
+
+
+def plot_within_session_light_dark():
+	source_file = r"Z:\Data\processed_data\V1_BMI_final\raw_data\R7_thru_V13_learning_event_data2.hdf5"
+	f = h5py.File(source_file, 'r')
+	light_data = np.asarray(f['light_sessions'][0:-6,:])
+	dark_data = np.vstack((np.asarray(f['dark_sessions']), light_data[-6:,0:150]))
+	f.close()
+	light_mean = np.nanmean(light_data, axis = 0)
+	light_std = np.nanstd(light_data, axis = 0)
+	light_sem = light_std/np.sqrt(light_data.shape[0])
+	dark_mean = np.nanmean(dark_data, axis = 0)
+	dark_std = np.nanstd(dark_data, axis = 0)
+	dark_sem = dark_std/np.sqrt(dark_data.shape[0])
+	x_axis = np.linspace(0,115,light_mean.shape[0])
+	fig, ax = plt.subplots()
+	ax.plot(x_axis, light_mean, linewidth = 3, color = 'yellow', label = "train light")
+	plt.fill_between(x_axis, light_mean-light_sem, light_mean+light_sem, 
+		alpha = 0.5, facecolor = 'yellow')
+	ax.plot(x_axis[0:dark_mean.size], dark_mean, linewidth = 3, color = 'k', label = "train dark")
+	plt.fill_between(x_axis[0:dark_mean.size], dark_mean-dark_sem, dark_mean+dark_sem, 
+		alpha = 0.5, facecolor = 'k')
+	for tick in ax.xaxis.get_major_ticks():
+		tick.label.set_fontsize(14)
+	for tick in ax.yaxis.get_major_ticks():
+		tick.label.set_fontsize(14)
+	ax.set_xlabel("Time in session, mins", fontsize = 16)
+	ax.set_ylabel("Percent rewarded", fontsize = 16)
+	fig.suptitle("Light vs dark training", fontsize = 18)
+	ax.set_xlim((0,50))
+	ax.fill_between(x_axis, .25,.39, alpha = 0.1, facecolor = 'cyan')
+	ax.legend()
+
+
+def plot_light_change_sessions():
+	f = h5py.File(r"Z:\Data\processed_data\V1_BMI_final\raw_data\R7_thru_V13_light_data.hdf5",'r')
+	data = np.asarray(f['scaled_p_correct_all'][0:2])
+	f.close()
+	mean = np.nanmean(data,axis=0)
+	std = np.nanstd(data,axis=0)
+	sem = std/np.sqrt(data.shape[0])
+	x_axis = np.linspace(0,120,mean.shape[0])
+	fig, ax = plt.subplots()
+	ax.plot(x_axis, mean, linewidth = 2, color = 'r')
+	plt.fill_between(x_axis, mean-sem, mean+sem, 
+		alpha = 0.5, facecolor = 'r')
+	for tick in ax.xaxis.get_major_ticks():
+		tick.label.set_fontsize(14)
+	for tick in ax.yaxis.get_major_ticks():
+		tick.label.set_fontsize(14)
+	ax.set_xlabel("Time in session, mins", fontsize = 16)
+	ax.set_ylabel("Percent rewarded", fontsize = 16)
+	ax.set_ylim((0,1))
+	fig.suptitle("Light change training", fontsize = 18)
+
+def save_V1_ds_ff_cohgram_data():	
+	f = h5py.File(r"C:\Users\Ryan\Documents\data\t1_triggered.hdf5",'r')
+	sessions = f.keys()
+	V1_data = []
+	DMS_data = []
+	session_names = []
+	for s in sessions:
+	    try:
+	        v1 = None
+	        dms = None
+	        name = None
+	        v1 = np.asarray(f[s]['V1_lfp'][:,3000:,:])
+	        dms = np.asarray(f[s]['Str_lfp'][:,3000:,:])
+	        name = s
+	    except KeyError:
+	        pass
+	    if (v1 != None and dms != None):
+	        V1_data.append(v1)
+	        DMS_data.append(dms)
+	        session_names.append(s)
+	f.close()
+	##let's put all this on disc since it's gonna be a lot of data...
+	g = h5py.File(r"C:\Users\Ryan\Documents\data\paired_v1_dms_lfp_t1.hdf5",'w-')
+	for i, name in enumerate(session_names):
+	    gp=g.create_group(name)
+	    gp.create_dataset("v1", data=V1_data[i])
+	    gp.create_dataset("dms",data=DMS_data[i])
+	g.close()
+	DMS_data = None; V1_data = None
+	g = h5py.File(r"C:\Users\Ryan\Documents\data\paired_v1_dms_lfp_t1.hdf5",'r')
+	results_file = h5py.File(r"C:\Users\Ryan\Documents\data\v1_dms_cohgrams_t12.hdf5",'w-')
+	##shape is trials x time x channels
+	##let's just do a pairwise comparison of EVERYTHING
+	##do this one sesssion at a time to not overload the memory
+	for session in session_names:
+	    group = g[session]
+	    v1_data = np.asarray(group['v1'])
+	    dms_data = np.asarray(group['dms'])
+	    data = []
+	    for v in range(v1_data.shape[2]):
+	        for d in range(dms_data.shape[2]):
+	            lfp_1 = v1_data[:,:,v].T
+	            lfp_2 = dms_data[:,:,d].T
+	            data.append([lfp_1,lfp_2])
+	    pool = mp.Pool(processes=mp.cpu_count())
+	    async_result = pool.map_async(ss.mp_cohgrams,data)
+	    pool.close()
+	    pool.join()
+	    cohgrams = async_result.get()
+	    results_file.create_dataset(session,data = np.asarray(cohgrams))
+	g.close()
+	results_file.close()
+
+def save_e1_V1_sf_cohgram_data():	
+	f = h5py.File(r"C:\Users\Ryan\Documents\data\t1_triggered.hdf5",'r')
+	sessions = f.keys()
+	e1_data = []
+	V1_data = []
+	session_names = []
+	for s in sessions:
+	    try:
+	        e1 = None
+	        v1 = None
+	        name = None
+	        e1 = np.asarray(f[s]['e1_units'][:,:,:])
+	        v1 = np.asarray(f[s]['V1_lfp'][:,:,:])
+	        name = s
+	    except KeyError:
+	        pass
+	    if (e1 != None and v1 != None):
+	        e1_data.append(e1)
+	        V1_data.append(dms)
+	        session_names.append(s)
+	f.close()
+	##let's put all this on disc since it's gonna be a lot of data...
+	g = h5py.File(r"C:\Users\Ryan\Documents\data\paired_e1_v1_sf_t1.hdf5",'w-')
+	for i, name in enumerate(session_names):
+	    gp=g.create_group(name)
+	    gp.create_dataset("e1", data=e1_data[i])
+	    gp.create_dataset("v1",data=V1_data[i])
+	g.close()
+	e1_data = None; V1_data = None
+	g = h5py.File(r"C:\Users\Ryan\Documents\data\paired_e1_v1_sf_t1.hdf5",'r')
+	results_file = h5py.File(r"C:\Users\Ryan\Documents\data\e1_v1_cohgrams_t1.hdf5",'w-')
+	##shape is trials x time x channels
+	##let's just do a pairwise comparison of EVERYTHING
+	##do this one sesssion at a time to not overload the memory
+	for session in session_names:
+	    group = g[session]
+	    e1_data = np.asarray(group['e1'])
+	    v1_data = np.asarray(group['v1'])
+	    data = []
+	    for v in range(e1_data.shape[2]):
+	        for d in range(v1_data.shape[2]):
+	            spikes = e1_data[:,:,v].T
+	            lfp = v1_data[:,:,d].T
+	            data.append([spikes,lfp])
+	    pool = mp.Pool(processes=mp.cpu_count())
+	    async_result = pool.map_async(ss.mp_cohgrams_sf,data)
+	    pool.close()
+	    pool.join()
+	    cohgrams = async_result.get()
+	    results_file.create_dataset(session,data = np.asarray(cohgrams))
+	g.close()
+	results_file.close()
+
+
+# def get_cursor_states():
+# 	f_in = r"C:\Users\Ryan\Documents\data\R7_thru_V13_all_data.hdf5"
+# 	#f_out = h5py.File("C:\Users\Ryan\Documents\data\cursor_states.hdf5", 'w-')
+# 	##get the raw. binned e1-e2 values for every session
+# 	cvals = ds.get_cursor_vals(f_in, binsize=200, session_range = [1,11])
+# 	##make the list into a symmetrical array for easier handling
+# 	longest = 0
+# 	for i in range(len(cvals)):
+# 		if cvals[i].shape[0] > longest:
+# 			longest = cvals[i].shape[0]
+# 	for n in range(len(cvals)):
+# 		if cvals[n].shape[0] < longest:
+# 			add1 = np.empty((longest-cvals[n].shape[0],))
+# 			add1[:] = np.nan
+# 			cvals[n] = np.hstack((cvals[n], add1))
+# 	cvals = np.asarray(cvals)
+# 	##need to normalize each session by its mean value as well as it's range.
+# 	for i in range(cvals.shape[0]):
+# 		##subtract the mean:
+# 		cvals[i,:] = cvals[i,:]-np.nanmean(cvals[i,:])
+# 		##get the max and min values
+# 		mx = np.nanmax(cvals[i,:])
+# 		mn = np.nanmin(cvals[i,:])
+# 		##now, we are going to compute the percent distance to the max/min values for each bin
+# 		for v in range(cvals[i,:].shape[0]):
+# 			if cvals[i,v] > 0:
+# 				cvals[i,v] = cvals[i,v]/mx
+# 			elif cvals[i,v] < 0:
+# 				cvals[i,v] = -1*(cvals[i,v]/mn)
+# 	##now, every session in cvals is on the same scale (0 to 1), where 1 is the rewarded tone,
+# 	##0 is the unrewarded (well, not exactly but it's close)
+# 	##let's use the first 5 min as early, and mins 35-40 as late
+# 	early_cvals = (cvals[:,0:10*60*5]).flatten() #binsize is 200, so 5 bins/sec, 60 sec/min
+# 	late_cvals = (cvals[:,5*60*30:5*60*40]).flatten()
+# 	n, bins, patches = plt.hist(early_cvals, 50, facecolor = 'red', alpha = 0.4)
+# 	n, bins, patches = plt.hist(late_cvals[~np.isnan(late_cvals)], 50, facecolor = 'blue', alpha = 0.4)
+# 	f_out.create_dataset("early_cvals", data = early_cvals)
+# 	f_out.create_dataset("late_cvals", data = late_cvals)
+# 	f_out.create_dataset("raw_cvals", data = cvals)
+# 	f_out.create_dataset("norm_cvals", data = cvals)
 
 # def get_cursor_states():
 # 	f_in = h5py.File(r"J:\Ryan\processed_data\V1_BMI_final\raw_data\R7_thru_V13_all_data.hdf5", 'r')

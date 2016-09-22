@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import scipy.stats as stats
 import SpikeStats2 as ss
+import matplotlib as ml
 """
 Plot a line with error bars.
 Inputs are x-data, y-data, error values, title, x-axis label,
@@ -33,7 +34,7 @@ def plot_cd_data(pre_arr, peri_arr, post_arr):
 		y = max(Y[i], Y[j])
 		
 		props = {'connectionstyle':'bar','arrowstyle':'-',\
-	                 'shrinkA':20,'shrinkB':20,'lw':2}
+					 'shrinkA':20,'shrinkB':20,'lw':2}
 		ax.annotate(text, xy=(x,y+0.1), zorder=10)
 		ax.annotate('', xy=(X[i],y), xytext=(X[j],y), arrowprops=props)
 
@@ -187,21 +188,21 @@ def plot_fr_means(arrs1, arrs2, chunk1 = (0,10), chunk2 = (35,45), n = None):
 	plt.show()
 
 def plot_locked_frs(e1_arr, e2_arr, id_arr, sigma):
-    N = e1_arr.shape[0]    
-    e1_arr = ss.masked_avg(ss.zscored_fr(e1_arr, sigma))
-    e2_arr = ss.masked_avg(ss.zscored_fr(e2_arr, sigma))
-    id_arr = ss.masked_avg(ss.zscored_fr(id_arr, sigma))
-    x = np.linspace(-N/2.0, N/2.0, e1_arr.shape[0])
-    plt.plot(x, e1_arr, label = "E1 Units", color = 'g')
-    plt.plot(x, e2_arr, label = "E2 Units", color = 'r')
-    plt.plot(x, id_arr, label = "Indirect Units", color = 'k')
-    plt.xlabel("Time to target, ms")
-    plt.ylabel("Firing Rate (zscore)")
-    plt.legend()
-    plt.title("Mean FR for Target Hits, Matlab Code")
-    plt.vlines(0, e1_arr.max(), e2_arr.min(), linestyle = 'dashed')
-    plt.show()
-    
+	N = e1_arr.shape[0]    
+	e1_arr = ss.masked_avg(ss.zscored_fr(e1_arr, sigma))
+	e2_arr = ss.masked_avg(ss.zscored_fr(e2_arr, sigma))
+	id_arr = ss.masked_avg(ss.zscored_fr(id_arr, sigma))
+	x = np.linspace(-N/2.0, N/2.0, e1_arr.shape[0])
+	plt.plot(x, e1_arr, label = "E1 Units", color = 'g')
+	plt.plot(x, e2_arr, label = "E2 Units", color = 'r')
+	plt.plot(x, id_arr, label = "Indirect Units", color = 'k')
+	plt.xlabel("Time to target, ms")
+	plt.ylabel("Firing Rate (zscore)")
+	plt.legend()
+	plt.title("Mean FR for Target Hits, Matlab Code")
+	plt.vlines(0, e1_arr.max(), e2_arr.min(), linestyle = 'dashed')
+	plt.show()
+	
 def plot_modulation_depth(arr_early, arr_late, sigma):
 	arr_early = ss.zscored_fr(arr_early, sigma).max(axis = 0)
 	arr_early = np.nan_to_num(arr_early)
@@ -248,5 +249,12 @@ def plot_wf(wf_array):
 	plt.xlabel("time, uS")
 	plt.ylabel('uV')
 	
-	
-    
+def spike_raster(spike_trains, midpoint, color = 'k'):
+	for train in range(spike_trains.shape[1]):
+		plt.vlines(ml.mlab.find(spike_trains[:,train] >0), 0.5+train, 1.5+train, color = color)
+
+	plt.vlines(midpoint, 0, spike_trains.shape[1], color = 'r')
+	plt.title('Raster plot')
+	plt.xlabel('time')
+	plt.ylabel('trial')
+	plt.show()
