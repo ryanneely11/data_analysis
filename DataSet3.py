@@ -1260,7 +1260,7 @@ def sig_pairwise_coherence(f_in, target1, target2, units1, units2, window,
 	return results_t1_u1, results_t1_u2, results_t2_u1, results_t2_u2
 
 
-def ensemble_correlations(f_in, window = [120000,30000], tau = 40, dt = 1):
+def ensemble_correlations(f_in, window = [120000,30000], tau = 20, dt = 1):
 	##open the file
 	f = h5py.File(f_in, 'r')
 	## retrieve a list of animals from the file

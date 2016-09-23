@@ -1,12 +1,11 @@
 import h5py 
-#import DataSet3 as ds
+import DataSet3 as ds
 import numpy as np
-#import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 import os.path
 import SpikeStats2 as ss
 from scipy import stats
-#import pandas as pd
-#import seaborn as sns
+import seaborn as sns
 import multiprocessing as mp
 	
 def get_performance_data():
@@ -2181,12 +2180,12 @@ def plot_fr_data():
 	ax.set_xlabel("Condition", fontsize = 14)
 
 def get_ensemble_correlations():
-	path_in = r"J:\Ryan\processed_data\V1_BMI_final\raw_data\R7_thru_V13_all_data.hdf5"
-	path_out = r"J:\Ryan\processed_data\V1_BMI_final\raw_data\R7_thru_V13_ensemble_correlations.hdf5"
+	path_in = r"C:\Users\Ryan\Documents\data\R7_thru_V13_all_data.hdf5"
+	path_out = r"C:\Users\Ryan\Documents\data\R7_thru_V13_ensemble_correlations.hdf5"
 
 	f_out = h5py.File(path_out, 'a')
 
-	animal_list = ["R13", "R11", "V01", "V02", "V03", "V04", "V05", "V11", "V13"]
+	animal_list = ["R13", "R11", "V01", "V02", "V03", "V04", "V05", "V11", "V13", "R7", "R8"]
 	within_e1_by_animal = []
 	within_e2_by_animal = []
 	between_e1_e2_by_animal = []
@@ -2207,7 +2206,7 @@ def get_ensemble_correlations():
 		between_e1_e2_by_animal.append(between_e1_e2.mean(axis = 0))
 		if within_e1.shape[1] > longest:
 			longest = within_e1.shape[1]
-			print "longest = " + str(longest)
+			#print "longest = " + str(longest)
 	
 	for i in range(len(within_e1_by_animal)): 
 		if within_e1_by_animal[i].size < longest:
@@ -2221,6 +2220,10 @@ def get_ensemble_correlations():
 	f_out.create_dataset("between_e1_e2_by_animal", data = np.asarray(between_e1_e2_by_animal))
 	f_out.close()
 	print "complete!"
+
+def plot_ensemble_correlations():
+	f_in = r"Z:\Data\processed_data\V1_BMI_final\raw_data\R7_thru_V13_ensemble_correlations.hdf5"
+	f = h5py.File(f_in, 'r')
 
 def plot_cursor_states():
 	f = h5py.File(r"Z:\Data\processed_data\V1_BMI_final\raw_data\R7_thru_V13_ensemble_state_data.hdf5", 'r')
