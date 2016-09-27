@@ -23,8 +23,7 @@ def mp_sfc(args):
 	target_rate_est = target_spikes.sum()/win_secs/target_spikes.shape[1] ##target spike rate est
 	comparison_rate_est = comparison_spikes.sum()/win_secs/comparison_spikes.shape[1] ##comparitson spike rate est
 	C,phi,S12,S1,S2,t,f,zerosp,confc,phistd,Cerr = spike_field_cohgram(spikes,lfp,
-		comparison_rate_est,target_rate_est,[0.75,0.05],Fs=1000.0,fpass=[0,100],
-		trialave=True,err=None)
+		comparison_rate_est,target_rate_est,[0.75,0.05],Fs=1000.0,fpass=[0,100],err=None)
 	return C_t
 
 """
