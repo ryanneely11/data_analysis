@@ -2639,6 +2639,60 @@ def save_e2_V1_sf_cohgram_data():
 	results_file.close()
 
 
+def save_indirect_V1_sf_cohgram_data():	
+	f = h5py.File("/home/lab/Documents/data/t1_triggered.hdf5",'r')
+	sessions = f.keys()
+	e1_data = []
+	V1_data = []
+	session_names = []
+	for s in sessions:
+		try:
+			e1 = None
+			v1 = None
+			name = None
+			e1 = np.asarray(f[s]['V1_units'][:,:,:]) 
+			v1 = np.asarray(f[s]['V1_lfp'][:,:,:])
+			name = s
+		except KeyError:
+			pass
+		if (e1 != None and v1 != None):
+			if (e1.shape[0] > 2 and v1.shape[0] == e1.shape[0]): ##need at least 2 trials
+				e1_data.append(e1)
+				V1_data.append(v1)
+				session_names.append(s)
+	f.close()
+	##let's put all this on disc since it's gonna be a lot of data...
+	g = h5py.File("/home/lab/Documents/data/paired_ind_v1_sf_t1.hdf5",'w-')
+	for i, name in enumerate(session_names):
+		gp=g.create_group(name)
+		gp.create_dataset("e1", data=e1_data[i])
+		gp.create_dataset("v1",data=V1_data[i])
+	g.close()
+	e1_data = None; V1_data = None
+	g = h5py.File("/home/lab/Documents/data/paired_ind_v1_sf_t1.hdf5",'r')
+	results_file = h5py.File("/home/lab/Documents/data/ind_v1_cohgrams_t1.hdf5",'w-')
+	##shape is trials x time x channels
+	##let's just do a pairwise comparison of EVERYTHING
+	##do this one sesssion at a time to not overload the memory
+	for session in session_names:
+		group = g[session]
+		e1_data = np.asarray(group['e1'])
+		v1_data = np.asarray(group['v1'])
+		data = []
+		for v in range(e1_data.shape[2]):
+			for d in range(v1_data.shape[2]):
+				spikes = e1_data[:,:,v].T
+				lfp = v1_data[:,:,d].T
+				data.append([spikes,lfp])
+		pool = mp.Pool(processes=mp.cpu_count())
+		async_result = pool.map_async(SFC.mp_sfc,data)
+		pool.close()
+		pool.join()
+		cohgrams = async_result.get()
+		results_file.create_dataset(session,data = np.asarray(cohgrams))
+	g.close()
+	results_file.close()
+
 # def get_cursor_states():
 # 	f_in = r"C:\Users\Ryan\Documents\data\R7_thru_V13_all_data.hdf5"
 # 	#f_out = h5py.File("C:\Users\Ryan\Documents\data\cursor_states.hdf5", 'w-')
