@@ -16,7 +16,7 @@ def mp_sfc(args):
 	assert lfp.shape == spikes.shape
 	for i in range(spikes.shape[1]):
 		if spikes[:,i].sum() > 0:
-		lfp[:,i] = interp_LFP(lfp[:,i],spikes[:,i])
+			lfp[:,i] = interp_LFP(lfp[:,i],spikes[:,i])
 	win_secs = (spikes.shape[0]/1000.0)/2.0 ##half the full time window in seconds
 	comparison_spikes = spikes[0:spikes.shape[0]/2,:] ##spike rates before the start of target acquisition
 	target_spikes = spikes[spikes.shape[0]/2:,:] #spike rates during target acquisition
