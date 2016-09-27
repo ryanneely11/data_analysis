@@ -2541,13 +2541,13 @@ def save_e1_V1_sf_cohgram_data():
 			e1 = None
 			v1 = None
 			name = None
-			e1 = np.asarray(f[s]['e1_units'][:,:,:])
+			e1 = np.asarray(f[s]['e1_units'][:,:,:]) 
 			v1 = np.asarray(f[s]['V1_lfp'][:,:,:])
 			name = s
 		except KeyError:
 			pass
 		if (e1 != None and v1 != None):
-			if (e1.shape[2] > 2 and e1.shape == v1.shape): ##need at least 2 trials
+			if (e1.shape[0] > 2 and v1.shape[0] == e1.shape[0]): ##need at least 2 trials
 				e1_data.append(e1)
 				V1_data.append(v1)
 				session_names.append(s)
