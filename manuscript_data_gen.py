@@ -1,5 +1,5 @@
 import h5py 
-import DataSet3 as ds
+#import DataSet3 as ds
 import numpy as np
 import matplotlib.pyplot as plt
 import os.path
@@ -2547,7 +2547,7 @@ def save_e1_V1_sf_cohgram_data():
 		except KeyError:
 			pass
 		if (e1 != None and v1 != None):
-			if (e1.shape[0] > 2 and e1.shape == v1.shape): ##need at least 2 trials
+			if (e1.shape[2] > 2 and e1.shape == v1.shape): ##need at least 2 trials
 				e1_data.append(e1)
 				V1_data.append(v1)
 				session_names.append(s)
