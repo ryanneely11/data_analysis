@@ -22,9 +22,9 @@ def mp_sfc(args):
 	target_spikes = spikes[spikes.shape[0]/2:,:] #spike rates during target acquisition
 	target_rate_est = target_spikes.sum()/win_secs/target_spikes.shape[1] ##target spike rate est
 	comparison_rate_est = comparison_spikes.sum()/win_secs/comparison_spikes.shape[1] ##comparitson spike rate est
-	C_t, phi_t, S12_t, S1_t, S2_t, fr_t, zerosp_t, confC_t, phistd_t, Cerr_t = spike_field_coherence(
-			spikes, lfp, comparison_rate_est, target_rate_est, Fs = 1000.0, 
-			fpass = [0,100], trialave = True, err = None)
+	C,phi,S12,S1,S2,t,f,zerosp,confc,phistd,Cerr = spike_field_cohgram(spikes,lfp,
+		comparison_rate_est,target_rate_est,[0.75,0.05],Fs=1000.0,fpass=[0,100],
+		trialave=True,err=None)
 	return C_t
 
 """
