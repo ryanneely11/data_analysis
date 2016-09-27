@@ -2493,7 +2493,7 @@ def save_V1_ds_ff_cohgram_data():
 		except KeyError:
 			pass
 		if (v1 != None and dms != None):
-			if (v1.shape[0] > 2 and dms.shape == v1.shape): ##need at least 2 trials
+			if (v1.shape[0] > 2 and dms.shape[0] == v1.shape[0]): ##need at least 2 trials
 				V1_data.append(v1)
 				DMS_data.append(dms)
 				session_names.append(s)
