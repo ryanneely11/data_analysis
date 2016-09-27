@@ -7,6 +7,7 @@ import SpikeStats2 as ss
 from scipy import stats
 import seaborn as sns
 import multiprocessing as mp
+import spike_field_coherence as SFC
 	
 def get_performance_data():
 	##functions to generate data for the manuscript
@@ -2221,10 +2222,6 @@ def get_ensemble_correlations():
 	f_out.close()
 	print "complete!"
 
-def plot_ensemble_correlations():
-	f_in = r"Z:\Data\processed_data\V1_BMI_final\raw_data\R7_thru_V13_ensemble_correlations.hdf5"
-	f = h5py.File(f_in, 'r')
-
 def plot_cursor_states():
 	f = h5py.File(r"Z:\Data\processed_data\V1_BMI_final\raw_data\R7_thru_V13_ensemble_state_data.hdf5", 'r')
 	data = {'early':np.asarray(f['early_cvals']),'late':np.asarray(f['late_cvals'])}
@@ -2579,7 +2576,7 @@ def save_e1_V1_sf_cohgram_data():
 				lfp = v1_data[:,:,d].T
 				data.append([spikes,lfp])
 		pool = mp.Pool(processes=mp.cpu_count())
-		async_result = pool.map_async(ss.mp_cohgrams_sf,data)
+		async_result = pool.map_async(SFC.mp_sfc,data)
 		pool.close()
 		pool.join()
 		cohgrams = async_result.get()
