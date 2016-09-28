@@ -5,6 +5,7 @@ import h5py
 import scipy.interpolate 
 import spectrum as spec
 import numpy as np
+import matplotlib as mp
 
 
 ##a function to calculate the spike-field coherence; for use 

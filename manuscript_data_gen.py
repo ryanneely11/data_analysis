@@ -3007,7 +3007,7 @@ def save_e1_V1_sf_coherence_data():
 				lfp = v1_data[:,:,d].T
 				data.append([spikes,lfp])
 		pool = mp.Pool(processes=mp.cpu_count())
-		async_result = pool.map_async(ss.mp_sf_coherence,data)
+		async_result = pool.map_async(SFC.mp_sf_coherence,data)
 		pool.close()
 		pool.join()
 		result_data = async_result.get() ##this will return a list of lists, 
