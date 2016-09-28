@@ -26,6 +26,26 @@ def mp_sfc(args):
 		comparison_rate_est,target_rate_est,[0.75,0.05],Fs=1000.0,fpass=[0,100],err=None)
 	return C
 
+##a function to calculate the spike-field coherence; for use 
+##in multiprocessing contexts
+def mp_sf_coherence(args):
+	spikes = args[0]
+	lfp = args[1]
+	##interpolate the LFP around the spikes to eliminate bleed-thru
+	assert lfp.shape == spikes.shape
+	for i in range(spikes.shape[1]):
+		if spikes[:,i].sum() > 0:
+			lfp[:,i] = interp_LFP(lfp[:,i],spikes[:,i])
+	win_secs = (spikes.shape[0]/1000.0)/2.0 ##half the full time window in seconds
+	comparison_spikes = spikes[0:spikes.shape[0]/2,:] ##spike rates before the start of target acquisition
+	target_spikes = spikes[spikes.shape[0]/2:,:] #spike rates during target acquisition
+	target_lfp = lfp[lfp.shape[0]/2:,:]
+	target_rate_est = target_spikes.sum()/win_secs/target_spikes.shape[1] ##target spike rate est
+	comparison_rate_est = comparison_spikes.sum()/win_secs/comparison_spikes.shape[1] ##comparitson spike rate est
+	C,phi,S12,S1,S2,f,zerosp,confC,phistd,Cerr = spike_field_coherence(target_spikes,target_lfp, ##only computing for target times!!!
+		comparison_rate_est,target_rate_est,Fs=1000.0,fpass=[0,100],trialave=True,err=[1,0.05])
+	return [C, confC]
+
 """
 this function grabs data from an hdf5 database, and parses it 
 into time-locked snippets from two conditions.

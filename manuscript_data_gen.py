@@ -1853,9 +1853,7 @@ def plot_cr_data():
 		tick.label.set_fontsize(14)
 	for tick in ax.yaxis.get_major_ticks():
 		tick.label.set_fontsize(14)
-#	ax.axvspan(15, 28, alpha = 0.5, color = 'lightblue')
-#	ax.axvspan(60, 75, alpha = 0.5, color = 'royalblue')
-#	ax.axvspan(32, 48, alpha = 0.5, color = 'orange')
+
 	plt.vlines(28, 0, 1, linestyle = 'dashed')	
 	ax.set_xlabel("Time, mins", fontsize = 16)
 	ax.set_ylabel("Percent of events", fontsize = 16)
@@ -2530,6 +2528,60 @@ def save_V1_ds_ff_cohgram_data():
 	g.close()
 	results_file.close()
 
+def save_V1_ds_ff_cohgram_data_ctrl():	##use this for non-task relevant periods
+	f = h5py.File("/home/lab/Documents/data/non_task_times.hdf5",'r')
+	sessions = f.keys()
+	V1_data = []
+	DMS_data = []
+	session_names = []
+	for s in sessions:
+		try:
+			v1 = None
+			dms = None
+			name = None
+			v1 = np.asarray(f[s]['V1_lfp'][:,2000:,:])
+			dms = np.asarray(f[s]['Str_lfp'][:,2000:,:])
+			name = s
+		except KeyError:
+			pass
+		if (v1 != None and dms != None):
+			if (v1.shape[0] > 2 and dms.shape[0] == v1.shape[0]): ##need at least 2 trials
+				V1_data.append(v1)
+				DMS_data.append(dms)
+				session_names.append(s)
+	f.close()
+	##let's put all this on disc since it's gonna be a lot of data...
+	g = h5py.File("/home/lab/Documents/data/paired_v1_dms_lfp_ctrl.hdf5",'w-')
+	for i, name in enumerate(session_names):
+		gp=g.create_group(name)
+		gp.create_dataset("v1", data=V1_data[i])
+		gp.create_dataset("dms",data=DMS_data[i])
+	g.close()
+	DMS_data = None; V1_data = None
+	g = h5py.File("/home/lab/Documents/data/paired_v1_dms_lfp_ctrl.hdf5",'r')
+	results_file = h5py.File("/home/lab/Documents/data/v1_dms_cohgrams_ctrl.hdf5",'w-')
+	##shape is trials x time x channels
+	##let's just do a pairwise comparison of EVERYTHING
+	##do this one sesssion at a time to not overload the memory
+	for session in session_names:
+		group = g[session]
+		v1_data = np.asarray(group['v1'])
+		dms_data = np.asarray(group['dms'])
+		data = []
+		for v in range(v1_data.shape[2]):
+			for d in range(dms_data.shape[2]):
+				lfp_1 = v1_data[:,:,v].T
+				lfp_2 = dms_data[:,:,d].T
+				data.append([lfp_1,lfp_2])
+		pool = mp.Pool(processes=mp.cpu_count())
+		async_result = pool.map_async(ss.mp_cohgrams,data)
+		pool.close()
+		pool.join()
+		cohgrams = async_result.get()
+		results_file.create_dataset(session,data = np.asarray(cohgrams))
+	g.close()
+	results_file.close()
+
 def save_e1_V1_sf_cohgram_data():	
 	f = h5py.File("/home/lab/Documents/data/t1_triggered.hdf5",'r')
 	sessions = f.keys()
@@ -2562,6 +2614,60 @@ def save_e1_V1_sf_cohgram_data():
 	e1_data = None; V1_data = None
 	g = h5py.File("/home/lab/Documents/data/paired_e1_v1_sf_t1.hdf5",'r')
 	results_file = h5py.File("/home/lab/Documents/data/e1_v1_cohgrams_t1.hdf5",'w-')
+	##shape is trials x time x channels
+	##let's just do a pairwise comparison of EVERYTHING
+	##do this one sesssion at a time to not overload the memory
+	for session in session_names:
+		group = g[session]
+		e1_data = np.asarray(group['e1'])
+		v1_data = np.asarray(group['v1'])
+		data = []
+		for v in range(e1_data.shape[2]):
+			for d in range(v1_data.shape[2]):
+				spikes = e1_data[:,:,v].T
+				lfp = v1_data[:,:,d].T
+				data.append([spikes,lfp])
+		pool = mp.Pool(processes=mp.cpu_count())
+		async_result = pool.map_async(SFC.mp_sfc,data)
+		pool.close()
+		pool.join()
+		cohgrams = async_result.get()
+		results_file.create_dataset(session,data = np.asarray(cohgrams))
+	g.close()
+	results_file.close()
+
+def save_e1_V1_sf_cohgram_data_ctrl():	
+	f = h5py.File("/home/lab/Documents/data/non_task_times.hdf5",'r')
+	sessions = f.keys()
+	e1_data = []
+	V1_data = []
+	session_names = []
+	for s in sessions:
+		try:
+			e1 = None
+			v1 = None
+			name = None
+			e1 = np.asarray(f[s]['e1_units'][:,:,:]) 
+			v1 = np.asarray(f[s]['V1_lfp'][:,:,:])
+			name = s
+		except KeyError:
+			pass
+		if (e1 != None and v1 != None):
+			if (e1.shape[0] > 2 and v1.shape[0] == e1.shape[0]): ##need at least 2 trials
+				e1_data.append(e1)
+				V1_data.append(v1)
+				session_names.append(s)
+	f.close()
+	##let's put all this on disc since it's gonna be a lot of data...
+	g = h5py.File("/home/lab/Documents/data/paired_e1_v1_sf_ctrl.hdf5",'w-')
+	for i, name in enumerate(session_names):
+		gp=g.create_group(name)
+		gp.create_dataset("e1", data=e1_data[i])
+		gp.create_dataset("v1",data=V1_data[i])
+	g.close()
+	e1_data = None; V1_data = None
+	g = h5py.File("/home/lab/Documents/data/paired_e1_v1_sf_ctrl.hdf5",'r')
+	results_file = h5py.File("/home/lab/Documents/data/e1_v1_cohgrams_ctrl.hdf5",'w-')
 	##shape is trials x time x channels
 	##let's just do a pairwise comparison of EVERYTHING
 	##do this one sesssion at a time to not overload the memory
@@ -2638,6 +2744,59 @@ def save_e2_V1_sf_cohgram_data():
 	g.close()
 	results_file.close()
 
+def save_e2_V1_sf_cohgram_data_ctrl():	
+	f = h5py.File("/home/lab/Documents/data/non_task_times.hdf5",'r')
+	sessions = f.keys()
+	e1_data = []
+	V1_data = []
+	session_names = []
+	for s in sessions:
+		try:
+			e1 = None
+			v1 = None
+			name = None
+			e1 = np.asarray(f[s]['e2_units'][:,:,:]) 
+			v1 = np.asarray(f[s]['V1_lfp'][:,:,:])
+			name = s
+		except KeyError:
+			pass
+		if (e1 != None and v1 != None):
+			if (e1.shape[0] > 2 and v1.shape[0] == e1.shape[0]): ##need at least 2 trials
+				e1_data.append(e1)
+				V1_data.append(v1)
+				session_names.append(s)
+	f.close()
+	##let's put all this on disc since it's gonna be a lot of data...
+	g = h5py.File("/home/lab/Documents/data/paired_e2_v1_sf_ctrl.hdf5",'w-')
+	for i, name in enumerate(session_names):
+		gp=g.create_group(name)
+		gp.create_dataset("e1", data=e1_data[i])
+		gp.create_dataset("v1",data=V1_data[i])
+	g.close()
+	e1_data = None; V1_data = None
+	g = h5py.File("/home/lab/Documents/data/paired_e2_v1_sf_ctrl.hdf5",'r')
+	results_file = h5py.File("/home/lab/Documents/data/e2_v1_cohgrams_ctrl.hdf5",'w-')
+	##shape is trials x time x channels
+	##let's just do a pairwise comparison of EVERYTHING
+	##do this one sesssion at a time to not overload the memory
+	for session in session_names:
+		group = g[session]
+		e1_data = np.asarray(group['e1'])
+		v1_data = np.asarray(group['v1'])
+		data = []
+		for v in range(e1_data.shape[2]):
+			for d in range(v1_data.shape[2]):
+				spikes = e1_data[:,:,v].T
+				lfp = v1_data[:,:,d].T
+				data.append([spikes,lfp])
+		pool = mp.Pool(processes=mp.cpu_count())
+		async_result = pool.map_async(SFC.mp_sfc,data)
+		pool.close()
+		pool.join()
+		cohgrams = async_result.get()
+		results_file.create_dataset(session,data = np.asarray(cohgrams))
+	g.close()
+	results_file.close()
 
 def save_indirect_V1_sf_cohgram_data():	
 	f = h5py.File("/home/lab/Documents/data/t1_triggered.hdf5",'r')
@@ -2693,122 +2852,173 @@ def save_indirect_V1_sf_cohgram_data():
 	g.close()
 	results_file.close()
 
-# def get_cursor_states():
-# 	f_in = r"C:\Users\Ryan\Documents\data\R7_thru_V13_all_data.hdf5"
-# 	#f_out = h5py.File("C:\Users\Ryan\Documents\data\cursor_states.hdf5", 'w-')
-# 	##get the raw. binned e1-e2 values for every session
-# 	cvals = ds.get_cursor_vals(f_in, binsize=200, session_range = [1,11])
-# 	##make the list into a symmetrical array for easier handling
-# 	longest = 0
-# 	for i in range(len(cvals)):
-# 		if cvals[i].shape[0] > longest:
-# 			longest = cvals[i].shape[0]
-# 	for n in range(len(cvals)):
-# 		if cvals[n].shape[0] < longest:
-# 			add1 = np.empty((longest-cvals[n].shape[0],))
-# 			add1[:] = np.nan
-# 			cvals[n] = np.hstack((cvals[n], add1))
-# 	cvals = np.asarray(cvals)
-# 	##need to normalize each session by its mean value as well as it's range.
-# 	for i in range(cvals.shape[0]):
-# 		##subtract the mean:
-# 		cvals[i,:] = cvals[i,:]-np.nanmean(cvals[i,:])
-# 		##get the max and min values
-# 		mx = np.nanmax(cvals[i,:])
-# 		mn = np.nanmin(cvals[i,:])
-# 		##now, we are going to compute the percent distance to the max/min values for each bin
-# 		for v in range(cvals[i,:].shape[0]):
-# 			if cvals[i,v] > 0:
-# 				cvals[i,v] = cvals[i,v]/mx
-# 			elif cvals[i,v] < 0:
-# 				cvals[i,v] = -1*(cvals[i,v]/mn)
-# 	##now, every session in cvals is on the same scale (0 to 1), where 1 is the rewarded tone,
-# 	##0 is the unrewarded (well, not exactly but it's close)
-# 	##let's use the first 5 min as early, and mins 35-40 as late
-# 	early_cvals = (cvals[:,0:10*60*5]).flatten() #binsize is 200, so 5 bins/sec, 60 sec/min
-# 	late_cvals = (cvals[:,5*60*30:5*60*40]).flatten()
-# 	n, bins, patches = plt.hist(early_cvals, 50, facecolor = 'red', alpha = 0.4)
-# 	n, bins, patches = plt.hist(late_cvals[~np.isnan(late_cvals)], 50, facecolor = 'blue', alpha = 0.4)
-# 	f_out.create_dataset("early_cvals", data = early_cvals)
-# 	f_out.create_dataset("late_cvals", data = late_cvals)
-# 	f_out.create_dataset("raw_cvals", data = cvals)
-# 	f_out.create_dataset("norm_cvals", data = cvals)
+def save_V1_ds_ff_coherence_data():	
+	f = h5py.File("/home/lab/Documents/data/t1_triggered.hdf5",'r')
+	sessions = f.keys()
+	V1_data = []
+	DMS_data = []
+	session_names = []
+	for s in sessions:
+		try:
+			v1 = None
+			dms = None
+			name = None
+			v1 = np.asarray(f[s]['V1_lfp'][:,2000:,:])
+			dms = np.asarray(f[s]['Str_lfp'][:,2000:,:])
+			name = s
+		except KeyError:
+			pass
+		if (v1 != None and dms != None):
+			if (v1.shape[0] > 2 and dms.shape[0] == v1.shape[0]): ##need at least 2 trials
+				V1_data.append(v1)
+				DMS_data.append(dms)
+				session_names.append(s)
+	f.close()
+	##let's put all this on disc since it's gonna be a lot of data...
+	g = h5py.File("/home/lab/Documents/data/paired_v1_dms_lfp_t1.hdf5",'w-')
+	for i, name in enumerate(session_names):
+		gp=g.create_group(name)
+		gp.create_dataset("v1", data=V1_data[i])
+		gp.create_dataset("dms",data=DMS_data[i])
+	g.close()
+	DMS_data = None; V1_data = None
+	g = h5py.File("/home/lab/Documents/data/paired_v1_dms_lfp_t1.hdf5",'r')
+	results_file = h5py.File("/home/lab/Documents/data/v1_dms_cohgrams_t12.hdf5",'w-')
+	##shape is trials x time x channels
+	##let's just do a pairwise comparison of EVERYTHING
+	##do this one sesssion at a time to not overload the memory
+	for session in session_names:
+		group = g[session]
+		v1_data = np.asarray(group['v1'])
+		dms_data = np.asarray(group['dms'])
+		data = []
+		for v in range(v1_data.shape[2]):
+			for d in range(dms_data.shape[2]):
+				lfp_1 = v1_data[:,:,v].T
+				lfp_2 = dms_data[:,:,d].T
+				data.append([lfp_1,lfp_2])
+		pool = mp.Pool(processes=mp.cpu_count())
+		async_result = pool.map_async(ss.mp_cohgrams,data)
+		pool.close()
+		pool.join()
+		cohgrams = async_result.get()
+		results_file.create_dataset(session,data = np.asarray(cohgrams))
+	g.close()
+	results_file.close()
 
-# def get_cursor_states():
-# 	f_in = h5py.File(r"J:\Ryan\processed_data\V1_BMI_final\raw_data\R7_thru_V13_all_data.hdf5", 'r')
-# 	f_out = h5py.File(r"J:\Ryan\processed_data\V1_BMI_final\raw_data\R7_thru_V13_ensemble_state_data.hdf5", 'w-')
-# 	session_range = np.arange(1,11)
-# 	animals = ["R13", "R11", "V01", "V02", "V03", "V04", "V05", "V11", "V13"]
-# 	mean_cursor_states = []
-# 	sup_longest = 0
-# 	for animal in animals:
-# 		if "/"+animal in f_out:
-# 			pass
-# 		else:
-# 			f_out.create_group(animal)
-# 		longest = 0
-# 		e1_arrays = []
-# 		e2_arrays = []
-# 		sessions = [x for x in f_in[animal].keys() if int(x[5:7]) in session_range]
-# 		for session in sessions:
-# 			e1_keys = [item for item in f_in[animal][session]['e1_units'].keys() if not item.endswith('_wf')]
-# 			e2_keys = [item for item in f_in[animal][session]['e2_units'].keys() if not item.endswith('_wf')]
-# 			duration = f_in[animal][session]['e1_units'][e1_keys[0]].shape[1]
-# 			e1_arr = np.zeros((duration, len(e1_keys)))
-# 			e2_arr = np.zeros((duration, len(e2_keys)))
-# 			for key in range(len(e1_keys)):
-# 				e1_arr[:, key] = np.asarray(f_in[animal][session]['e1_units'][e1_keys[key]])[0,:]
-# 			e1_arr = e1_arr.sum(axis = 1)
-# 			for name in range(len(e2_keys)):
-# 				e2_arr[:, name] = np.asarray(f_in[animal][session]['e2_units'][e2_keys[name]])[0,:]
-# 			e2_arr = e2_arr.sum(axis = 1)
-# 			e1_arrays.append(e1_arr)
-# 			e2_arrays.append(e2_arr)
-# 			if duration > longest:
-# 				longest = duration
-# 		for n in range(len(e1_arrays)):
-# 			if e1_arrays[n].shape[0] < longest:
-# 				add1 = np.empty((longest-e1_arrays[n].shape[0],))
-# 				add2 = np.empty((longest-e1_arrays[n].shape[0],))
-# 				add1[:] = np.nan
-# 				add2[:] = np.nan
-# 				e1_arrays[n] = np.hstack((e1_arrays[n], add1))
-# 				e2_arrays[n] = np.hstack((e2_arrays[n], add2))
-# 		e1_arrays = np.asarray(e1_arrays)
-# 		e2_arrays = np.asarray(e2_arrays)
-# 		if "/"+animal+"/e1_ensembles" in f_out:
-# 			del(f_out["/"+animal+"/e1_ensembles"])
-# 		if "/"+animal+"/e2_ensembles" in f_out:
-# 			del(f_out["/"+animal+"/e2_ensembles"])
-# 		if "/"+animal+"/mean_cursor_states" in f_out:
-# 			del(f_out["/"+animal+"/mean_cursor_states"])
-# 		f_out[animal].create_dataset("e1_ensembles", data = e1_arrays)
-# 		f_out[animal].create_dataset("e2_ensembles", data = e2_arrays)
-# 		f_out[animal].create_dataset("mean_cursor_states", data = (e1_arrays-e2_arrays).mean(axis = 0))
-# 		mean_cursor_states.append((e1_arrays-e2_arrays).mean(axis = 0))
-# 		if sup_longest < longest:
-# 			sup_longest = longest
-# 	for n in range(len(mean_cursor_states)):
-# 		if mean_cursor_states[n].shape[0] < sup_longest:
-# 			add = np.empty((sup_longest-mean_cursor_states[n].shape[0]))
-# 			add[:] = np.nan
-# 			mean_cursor_states[n] = np.hstack((mean_cursor_states[n], add))
-# 	mean_cursor_states = np.asarray(mean_cursor_states)
-# 	if "/across_animals_mean_states" in f_out:
-# 		del(f_out["/across_animals_mean_states"])
-# 	f_out.create_dataset("/across_animals_mean_states", data = mean_cursor_states)
-# 	idx = np.arange(0,duration-300, 100)
-# 	binned = np.zeros((mean_cursor_states.shape[0], idx.shape[0]))
-# 	for i in idx:
-# 		binned[:,i/100] = mean_cursor_states[:,i:i+100].sum(axis = 1)
-# 	if "/across_animals_binned_states" in f_out:
-# 		del(f_out["/across_animals_binned_states"])
-# 	f_out.create_dataset("/across_animals_binned_states", data = mean_cursor_states)
-# 	f_in.close()
-# 	f_out.close()
+def save_V1_ds_ff_coherence_data():	
+	f = h5py.File("/home/lab/Documents/data/t1_triggered.hdf5",'r')
+	sessions = f.keys()
+	V1_data = []
+	DMS_data = []
+	session_names = []
+	for s in sessions:
+		try:
+			v1 = None
+			dms = None
+			name = None
+			v1 = np.asarray(f[s]['V1_lfp'][:,2000:,:])
+			dms = np.asarray(f[s]['Str_lfp'][:,2000:,:])
+			name = s
+		except KeyError:
+			pass
+		if (v1 != None and dms != None):
+			if (v1.shape[0] > 2 and dms.shape[0] == v1.shape[0]): ##need at least 2 trials
+				V1_data.append(v1)
+				DMS_data.append(dms)
+				session_names.append(s)
+	f.close()
+	##let's put all this on disc since it's gonna be a lot of data...
+	g = h5py.File("/home/lab/Documents/data/paired_v1_dms_lfp_t1.hdf5",'w-')
+	for i, name in enumerate(session_names):
+		gp=g.create_group(name)
+		gp.create_dataset("v1", data=V1_data[i])
+		gp.create_dataset("dms",data=DMS_data[i])
+	g.close()
+	DMS_data = None; V1_data = None
+	g = h5py.File("/home/lab/Documents/data/paired_v1_dms_lfp_t1.hdf5",'r')
+	results_file = h5py.File("/home/lab/Documents/data/v1_dms_cohgrams_t12.hdf5",'w-')
+	##shape is trials x time x channels
+	##let's just do a pairwise comparison of EVERYTHING
+	##do this one sesssion at a time to not overload the memory
+	for session in session_names:
+		group = g[session]
+		v1_data = np.asarray(group['v1'])
+		dms_data = np.asarray(group['dms'])
+		data = []
+		for v in range(v1_data.shape[2]):
+			for d in range(dms_data.shape[2]):
+				lfp_1 = v1_data[:,:,v].T
+				lfp_2 = dms_data[:,:,d].T
+				data.append([lfp_1,lfp_2])
+		pool = mp.Pool(processes=mp.cpu_count())
+		async_result = pool.map_async(ss.mp_cohgrams,data)
+		pool.close()
+		pool.join()
+		cohgrams = async_result.get()
+		results_file.create_dataset(session,data = np.asarray(cohgrams))
+	g.close()
+	results_file.close()
 
 
-
-
-
-
+def save_e1_V1_sf_coherence_data():	
+	f = h5py.File("/home/lab/Documents/data/t1_triggered.hdf5",'r')
+	sessions = f.keys()
+	e1_data = []
+	V1_data = []
+	session_names = []
+	for s in sessions:
+		try:
+			e1 = None
+			v1 = None
+			name = None
+			e1 = np.asarray(f[s]['e1_units'][:,:,:])
+			v1 = np.asarray(f[s]['V1_lfp'][:,:,:])
+			name = s
+		except KeyError:
+			pass
+		if (e1 != None and v1 != None):
+			if (e1.shape[0] > 2 and e1.shape[0] == v1.shape[0]): ##need at least 2 trials
+				e1_data.append(e1)
+				V1_data.append(v1)
+				session_names.append(s)
+	f.close()
+	##let's put all this on disc since it's gonna be a lot of data...
+	g = h5py.File("/home/lab/Documents/data/paired_e1_v1_hybrid_t1.hdf5",'w-')
+	for i, name in enumerate(session_names):
+		gp=g.create_group(name)
+		gp.create_dataset("e1", data=e1_data[i])
+		gp.create_dataset("v1",data=V1_data[i])
+	g.close()
+	e1_data = None; V1_data = None
+	g = h5py.File("/home/lab/Documents/data/paired_e1_v1_hybrid_t1.hdf5",'r')
+	results_file = h5py.File("/home/lab/Documents/data/e1_v1_sfcoherence_t1.hdf5",'w-')
+	##shape is trials x time x channels
+	##let's just do a pairwise comparison of EVERYTHING
+	##do this one sesssion at a time to not overload the memory
+	for session in session_names:
+		group = g[session]
+		e1_data = np.asarray(group['e1'])
+		v1_data = np.asarray(group['v1'])
+		data = []
+		for v in range(e1_data.shape[2]):
+			for d in range(v1_data.shape[2]):
+				spikes = e1_data[:,:,v].T
+				lfp = v1_data[:,:,d].T
+				data.append([spikes,lfp])
+		pool = mp.Pool(processes=mp.cpu_count())
+		async_result = pool.map_async(ss.mp_sf_coherence,data)
+		pool.close()
+		pool.join()
+		result_data = async_result.get() ##this will return a list of lists, 
+		##index 0 is the coherence, index 1 is the confidence intervals
+		##separate them out:
+		coherence = []
+		confC = []
+		for i in range(len(result_data)):
+			coherence.append(result_data[i][0])
+			confC.append(result_data[i][1])
+		results_file.create_dataset(session,data = np.asarray(coherence))
+		results_file.create_dataset(session+"_err", data=np.asarray(confC))
+	g.close()
+	results_file.close()
