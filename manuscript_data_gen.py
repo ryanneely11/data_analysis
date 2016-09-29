@@ -2962,7 +2962,7 @@ def save_V1_ds_ff_coherence_data_ctrl():
 
 
 def save_e1_V1_sf_coherence_data():	
-	f = h5py.File("/home/lab/Documents/data/t1_triggered.hdf5",'r')
+	f = h5py.File(r"C:\Users\Ryan\Documents\data\t1_triggered.hdf5",'r')
 	sessions = f.keys()
 	e1_data = []
 	V1_data = []
@@ -2972,8 +2972,8 @@ def save_e1_V1_sf_coherence_data():
 			e1 = None
 			v1 = None
 			name = None
-			e1 = np.asarray(f[s]['e1_units'][:,:,:])
-			v1 = np.asarray(f[s]['V1_lfp'][:,:,:])
+			e1 = np.asarray(f[s]['e1_units'][:,3000:-1000,:])
+			v1 = np.asarray(f[s]['V1_lfp'][:,3000:-1000,:])
 			name = s
 		except KeyError:
 			pass
@@ -2984,15 +2984,15 @@ def save_e1_V1_sf_coherence_data():
 				session_names.append(s)
 	f.close()
 	##let's put all this on disc since it's gonna be a lot of data...
-	g = h5py.File("/home/lab/Documents/data/paired_e1_v1_hybrid_t1.hdf5",'w-')
+	g = h5py.File(r"C:\Users\Ryan\Documents\data\paired_e1_v1_hybrid_t1.hdf5",'w-')
 	for i, name in enumerate(session_names):
 		gp=g.create_group(name)
 		gp.create_dataset("e1", data=e1_data[i])
 		gp.create_dataset("v1",data=V1_data[i])
 	g.close()
 	e1_data = None; V1_data = None
-	g = h5py.File("/home/lab/Documents/data/paired_e1_v1_hybrid_t1.hdf5",'r')
-	results_file = h5py.File("/home/lab/Documents/data/e1_v1_sfcoherence_t1.hdf5",'w-')
+	g = h5py.File(r"C:\Users\Ryan\Documents\data\paired_e1_v1_hybrid_t1.hdf5",'r')
+	results_file = h5py.File(r"C:\Users\Ryan\Documents\data\e1_v1_sfcoherence_t1.hdf5",'w-')
 	##shape is trials x time x channels
 	##let's just do a pairwise comparison of EVERYTHING
 	##do this one sesssion at a time to not overload the memory
@@ -3024,7 +3024,7 @@ def save_e1_V1_sf_coherence_data():
 	results_file.close()
 
 def save_e2_V1_sf_coherence_data():	
-	f = h5py.File("/home/lab/Documents/data/t1_triggered.hdf5",'r')
+	f = h5py.File(r"C:\Users\Ryan\Documents\data\t1_triggered.hdf5",'r')
 	sessions = f.keys()
 	e1_data = []
 	V1_data = []
@@ -3034,8 +3034,8 @@ def save_e2_V1_sf_coherence_data():
 			e1 = None
 			v1 = None
 			name = None
-			e1 = np.asarray(f[s]['e2_units'][:,:,:])
-			v1 = np.asarray(f[s]['V1_lfp'][:,:,:])
+			e1 = np.asarray(f[s]['e2_units'][:,3000:-1000,:])
+			v1 = np.asarray(f[s]['V1_lfp'][:,3000:-1000,:])
 			name = s
 		except KeyError:
 			pass
@@ -3046,15 +3046,15 @@ def save_e2_V1_sf_coherence_data():
 				session_names.append(s)
 	f.close()
 	##let's put all this on disc since it's gonna be a lot of data...
-	g = h5py.File("/home/lab/Documents/data/paired_e2_v1_hybrid_t1.hdf5",'w-')
+	g = h5py.File(r"C:\Users\Ryan\Documents\data\paired_e2_v1_hybrid_t1.hdf5",'w-')
 	for i, name in enumerate(session_names):
 		gp=g.create_group(name)
 		gp.create_dataset("e1", data=e1_data[i])
 		gp.create_dataset("v1",data=V1_data[i])
 	g.close()
 	e1_data = None; V1_data = None
-	g = h5py.File("/home/lab/Documents/data/paired_e2_v1_hybrid_t1.hdf5",'r')
-	results_file = h5py.File("/home/lab/Documents/data/e2_v1_sfcoherence_t1.hdf5",'w-')
+	g = h5py.File(r"C:\Users\Ryan\Documents\data\paired_e2_v1_hybrid_t1.hdf5",'r')
+	results_file = h5py.File(r"C:\Users\Ryan\Documents\data\e2_v1_sfcoherence_t1.hdf5",'w-')
 	##shape is trials x time x channels
 	##let's just do a pairwise comparison of EVERYTHING
 	##do this one sesssion at a time to not overload the memory
@@ -3096,8 +3096,8 @@ def save_e1_V1_sf_coherence_ctrl():
 			e1 = None
 			v1 = None
 			name = None
-			e1 = np.asarray(f[s]['e1_units'][:,:,:])
-			v1 = np.asarray(f[s]['V1_lfp'][:,:,:])
+			e1 = np.asarray(f[s]['e1_units'][:,3000:-1000,:])
+			v1 = np.asarray(f[s]['V1_lfp'][:,3000:-1000,:])
 			name = s
 		except KeyError:
 			pass
@@ -3158,8 +3158,8 @@ def save_e2_V1_sf_coherence_ctrl():
 			e1 = None
 			v1 = None
 			name = None
-			e1 = np.asarray(f[s]['e2_units'][:,:,:])
-			v1 = np.asarray(f[s]['V1_lfp'][:,:,:])
+			e1 = np.asarray(f[s]['e2_units'][:,3000:-1000,:])
+			v1 = np.asarray(f[s]['V1_lfp'][:,3000:-1000,:])
 			name = s
 		except KeyError:
 			pass
