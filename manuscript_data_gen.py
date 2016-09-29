@@ -3208,3 +3208,115 @@ def save_e2_V1_sf_coherence_ctrl():
 		results_file.create_dataset(session+"_err", data=np.asarray(confC))
 	g.close()
 	results_file.close()
+
+def save_direct_ds_sf_cohgram():	
+	f = h5py.File("/home/lab/Documents/data/t1_triggered.hdf5",'r')
+	sessions = f.keys()
+	direct_data = []
+	DS_data = []
+	session_names = []
+	for s in sessions:
+		try:
+			direct = None
+			ds = None
+			name = None
+			direct1 = np.asarray(f[s]['e1_units'][:,:,:])
+			direct2 = np.asarray(f[s]['e2_units'][:,:,:])
+			direct = np.dstack((direct1,direct2)) 
+			ds = np.asarray(f[s]['Str_lfp'][:,:,:])
+			name = s
+		except KeyError:
+			pass
+		if (direct != None and ds != None):
+			if (direct.shape[0] > 2 and direct.shape[0] == ds.shape[0]): ##need at least 2 trials
+				direct_data.append(direct)
+				DS_data.append(ds)
+				session_names.append(s)
+	f.close()
+	##let's put all this on disc since it's gonna be a lot of data...
+	g = h5py.File("/home/lab/Documents/data/paired_direct_ds_sf_t1.hdf5",'w-')
+	for i, name in enumerate(session_names):
+		gp=g.create_group(name)
+		gp.create_dataset("direct", data=direct_data[i])
+		gp.create_dataset("ds",data=DS_data[i])
+	g.close()
+	direct_data = None; DS_data = None
+	g = h5py.File("/home/lab/Documents/data/paired_direct_ds_sf_t1.hdf5",'r')
+	results_file = h5py.File("/home/lab/Documents/data/direct_ds_sfcohgrams_t1.hdf5",'w-')
+	##shape is trials x time x channels
+	##let's just do a pairwise comparison of EVERYTHING
+	##do this one sesssion at a time to not overload the memory
+	for session in session_names:
+		group = g[session]
+		direct_data = np.asarray(group['direct'])
+		ds_data = np.asarray(group['ds'])
+		data = []
+		for v in range(direct_data.shape[2]):
+			for d in range(ds_data.shape[2]):
+				spikes = direct_data[:,:,v].T
+				lfp = ds_data[:,:,d].T
+				data.append([spikes,lfp])
+		pool = mp.Pool(processes=mp.cpu_count())
+		async_result = pool.map_async(SFC.mp_sfc,data)
+		pool.close()
+		pool.join()
+		cohgrams = async_result.get()
+		results_file.create_dataset(session,data = np.asarray(cohgrams))
+	g.close()
+	results_file.close()
+
+def save_direct_ds_sf_cohgram_ctrl():	
+	f = h5py.File("/home/lab/Documents/data/non_task_times.hdf5",'r')
+	sessions = f.keys()
+	direct_data = []
+	DS_data = []
+	session_names = []
+	for s in sessions:
+		try:
+			direct = None
+			ds = None
+			name = None
+			direct1 = np.asarray(f[s]['e1_units'][:,:,:])
+			direct2 = np.asarray(f[s]['e2_units'][:,:,:])
+			direct = np.dstack((direct1,direct2)) 
+			ds = np.asarray(f[s]['Str_lfp'][:,:,:])
+			name = s
+		except KeyError:
+			pass
+		if (direct != None and ds != None):
+			if (direct.shape[0] > 2 and direct.shape[0] == ds.shape[0]): ##need at least 2 trials
+				direct_data.append(direct)
+				DS_data.append(ds)
+				session_names.append(s)
+	f.close()
+	##let's put all this on disc since it's gonna be a lot of data...
+	g = h5py.File("/home/lab/Documents/data/paired_direct_ds_sf_t1.hdf5",'w-')
+	for i, name in enumerate(session_names):
+		gp=g.create_group(name)
+		gp.create_dataset("direct", data=direct_data[i])
+		gp.create_dataset("ds",data=DS_data[i])
+	g.close()
+	direct_data = None; DS_data = None
+	g = h5py.File("/home/lab/Documents/data/paired_direct_ds_sf_t1.hdf5",'r')
+	results_file = h5py.File("/home/lab/Documents/data/direct_ds_sfcohgrams_t1.hdf5",'w-')
+	##shape is trials x time x channels
+	##let's just do a pairwise comparison of EVERYTHING
+	##do this one sesssion at a time to not overload the memory
+	for session in session_names:
+		group = g[session]
+		direct_data = np.asarray(group['direct'])
+		ds_data = np.asarray(group['ds'])
+		data = []
+		for v in range(direct_data.shape[2]):
+			for d in range(ds_data.shape[2]):
+				spikes = direct_data[:,:,v].T
+				lfp = ds_data[:,:,d].T
+				data.append([spikes,lfp])
+		pool = mp.Pool(processes=mp.cpu_count())
+		async_result = pool.map_async(SFC.mp_sfc,data)
+		pool.close()
+		pool.join()
+		cohgrams = async_result.get()
+		results_file.create_dataset(session,data = np.asarray(cohgrams))
+	g.close()
+	results_file.close()
