@@ -19,6 +19,32 @@ import multiprocessing as mp
 import data_to_gdf as dg
 from scipy.stats.mstats import zscore
 import matplotlib.pyplot as plt
+import glob
+
+"""
+this script looks in a directory, takes the plx files and saves a copy as an HDF5 file.
+
+"""
+def batch_plx_to_hdf5(directory):
+	##first, get a list of the plx files in the directory:
+	cd = os.getcwd() ##to return to the cd later
+	os.chdir(directory)
+	for f in glob.glob("*.plx"):
+		cur_file = os.path.join(directory,f)
+		print "Saving "+cur_file
+		##parse the plx file
+		data = plxread.import_file(cur_file,AD_channels=range(1,97),import_unsorted=False,
+			verbose=False,import_wf=True)
+		##create the output file in the same dir
+		out_file = h5py.File(cur_file.strip('plx')+'hdf5','w-')
+		##save the data
+		for k in data.keys:
+			out_file.create_dataset(k,data=data[k])
+	out_file.close()
+	os.chdir(cd)
+	print "Done!"
+	return None
+
 
 """This first function takes raw plexon data files, organizes the data,
 and saves it in hdf5 format for fast loading and indexing. 
