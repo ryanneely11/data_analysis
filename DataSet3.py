@@ -38,7 +38,7 @@ def batch_plx_to_hdf5(directory):
 		##create the output file in the same dir
 		out_file = h5py.File(cur_file.strip('plx')+'hdf5','w-')
 		##save the data
-		for k in data.keys:
+		for k in data.keys():
 			out_file.create_dataset(k,data=data[k])
 	out_file.close()
 	os.chdir(cd)
