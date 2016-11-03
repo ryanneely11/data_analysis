@@ -3320,3 +3320,30 @@ def save_direct_ds_sf_cohgram_ctrl():
 		results_file.create_dataset(session,data = np.asarray(cohgrams))
 	g.close()
 	results_file.close()
+
+def plot_jaws_late():
+	f = h5py.File(r"/Users/Ryan/Documents/jaws_late_v_50_new.hdf5",'r')
+	s50_mean = np.asarray(f['stim_50_mean'])
+	s50_sem = np.asarray(f['stim_50_sem'])
+	sLate_mean = np.asarray(f['stim_late_mean'])
+	sLate_sem = np.asarray(f['stim_late_sem'])
+	f.close()
+	xLate = np.arange(1,sLate_mean.size+1)
+	x50 = np.arange(1,s50_mean.size+1)
+	fig, ax = plt.subplots(1)
+	ax.plot(x50,s50_mean,linewidth=2,color='k',linestyle='-',label='stim 50')
+	ax.plot(x50,s50_mean,linewidth=2,color='r',linestyle='--')
+	ax.plot(xLate[0:46],sLate_mean[0:46],linewidth=2,color='k',label='stim late')
+	ax.plot(xLate[45:],sLate_mean[45:],linewidth=2,color='r')
+	ax.fill_between(xLate[0:46],sLate_mean[0:46]-sLate_sem[0:46],sLate_mean[0:46]+
+		sLate_sem[0:46],facecolor='k',color='k',alpha=0.5)
+	ax.fill_between(xLate[45:],sLate_mean[45:]-sLate_sem[45:],sLate_mean[45:]+
+		sLate_sem[45:],facecolor='r',color='r',alpha=0.5)
+
+
+
+
+
+
+
+
