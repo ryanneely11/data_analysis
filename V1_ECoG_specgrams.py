@@ -18,13 +18,13 @@ def butter_bandpass_filter(data, lowcut, highcut, fs, order=5):
 	y = lfilter(b, a, data)
 	return y
 
-file_in = r"J:\Ryan\11_22_16_SiC\SiC_2.hdf5"
-file_out = r"J:\Ryan\11_22_16_SiC\SiC_2_specgrams"
+# file_in = r"J:\Ryan\11_22_16_SiC\SiC_2.hdf5"
+# file_out = r"J:\Ryan\11_22_16_SiC\SiC_2_specgrams"
 angle_list = ['-1', '0', '135', '180', '225', '270', '315', '45', '90']
 
 def save_specgrams(angle):
-	f = h5py.File(r"J:\Ryan\11_22_16_SiC\SiC_2.hdf5",'r')
-	save_folder = r"J:\Ryan\11_22_16_SiC\specgrams"
+	f = h5py.File(r"J:\Ryan\11_22_16_SiC\SiC_1.hdf5",'r')
+	save_folder = r"J:\Ryan\11_22_16_SiC\specgrams\SiC_1"
 	#get the data for the given angle
 	set_list = f.keys()
 	#shape of data for one trial

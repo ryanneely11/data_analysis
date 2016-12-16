@@ -544,8 +544,10 @@ def lfpSpecGram(data, window=[0.75,0.05], Fs = 1000.0, fpass = [0,100], err = No
 	data = data.squeeze() ##get rid of singleton dimensions for the next step
 	if len(data.shape) > 1: ##if there is more than one trace, set N and numTraces appropriately
 		N = data.shape[0]
+		num_traces = data.shape[1]
 	else: ##if there is only 1, set N and numTraces
 		N = len(data)
+		num_traces = 1
 		data = data[:,None]
 	#Fs = 1000.0
 	Nwin = int(round(window[0]*Fs)) ##window size
