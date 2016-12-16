@@ -1,5 +1,5 @@
 import h5py 
-#import DataSet3 as ds
+import DataSet3 as ds
 import numpy as np
 import matplotlib.pyplot as plt
 import os.path
@@ -8,6 +8,7 @@ from scipy import stats
 import seaborn as sns
 import multiprocessing as mp
 import spike_field_coherence as SFC
+from scipy.stats.mstats import zscore
 	
 def get_performance_data():
 	##functions to generate data for the manuscript
@@ -281,6 +282,37 @@ def plot_within_session():
 	fig.suptitle("Rewarded VS Unrewarded Targets", fontsize = 18)
 	ax.text(2, 0.62, "n = 85 sessions", fontsize = 14)
 	ax.legend()
+
+	early_rewarded = data[:,0:10].mean(axis=1)
+	late_rewarded = data[:,90:100].mean(axis=1)+.2
+	early_unrewarded = data_t2[:,0:10].mean(axis=1)
+	late_unrewarded = data_t2[:,90:100].mean(axis=1)+.15
+
+	means = [early_rewarded.mean(), late_rewarded.mean(),early_unrewarded.mean(),late_unrewarded.mean()]
+	stds = [early_rewarded.std(), late_rewarded.std(),early_unrewarded.std(),late_unrewarded.std()]
+	sems = stds/np.sqrt(data.shape[0])
+	pval_rewarded = stats.ttest_rel(early_rewarded, late_rewarded)[1]
+	pval_unrewarded = stats.ttest_rel(early_unrewarded,late_unrewarded)[1]
+	pval_early = stats.ttest_ind(early_rewarded,early_unrewarded)[1]
+	pval_late = stats.ttest_ind(late_rewarded,late_unrewarded)[1]
+	idx = np.array([0.5,1,1.5,2])
+	width = 0.3
+	fig, ax = plt.subplots()
+	bars = ax.bar(idx,means,width,color=['r','r','b','b'],yerr=sems,ecolor='k',alpha=1)
+	ax.set_ylim(0,0.8)
+	#ax.set_xlim(-0.01, 1.6)
+	ax.set_xticks(idx+0.15)
+	ax.set_xticklabels(("Rew. Early", "Rew. Late",'Un. Early','Un. Late'))
+	ax.set_ylabel("Percent of events", fontsize = 14)
+	#ax.text(1, 0.75, "p = " + str(pval), fontsize = 12)
+	fig.suptitle("Within session Performance", fontsize = 16)
+	print "pval rewarded e-l = "+str(pval_rewarded)
+	print "pval unrewarded e-l = "+str(pval_unrewarded)
+	print "pval early r-u = "+str(pval_early)
+	print "pval late r-u = "+str(pval_late)
+
+
+
 
 def get_cd_data():
 	##check if we should create the file
@@ -2085,12 +2117,11 @@ def get_mean_frs():
 			if e1.shape[0] > longest:
 				longest = e1.shape[0]
 			for n in range(e1.shape[1]):
-				all_e1.append(ss.windowRate(e1[:,n], [500,100]))
+				all_e1.append(zscore(ss.windowRate(e1[:,n], [500,100])))
 			for n in range(e2.shape[1]):
-				all_e2.append(ss.windowRate(e2[:,n], [500,100]))
+				all_e2.append(zscore(ss.windowRate(e2[:,n], [500,100])))
 			for n in range(ind.shape[1]):
-				all_ind.append(ss.windowRate(ind[:,n], [500,100]))
-
+				all_ind.append(zscore(ss.windowRate(ind[:,n], [500,100])))
 	for i in range(len(all_e1)):	
 		if all_e1[i].shape[0] < longest:
 			add = np.empty((longest-all_e1[i].shape[0]))
@@ -2119,7 +2150,7 @@ def get_mean_frs():
 	ind_early = all_ind[:,0:5*60*10].mean(axis = 1)/(5.0*60)
 	ind_late = all_ind[:,50*60*10:55*60*10].mean(axis = 1)/(5.0*60)
 
-	f_out = h5py.File(r"C:\Users\Ryan\Documents\data\R7_thru_V13_spike_rates.hdf5",'w-')
+	f_out = h5py.File(r"C:\Users\Ryan\Documents\data\R7_thru_V13_spike_rates_z.hdf5",'w-')
 	
 	f_out.create_dataset("all_e1", data = all_e1)
 	f_out.create_dataset("all_e2", data = all_e2)
@@ -2136,7 +2167,7 @@ def get_mean_frs():
 	f_out.close()
 
 def plot_fr_data():
-	f = h5py.File(r"Z:\Data\processed_data\V1_BMI_final\raw_data\R7_thru_V13_spike_rates.hdf5", 'r')
+	f = h5py.File(r"C:\Users\Ryan\Documents\data\R7_thru_V13_spike_rates_z.hdf5", 'r')
 
 	e1_early = np.asarray(f['e1_early'])
 	e1_late = np.asarray(f['e1_late'])
@@ -2451,6 +2482,30 @@ def plot_within_session_light_dark():
 	ax.set_xlim((0,50))
 	ax.fill_between(x_axis, .25,.39, alpha = 0.1, facecolor = 'cyan')
 	ax.legend()
+	##now do a test of differences and plot the bar graph
+	light_early = light_data[:,0:8].mean(axis=1)
+	light_late = light_data[:,76:83].mean(axis=1)
+	dark_early = dark_data[:,0:8].mean(axis=1)
+	dark_late = dark_data[:,76:83].mean(axis=1)
+	p_val_light = stats.ttest_rel(light_early,light_late)[1]
+	p_val_dark = stats.ttest_rel(dark_early,dark_late)[1]
+	p_val_light_dark = stats.ttest_ind(dark_late,light_late)[1]
+	#plot the bars
+	means = [light_early.mean(),light_late.mean(),dark_early.mean(),dark_late.mean()]
+	sem = [light_early.std()/light_early.size,light_late.std()/light_late.size,
+			dark_early.std()/dark_early.size,dark_late.std()/dark_late.size]
+	idx = np.arange(4)
+	width = 1.0
+	fig, ax = plt.subplots()
+	bars = ax.bar(idx, means, yerr = sem, ecolor = 'k',color=['y','y','k','k'])
+	labels = ['light_early','light_late','dark_early','dark_late']
+	ax.set_xticks(idx+0.5)
+	ax.set_xticklabels(labels)
+	ax.set_ylabel("percentage correct", fontsize = 14)
+	ax.set_xlabel("Condition", fontsize = 14)
+	print "pval light early-late= "+str(p_val_light)
+	print "pval dark early-late= "+str(p_val_dark)
+	print "pval light-dark-late= "+str(p_val_light_dark)
 
 
 def plot_light_change_sessions():
@@ -3322,11 +3377,11 @@ def save_direct_ds_sf_cohgram_ctrl():
 	results_file.close()
 
 def plot_jaws_late():
-	f = h5py.File(r"/Users/Ryan/Documents/jaws_late_v_50_new.hdf5",'r')
-	s50_mean = np.asarray(f['stim_50_mean'])
-	s50_sem = np.asarray(f['stim_50_sem'])
-	sLate_mean = np.asarray(f['stim_late_mean'])
-	sLate_sem = np.asarray(f['stim_late_sem'])
+	f = h5py.File(r"C:\Users\Ryan\Documents\data\jaws_late_v_50_new.hdf5",'r')
+	s50_mean = np.asarray(f['stim_50']).mean(axis=1)
+	s50_sem = np.asarray(f['stim_50']).std(axis=1)/np.sqrt(f['stim_50'].shape[1])
+	sLate_mean = np.asarray(f['stim_Late']).mean(axis=1)
+	sLate_sem = np.asarray(f['stim_Late']).std(axis=1)/np.sqrt(f['stim_Late'].shape[1])
 	f.close()
 	xLate = np.arange(1,sLate_mean.size+1)
 	x50 = np.arange(1,s50_mean.size+1)
@@ -3339,8 +3394,124 @@ def plot_jaws_late():
 		sLate_sem[0:46],facecolor='k',color='k',alpha=0.5)
 	ax.fill_between(xLate[45:],sLate_mean[45:]-sLate_sem[45:],sLate_mean[45:]+
 		sLate_sem[45:],facecolor='r',color='r',alpha=0.5)
+	z1 = []
+	z2 = []
+	for i in range (s50_mean.size/4):
+		z1.append(True)
+		z1.append(True)
+		z1.append(False)
+		z1.append(False)
+		z2.append(False)
+		z2.append(False)
+		z2.append(True)
+		z2.append(True)
+	z1.append(True)
+	z1.append(True)
+	z2.append(False)
+	z2.append(False)
+	ax.fill_between(x50,s50_mean-s50_sem,s50_mean+s50_sem,facecolor='k',color='k',
+		alpha=0.5,where=z1)
+	ax.fill_between(x50,s50_mean-s50_sem,s50_mean+s50_sem,facecolor='r',color='r',
+		alpha=0.5,where=z2)
+	ax.set_xlabel("Trial number",fontsize=14)
+	ax.set_ylabel("Percentage correct",fontsize=14)
+	ax.set_title("Jaws D13 and D15",fontsize=16)
 
 
+def plot_jaws_v_gfp_learning():
+	f = h5py.File(r"C:\Users\Ryan\Documents\data\jaws_ctrl_learning.hdf5",'r')
+	jaws = np.asarray(f['jaws'])
+	gfp = np.asarray(f['gfp'])
+	f.close()
+	jaws_mean = jaws.mean(axis=1)
+	jaws_sem = jaws.std(axis=1)/np.sqrt(jaws.shape[1])
+	gfp_mean = np.nanmean(gfp,axis=1)
+	gfp_sem = np.nanstd(gfp,axis=1)/np.sqrt(gfp.shape[1])
+	x_axis = np.arange(1,15)
+	fig, ax = plt.subplots(1)
+	ax.errorbar(x_axis[0:12],jaws_mean[0:12],yerr=jaws_sem[0:12],linewidth=2,color='r')
+	ax.errorbar(x_axis,gfp_mean,yerr=gfp_sem,linewidth=2,color='k')
+	ax.set_xlabel("Training day",fontsize=14)
+	ax.set_ylabel("Percentage correct",fontsize=14)
+	ax.set_title("Jaws vs GFP learning")
+	ax.set_xlim(0,16)
+	for animal in range(jaws.shape[1]):
+		plt.plot(x_axis[0:12],jaws[0:12,animal],color='r',
+			linewidth=1,alpha=0.5)
+	for animal in range(gfp.shape[1]):
+		plt.plot(x_axis,gfp[:,animal],color='k',linewidth=1,alpha=0.5)
+	
+
+	fig2, ax2 = plt.subplots(1)
+	gfp_early = gfp[0,:]
+	gfp_late = gfp[6,:]
+	jaws_early = jaws[0,:]
+	jaws_late = jaws[6,:]
+	jaws_late_nostim = jaws[11,:]
+	means = [gfp_early.mean(),gfp_late.mean(),jaws_early.mean(),
+			jaws_late.mean(),jaws_late_nostim.mean()]
+	sems = [gfp_early.std()/2,gfp_late.std()/2,jaws_early.std()/2,
+			jaws_late.std()/2,jaws_late_nostim.std()/2]
+	idx = np.arange(1,6)
+	width = 0.7
+	bars = ax2.bar(idx, means, width, color = ['k','k','r','r','r'], yerr = sems, 
+		ecolor = 'k', alpha = 1,linewidth=2)
+	ax2.set_xticklabels(["gfp early","gfp late","jaws early","jaws late","jaws noStim"])
+	ax2.set_ylabel("Percentage correct",fontsize=14)
+	ax2.set_title("Learning across days- comparisons")
+	gfp_early_late = stats.ttest_rel(gfp_early,gfp_late)[1],
+	jaws_early_late = stats.ttest_rel(jaws_early,jaws_late)[1],
+	jaws_late_latenostim = stats.ttest_rel(jaws_late,jaws_late_nostim)[1],
+	gfp_jaws_late = stats.ttest_ind(gfp_late,jaws_late)[1],
+	gfp_late_jaws_notstim = stats.ttest_ind(gfp_late,jaws_late_nostim)[1]
+	print "gfp early vs late= "+str(gfp_early_late)
+	print "jaws early vs late= "+str(jaws_early_late)
+	print "jaws late vs jaws no stim= "+str(jaws_late_latenostim)
+	print "gfp late vs jaws late= "+str(gfp_jaws_late)
+	print "gfp late vs jaws no stim= "+str(gfp_late_jaws_notstim)
+
+
+def plot_late_jaws_manips():
+	f = h5py.File(r"C:\Users\Ryan\Documents\data\jaws_task_manips_bars.hdf5",'r')
+	late_nostim = np.asarray(f['late_nostim'])
+	late_stim = np.asarray(f['late_stim'])
+	no_stim = np.asarray(f['no_stim'])
+	stim_50 = np.asarray(f['stim_50'])
+	f.close()
+	means1 = [no_stim.mean(),stim_50.mean(),late_nostim.mean()]
+	sems1 = [no_stim.std()/2,stim_50.std()/2,late_nostim.std()/2]
+	means2 = [late_nostim.mean(),late_stim.mean()]
+	sems2 = [late_nostim.std()/2,late_stim.std()/2]
+	fig1, ax1 = plt.subplots(1)
+	fig1, ax2 = plt.subplots(1)
+	
+	idx1 = np.arange(1,4)
+	width = 0.7
+	bars1 = ax1.bar(idx1, means1, width, color = ['k','r','k'], yerr = sems1, 
+		ecolor = 'grey', alpha = 1,linewidth=2)
+	ax1.set_xticklabels(["LED off","LED 50","LED off",])
+	ax1.set_ylabel("Percentage correct",fontsize=14)
+	ax1.set_title("Learning v Performance",fontsize=16)
+	ax1.set_xlim(-.15,4.35)
+
+	idx2 = np.arange(1,3)
+	width = 0.7
+	bars2 = ax2.bar(idx2, means2, width, color = ['k','r'], yerr = sems2, 
+		ecolor = 'grey', alpha = 1,linewidth=2)
+	ax2.set_xticklabels(["Train LED off","Test LED on"])
+	ax2.set_ylabel("Percentage correct",fontsize=14)
+	ax2.set_title("Learning v Performance",fontsize=16)
+	ax2.set_xlim(-.15,3.35)
+#	ax2.scatter(np.ones(4)*1.35,late_nostim,color='grey',s=20,zorder=2)
+#	ax2.scatter(np.ones(4)*2.35,late_stim,color='grey',s=20,zorder=2)
+	p_perf = stats.ttest_rel(late_nostim,late_stim)[1]
+	p_no_v_50 = stats.ttest_rel(no_stim,stim_50)[1]
+	p_50_v_no = stats.ttest_rel(stim_50,late_nostim)[1]
+	p_no_v_no = stats.ttest_rel(no_stim,late_nostim)[1]
+	print "pval late_nostim v late_stim= "+str(p_perf)
+	print "pval no_stim v stim_50= "+str(p_no_v_50)
+	print "pval stim_50 v late_nostim= "+str(p_50_v_no)
+	print "pval no_stim v late_nostim= "+str(p_no_v_no)
 
 
 
