@@ -74,7 +74,19 @@ def resampling(w, r_type, n):
 		index = np.hstack((index, resindex))
 	return index
 
-##Sequential monte carlo function
+"""
+##Sequential monte carlo function.
+Inputs:
+	-actions: array of action choices; 1 or 0
+	-outcomes: array of outcomes; 1 or 0
+	-N: number of hidden variables (defaults to 4)
+	-M: number of particles 
+	-sd_justter: standard deviation for the jitter param
+	-particles: initial particles
+Returns:
+	-result_e: expectation value of hidden params
+	-results_s: variances of hidden parameters
+"""
 def SMC(actions, outcomes, N, M, sd_jitter, particles = None):
 	##if particles have not been initialized, do that now
 	if particles is None:
@@ -104,7 +116,7 @@ def SMC(actions, outcomes, N, M, sd_jitter, particles = None):
 		##add jitter
 		yp = yp + np.random.randn(N,M)*(sd_jitter*np.ones(M))
 
-	return result
+	return result_e, result_s
 
 def init_particles(num_vars=4, num_particles=1000):
 	##function to set the initial distribution of particles

@@ -5,10 +5,13 @@ import matplotlib.pyplot as plt
 import os.path
 import SpikeStats2 as ss
 from scipy import stats
-import seaborn as sns
 import multiprocessing as mp
 import spike_field_coherence as SFC
 from scipy.stats.mstats import zscore
+import seaborn as sns
+import pandas as pd
+import collections
+sns.set_style("whitegrid", {'axes.grid' : False})
 	
 def get_performance_data():
 	##functions to generate data for the manuscript
@@ -129,15 +132,23 @@ def plot_performance_data():
 	ax.text(2, 0.65, "n = 9", fontsize = 14)
 	ax.legend()
 
-	early = all_across[:,0:3].ravel()
-	late = all_across[:, 6:9].ravel()
-	mask = np.isnan(late)
-	early = np.delete(early, np.where(mask))
-	late = np.delete(late, np.where(mask))
+	early = all_across[:,0:3].mean(axis=1)
+	##take the last 3 sessions for each animal (different lengths of training so need to do this one-by-one)
+	late = np.array([
+		all_across[0,4:7].mean(),
+		all_across[1,:9:12].mean(),
+		all_across[2,7:10].mean(),
+		all_across[3,7:10].mean(),
+		all_across[4,6:9].mean(),
+		all_across[5,6:9].mean(),
+		all_across[6,7:10].mean(),
+		all_across[7,4:7].mean(),
+		all_across[8,3:6].mean()])
 	means = [early.mean(), late.mean()]
 	stds = [early.std(), late.std()]
 	sems = stds/np.sqrt(late.size)
 	pval = stats.ttest_rel(early, late)[1]
+	tval =stats.ttest_rel(early, late)[0]
 	idx = np.array([0.5, 0.9])
 	width = 0.3
 	fig, ax = plt.subplots()
@@ -149,6 +160,29 @@ def plot_performance_data():
 	ax.set_ylabel("Percent correct", fontsize = 14)
 	ax.text(1, 0.75, "p = " + str(pval), fontsize = 12)
 	fig.suptitle("Performance", fontsize = 16)
+	print "tval = "+str(tval)
+
+	fig, ax2 = plt.subplots(1)
+	rew = np.vstack((early,late))
+	xr = np.array([0,1])
+	err_x = np.array([0,1])
+	yerr = sems
+	xerr = np.ones(2)*0.25
+	for i in range(rew.shape[1]):
+		ax2.plot(xr,rew[:,i],color='k',linewidth=2,marker='o')
+	ax2.errorbar(err_x,means,yerr=yerr,xerr=xerr,fmt='none',ecolor='k',capthick=2,elinewidth=2)
+	plt.xticks(np.arange(0,2),['Early','Late'])
+	for ticklabel in ax2.get_xticklabels():
+		ticklabel.set_fontsize(14)
+	for ticklabel in ax2.get_yticklabels():
+		ticklabel.set_fontsize(14)
+	ax2.set_xlim(-0.3,1.3)
+
+	print "pval = "+str(pval)
+	print "tval = "+str(tval)
+	print "mean early = "+str(means[0])
+	print "mean light = "+str(means[1])
+
 
 
 def get_within_session_data():
@@ -904,9 +938,9 @@ def plot_cd_data():
 	f.close()
 	means = np.array([data[:,0].mean(), data[:,1].mean(), data[:,2].mean()])
 	sem = np.array([data[:,0].std(), data[:,1].std(), data[:,2].std()])/np.sqrt(data.shape[0])
-	p_val_p_cd = stats.ttest_rel(data[:,0], data[:,1])[1]
-	p_val_cd_r = stats.ttest_rel(data[:,1], data[:,2])[1]
-	p_val_p_r = stats.ttest_rel(data[:,0], data[:,2])[1]
+	t_p_cd,p_val_p_cd = stats.ttest_rel(data[:,0], data[:,1])
+	t_cd_r,p_val_cd_r = stats.ttest_rel(data[:,1], data[:,2])
+	t_p_r,p_val_p_r = stats.ttest_rel(data[:,0], data[:,2])
 	idx = np.arange(3)
 	width = 1.0
 	fig, ax = plt.subplots()
@@ -923,6 +957,15 @@ def plot_cd_data():
 	ax.text(2.3, 0.81, "p = " + str(p_val_cd_r), fontsize = 12)
 	ax.text(1.3, 0.85, "p = " + str(p_val_p_r), fontsize = 12)
 	fig.suptitle("Performance during Contingency Degradation", fontsize = 16)
+	print "pval P-CD = "+str(p_val_p_cd)
+	print "tval P-CD = "+str(t_p_cd)
+	print "pval CD-R = "+str(p_val_cd_r)
+	print "tval CD-R = "+str(t_cd_r)
+	print "pval P-R = "+str(p_val_p_r)
+	print "tval P-R = "+str(t_p_r)
+	print "mean P = "+str(means[0])
+	print "mean CD = "+str(means[1])
+	print "mean R = "+str(means[2])
 
 def get_no_feedback_data():
 	f_in = h5py.File(r"J:\Ryan\processed_data\V1_BMI_final\raw_data\R7_thru_V13_all_data.hdf5", 'r')
@@ -1034,7 +1077,7 @@ def plot_no_feedback_data():
 	means = [t1.mean(), t2.mean()]
 	stds = [t1.std(), t2.std()]
 	sems = stds/np.sqrt(t1.size)
-	pval = stats.ttest_ind(t1, t2)[1]
+	tval,pval = stats.ttest_ind(t1, t2)
 	idx = np.array([0.5, 0.9])
 	width = 0.3
 	fig, ax = plt.subplots()
@@ -1046,6 +1089,27 @@ def plot_no_feedback_data():
 	ax.set_ylabel("Percent correct", fontsize = 14)
 	ax.text(1, 0.75, "p = " + str(pval), fontsize = 12)
 	fig.suptitle("Performance without feedback", fontsize = 16)
+
+	fig, ax2 = plt.subplots(1)
+	rew = np.vstack((t1,t2))
+	xr = np.array([0,1])
+	err_x = np.array([0,1])
+	yerr = sems
+	xerr = np.ones(2)*0.25
+	for i in range(rew.shape[1]):
+		ax2.plot(xr,rew[:,i],color='k',linewidth=2,marker='o',linestyle='none')
+	ax2.errorbar(err_x,means,yerr=yerr,xerr=xerr,fmt='none',ecolor='k',capthick=2,elinewidth=2)
+	plt.xticks(np.arange(0,2),['Rewarded','Unrewarded'])
+	for ticklabel in ax2.get_xticklabels():
+		ticklabel.set_fontsize(14)
+	for ticklabel in ax2.get_yticklabels():
+		ticklabel.set_fontsize(14)
+	ax2.set_xlim(-0.3,1.3)
+
+	print "pval = "+str(pval)
+	print "tval = "+str(tval)
+	print "mean rew = "+str(means[0])
+	print "mean unrew = "+str(means[1])
 
 def get_cr_data():
 	source_file = r"J:\Ryan\processed_data\V1_BMI_final\raw_data\R7_thru_V13_all_data.hdf5"
@@ -1850,11 +1914,11 @@ def plot_cr_data():
 
 	means = np.array([data[:,0].mean(), data[:,1].mean(), data[:,2].mean()])
 	sems = np.array([data[:,0].std(), data[:,1].mean(), data[:,2].std()])/np.sqrt(data.shape[0])
-	p_val = stats.ttest_rel(data[:,0], data[:,2])[1]
-	p_val_cr = stats.ttest_rel(data[:,0], data[:,1])[1]
-	p_val_r = stats.ttest_rel(data[:,1], data[:,2])[1]
-	idx = np.array([0.3, 0.6, 0.9])
-	width = 0.3
+	t_val,p_val = stats.ttest_rel(data[:,0], data[:,2])
+	t_val_cr,p_val_cr = stats.ttest_rel(data[:,0], data[:,1])
+	t_val_r,p_val_r = stats.ttest_rel(data[:,1], data[:,2])
+	idx = np.array([0, 1, 2])-0.4
+	width = 0.8
 	fig, ax = plt.subplots()
 	bars = ax.bar(idx, means, width, color = ['lightblue','orange', 'royalblue'], yerr = sems, ecolor = 'k', alpha = 0.8)
 	ax.set_ylim(0,1)
@@ -1892,6 +1956,34 @@ def plot_cr_data():
 	fig.suptitle("Performance during CR", fontsize = 18)
 	ax.legend()
 
+	fig, ax2 = plt.subplots(1)
+	rew = data.T
+	xr = np.array([0,1,2])
+	err_x = np.array([0,1,2])
+	yerr = sems
+	xerr = np.ones(3)*0.25
+	bars = ax2.bar(idx, means, width, color = ['b','r', 'b'])
+	for i in range(rew.shape[1]):
+		ax2.plot(xr,rew[:,i],color='k',linewidth=2,marker='o')
+	ax2.errorbar(err_x,means,yerr=yerr,xerr=xerr,fmt='none',ecolor='k',capthick=2,elinewidth=2)
+	plt.xticks(np.arange(0,3),['P','Rev','R'])
+	for ticklabel in ax2.get_xticklabels():
+		ticklabel.set_fontsize(14)
+	for ticklabel in ax2.get_yticklabels():
+		ticklabel.set_fontsize(14)
+	ax2.set_xlim(-0.6,2.6)
+	ax2.set_ylim(0,1.3)
+
+	print "pval P-Rev = "+str(p_val_cr)
+	print "tval P-Rev = "+str(t_val_cr)
+	print "pval Rev-R = "+str(p_val_r)
+	print "tval Rev-R = "+str(t_val_r)
+	print "pval P-R = "+str(p_val)
+	print "tval P-R = "+str(t_val)
+	print "mean P = "+str(means[0])
+	print "mean Rev = "+str(means[1])
+	print "mean R = "+str(means[2])
+
 
 def plot_light_data():
 	f = h5py.File(r"Z:\Data\processed_data\V1_BMI_final\raw_data\R7_thru_V13_light_data.hdf5", 'r')
@@ -1899,7 +1991,7 @@ def plot_light_data():
 
 	means = np.array([data[:,0].mean(), data[:,1].mean()])
 	sems = np.array([data[:,0].std(), data[:,1].std()])/np.sqrt(data.shape[0])
-	p_val = stats.ttest_rel(data[:,0], data[:,1])[1]
+	t_val,p_val = stats.ttest_rel(data[:,0], data[:,1])
 	idx = np.array([0.5, 0.9])
 	width = 0.3
 	fig, ax = plt.subplots()
@@ -1934,6 +2026,27 @@ def plot_light_data():
 	ax.set_ylabel("Percent of events", fontsize = 16)
 	fig.suptitle("Performance during Light Change", fontsize = 18)
 	ax.legend()
+
+	fig, ax2 = plt.subplots(1)
+	rew = data[:,0:2].T
+	xr = np.array([0,1])
+	err_x = np.array([0,1])
+	yerr = sems
+	xerr = np.ones(2)*0.25
+	for i in range(rew.shape[1]):
+		ax2.plot(xr,rew[:,i],color='k',linewidth=2,marker='o')
+	ax2.errorbar(err_x,means,yerr=yerr,xerr=xerr,fmt='none',ecolor='k',capthick=2,elinewidth=2)
+	plt.xticks(np.arange(0,2),['Dark','Light'])
+	for ticklabel in ax2.get_xticklabels():
+		ticklabel.set_fontsize(14)
+	for ticklabel in ax2.get_yticklabels():
+		ticklabel.set_fontsize(14)
+	ax2.set_xlim(-0.3,1.3)
+
+	print "pval = "+str(p_val)
+	print "tval = "+str(t_val)
+	print "mean early = "+str(means[0])
+	print "mean light = "+str(means[1])
 
 ##specifically retreives data for LATE in sessions
 def get_triggered_spike_rates():
@@ -2165,6 +2278,86 @@ def get_mean_frs():
 	f_out.create_dataset("ind_late", data = ind_late)
 
 	f_out.close()
+
+def get_mean_frs_nozscore():
+	path = r"C:\Users\Ryan\Documents\data\R7_thru_V13_all_data.hdf5"
+	animal_list = ["R13", "R11", "V02", "V03", "V04", "V05", "V11", "V13", "R7", "R8"]
+	session_dict_late = {
+	"R13":["BMI_D05.plx", "BMI_D06.plx", "BMI_D07.plx", "BMI_D08.plx", "BMI_D09.plx", "BMI_D10.plx"],
+	"R11":["BMI_D05.plx", "BMI_D06.plx", "BMI_D07.plx", "BMI_D08.plx", "BMI_D09.plx", "BMI_D10.plx"],
+	"V02":["BMI_D05.plx", "BMI_D06.plx", "BMI_D07.plx", "BMI_D08.plx", "BMI_D09.plx", "BMI_D10.plx"],
+	"V03":["BMI_D05.plx", "BMI_D06.plx", "BMI_D07.plx", "BMI_D08.plx", "BMI_D09.plx"],
+	"V04":["BMI_D05.plx", "BMI_D06.plx", "BMI_D07.plx", "BMI_D08.plx", "BMI_D09.plx"],
+	"V05":["BMI_D05.plx", "BMI_D06.plx", "BMI_D07.plx", "BMI_D08.plx", "BMI_D09.plx", "BMI_D10.plx"],
+	"V11":["BMI_D05.plx", "BMI_D06.plx", "BMI_D07.plx", "BMI_D11.plx", "BMI_D09.plx", "BMI_D10.plx"],
+	"V13":["BMI_D05.plx", "BMI_D06.plx", "BMI_D04.plx"],
+	"R7":["BMI_D05.plx", "BMI_D06.plx"],
+	"R8":["BMI_D05.plx", "BMI_D06.plx"]
+	}
+
+	all_e1 = []
+	all_e2 = []
+	all_ind = []
+	##save an array of which session/animal corresponds to which array idx
+	session_ids = []
+	longest = 0
+	for animal in animal_list:
+		for session in session_dict_late[animal]:
+			session_ids.append(animal+"_"+session)
+			e1, e2, ind = ds.get_ensemble_arrays(path, animal = animal, session = session)
+			if e1.shape[0] > longest:
+				longest = e1.shape[0]
+			for n in range(e1.shape[1]):
+				all_e1.append((ss.windowRate(e1[:,n], [500,100])))
+			for n in range(e2.shape[1]):
+				all_e2.append((ss.windowRate(e2[:,n], [500,100])))
+			for n in range(ind.shape[1]):
+				all_ind.append((ss.windowRate(ind[:,n], [500,100])))
+	for i in range(len(all_e1)):	
+		if all_e1[i].shape[0] < longest:
+			add = np.empty((longest-all_e1[i].shape[0]))
+			add[:] = np.nan
+			all_e1[i] = np.hstack((all_e1[i], add))
+	for i in range(len(all_e2)):	
+		if all_e2[i].shape[0] < longest:
+			add = np.empty((longest-all_e2[i].shape[0]))
+			add[:] = np.nan
+			all_e2[i] = np.hstack((all_e2[i], add))
+	for i in range(len(all_ind)):	
+		if all_ind[i].shape[0] < longest:
+			add = np.empty((longest-all_ind[i].shape[0]))
+			add[:] = np.nan
+			all_ind[i] = np.hstack((all_ind[i], add))
+	all_e1 = np.asarray(all_e1)
+	all_e2 = np.asarray(all_e2)
+	all_ind = np.asarray(all_ind)
+
+	e1_early = all_e1[:,0:5*60*10].mean(axis = 1)/(5.0*60)
+	e1_late = all_e1[:,45*60*10:50*60*10].mean(axis = 1)/(5.0*60)
+
+	e2_early = all_e2[:,0:5*60*10].mean(axis = 1)/(5.0*60)
+	e2_late = all_e2[:,50*60*10:55*60*10].mean(axis = 1)/(5.0*60)
+
+	ind_early = all_ind[:,0:5*60*10].mean(axis = 1)/(5.0*60)
+	ind_late = all_ind[:,50*60*10:55*60*10].mean(axis = 1)/(5.0*60)
+
+	f_out = h5py.File(r"C:\Users\Ryan\Documents\data\R7_thru_V13_spike_rates_binned.hdf5",'w-')
+	
+	f_out.create_dataset("all_e1", data = all_e1)
+	f_out.create_dataset("all_e2", data = all_e2)
+	f_out.create_dataset("all_ind", data = all_ind)
+
+	f_out.create_dataset("e1_early", data = e1_early)
+	f_out.create_dataset("e2_early", data = e2_early)
+	f_out.create_dataset("ind_early", data = ind_early)
+
+	f_out.create_dataset("e1_late", data = e1_late)
+	f_out.create_dataset("e2_late", data = e2_late)
+	f_out.create_dataset("ind_late", data = ind_late)
+	f_out.create_dataset("session_ids",data=np.asarray(session_ids))
+
+	f_out.close()
+
 
 def plot_fr_data():
 	f = h5py.File(r"C:\Users\Ryan\Documents\data\R7_thru_V13_spike_rates_z.hdf5", 'r')
@@ -2510,7 +2703,7 @@ def plot_within_session_light_dark():
 
 def plot_light_change_sessions():
 	f = h5py.File(r"Z:\Data\processed_data\V1_BMI_final\raw_data\R7_thru_V13_light_data.hdf5",'r')
-	data = np.asarray(f['scaled_p_correct_all'][0:2])
+	data = np.asarray(f['scaled_p_correct_all'][0:4])
 	f.close()
 	mean = np.nanmean(data,axis=0)
 	std = np.nanstd(data,axis=0)
@@ -2528,6 +2721,41 @@ def plot_light_change_sessions():
 	ax.set_ylabel("Percent rewarded", fontsize = 16)
 	ax.set_ylim((0,1))
 	fig.suptitle("Light change training", fontsize = 18)
+
+	##for the line graphs
+	light = np.array([data[0,45:60].mean(),data[1,35:50].mean(),
+		data[2,35:50].mean(),data[3,45:60].mean()])
+	dark = np.array([data[0,65:80].mean(),data[1,65:80].mean(),
+		data[2,60:75].mean(),data[3,68:83].mean()])
+	light_mean = light.mean()
+	dark_mean = dark.mean()
+	light_sem = light.std()/np.sqrt(4)
+	dark_sem = dark.std()/np.sqrt(4)
+	means = np.array([light_mean,dark_mean])
+	sems = np.array([light_sem,dark_sem])
+	t_val,p_val = stats.ttest_rel(light,dark)
+
+	fig, ax2 = plt.subplots(1)
+	rew = np.vstack((light,dark))
+	xr = np.array([0,1])
+	err_x = np.array([0,1])
+	yerr = sems
+	xerr = np.ones(2)*0.25
+	for i in range(rew.shape[1]):
+		ax2.plot(xr,rew[:,i],color='k',linewidth=2,marker='o')
+	ax2.errorbar(err_x,means,yerr=yerr,xerr=xerr,fmt='none',ecolor='k',capthick=2,elinewidth=2)
+	plt.xticks(np.arange(0,2),['Dark','Light'])
+	for ticklabel in ax2.get_xticklabels():
+		ticklabel.set_fontsize(14)
+	for ticklabel in ax2.get_yticklabels():
+		ticklabel.set_fontsize(14)
+	ax2.set_xlim(-0.3,1.3)
+
+	print "pval = "+str(p_val)
+	print "tval = "+str(t_val)
+	print "mean light = "+str(means[0])
+	print "mean dark = "+str(means[1])
+
 
 def save_V1_ds_ff_cohgram_data():	
 	f = h5py.File("/home/lab/Documents/data/t1_triggered.hdf5",'r')
@@ -3443,32 +3671,67 @@ def plot_jaws_v_gfp_learning():
 	
 
 	fig2, ax2 = plt.subplots(1)
-	gfp_early = gfp[0,:]
-	gfp_late = gfp[6,:]
-	jaws_early = jaws[0,:]
-	jaws_late = jaws[6,:]
-	jaws_late_nostim = jaws[11,:]
+	gfp_early = gfp[0:3,:].mean(axis=0)
+	gfp_late = gfp[4:7,:].mean(axis=0)
+	jaws_early = jaws[0:3,:].mean(axis=0)
+	jaws_late = jaws[4:7,:].mean(axis=0)
+	jaws_late_nostim = jaws[9:,:].mean(axis=0)
 	means = [gfp_early.mean(),gfp_late.mean(),jaws_early.mean(),
 			jaws_late.mean(),jaws_late_nostim.mean()]
 	sems = [gfp_early.std()/2,gfp_late.std()/2,jaws_early.std()/2,
 			jaws_late.std()/2,jaws_late_nostim.std()/2]
-	idx = np.arange(1,6)
+	idx = np.arange(0,5)-0.35
 	width = 0.7
-	bars = ax2.bar(idx, means, width, color = ['k','k','r','r','r'], yerr = sems, 
+	bars = ax2.bar(idx, means, width, color = ['g','g','r','r','r'], yerr = sems, 
 		ecolor = 'k', alpha = 1,linewidth=2)
 	ax2.set_xticklabels(["gfp early","gfp late","jaws early","jaws late","jaws noStim"])
 	ax2.set_ylabel("Percentage correct",fontsize=14)
 	ax2.set_title("Learning across days- comparisons")
-	gfp_early_late = stats.ttest_rel(gfp_early,gfp_late)[1],
-	jaws_early_late = stats.ttest_rel(jaws_early,jaws_late)[1],
-	jaws_late_latenostim = stats.ttest_rel(jaws_late,jaws_late_nostim)[1],
+	t_gfp_el,gfp_early_late = stats.ttest_rel(gfp_early,gfp_late)
+	t_jaws_el,jaws_early_late = stats.ttest_rel(jaws_early,jaws_late)
+	t_jaws_lns,jaws_late_latenostim = stats.ttest_rel(jaws_late,jaws_late_nostim)
 	gfp_jaws_late = stats.ttest_ind(gfp_late,jaws_late)[1],
 	gfp_late_jaws_notstim = stats.ttest_ind(gfp_late,jaws_late_nostim)[1]
-	print "gfp early vs late= "+str(gfp_early_late)
-	print "jaws early vs late= "+str(jaws_early_late)
-	print "jaws late vs jaws no stim= "+str(jaws_late_latenostim)
-	print "gfp late vs jaws late= "+str(gfp_jaws_late)
-	print "gfp late vs jaws no stim= "+str(gfp_late_jaws_notstim)
+	
+	##line plot version
+	labels = ["gfp early","gfp late","jaws early","jaws late","jaws noStim"]
+	fig, ax2 = plt.subplots(1)
+	gfp = np.vstack((gfp_early,gfp_late))
+	jaws = np.vstack((jaws_early,jaws_late,jaws_late_nostim))
+	xg = np.array([0,1])
+	xj = np.array([2,3,4])
+	for i in range(gfp_early.shape[0]):
+		ax2.plot(xg,gfp[:,i],color='g',linewidth=2,marker='o')
+	for i in range(jaws_early.shape[0]):
+		ax2.plot(xj,jaws[:,i],color='r',linewidth=2,marker='o')
+	err_x = np.arange(0,5)
+	yerr=sems
+	xerr=np.ones(5)*0.25
+	ax2.errorbar(err_x,means,yerr=yerr,xerr=xerr,fmt='none',ecolor='k',capthick=2,elinewidth=2)
+	plt.xticks(np.arange(0,5),labels)
+	for ticklabel in ax2.get_xticklabels():
+		ticklabel.set_fontsize(14)
+	for ticklabel in ax2.get_yticklabels():
+		ticklabel.set_fontsize(14)
+	ax2.set_xlim(-0.35,4.35)
+	ax2.set_ylabel("percentage correct", fontsize = 14)
+	ax2.set_xlabel("Condition", fontsize = 14)
+	#bars = ax2.bar(idx, means, width, color = ['g','g','r','r','r'], yerr = None, 
+	#	alpha = 1,linewidth=2)
+
+	print "mean gfp early = "+str(means[0])
+	print "mean gfp late = "+str(means[1])
+	print "P-val gfp early vs late= "+str(gfp_early_late)
+	print "T-val gfp early vs late= "+str(t_gfp_el)
+	print "mean jaws early = "+str(means[2])
+	print "mean jaws late = "+str(means[3])
+	print "mean jaws nostim = "+str(means[4])
+	print "P-val jaws early vs late= "+str(jaws_early_late)
+	print "T-val jaws early vs late= "+str(t_jaws_el)
+	print "P-val jaws late vs jaws no stim= "+str(jaws_late_latenostim)
+	print "T-val jaws late vs jaws no stim= "+str(t_jaws_lns)
+	print "P-val gfp late vs jaws late= "+str(gfp_jaws_late)
+	print "P-val gfp late vs jaws no stim= "+str(gfp_late_jaws_notstim)
 
 
 def plot_late_jaws_manips():
@@ -3502,18 +3765,761 @@ def plot_late_jaws_manips():
 	ax2.set_ylabel("Percentage correct",fontsize=14)
 	ax2.set_title("Learning v Performance",fontsize=16)
 	ax2.set_xlim(-.15,3.35)
-#	ax2.scatter(np.ones(4)*1.35,late_nostim,color='grey',s=20,zorder=2)
-#	ax2.scatter(np.ones(4)*2.35,late_stim,color='grey',s=20,zorder=2)
-	p_perf = stats.ttest_rel(late_nostim,late_stim)[1]
-	p_no_v_50 = stats.ttest_rel(no_stim,stim_50)[1]
-	p_50_v_no = stats.ttest_rel(stim_50,late_nostim)[1]
-	p_no_v_no = stats.ttest_rel(no_stim,late_nostim)[1]
-	print "pval late_nostim v late_stim= "+str(p_perf)
-	print "pval no_stim v stim_50= "+str(p_no_v_50)
-	print "pval stim_50 v late_nostim= "+str(p_50_v_no)
-	print "pval no_stim v late_nostim= "+str(p_no_v_no)
+	#ax2.scatter(np.ones(4)*1.35,late_nostim,color='grey',s=20,zorder=2)
+	#ax2.scatter(np.ones(4)*2.35,late_stim,color='grey',s=20,zorder=2)
+	t_perf,p_perf = stats.ttest_rel(late_nostim,late_stim)
+	t_no_v_50,p_no_v_50 = stats.ttest_rel(no_stim,stim_50)
+	t_50_v_no,p_50_v_no = stats.ttest_rel(stim_50,late_nostim)
+	t_no_v_no,p_no_v_no = stats.ttest_rel(no_stim,late_nostim)
+	
+	labels1 = ["LED off","LED 50","LED off"]
+	rew = np.vstack((no_stim,stim_50,late_nostim))
+	fig, ax2 = plt.subplots(1)
+	xr = np.array([0,1,2])
+	err_x = np.array([0,1,2])
+	yerr = sems1
+	xerr = np.ones(3)*0.25
+	for i in range(rew.shape[1]):
+		ax2.plot(xr,rew[:,i],color='k',linewidth=2,marker='o')
+	ax2.errorbar(err_x,means1,yerr=yerr,xerr=xerr,fmt='none',ecolor='k',capthick=2,elinewidth=2)
+	plt.xticks(np.arange(0,2),labels1)
+	for ticklabel in ax2.get_xticklabels():
+		ticklabel.set_fontsize(14)
+	for ticklabel in ax2.get_yticklabels():
+		ticklabel.set_fontsize(14)
+	ax2.set_xlim(-0.3,2.3)
+	ax2.set_ylim(-0.1,0.8)
+
+	labels2 = [" train LED off","test LED on"]
+	rew = np.vstack((late_nostim,late_stim))
+	fig, ax2 = plt.subplots(1)
+	xr = np.array([0,1])
+	err_x = np.array([0,1])
+	yerr = sems2
+	xerr = np.ones(2)*0.25
+	for i in range(rew.shape[1]):
+		ax2.plot(xr,rew[:,i],color='k',linewidth=2,marker='o')
+	ax2.errorbar(err_x,means2,yerr=yerr,xerr=xerr,fmt='none',ecolor='k',capthick=2,elinewidth=2)
+	plt.xticks(np.arange(0,2),labels2)
+	for ticklabel in ax2.get_xticklabels():
+		ticklabel.set_fontsize(14)
+	for ticklabel in ax2.get_yticklabels():
+		ticklabel.set_fontsize(14)
+	ax2.set_xlim(-0.3,1.3)
+	ax2.set_ylim(-0,1)
+
+	print "mean LED off 1 = "+str(means1[0])
+	print "mean LED 50 = "+str(means1[1])
+	print "mean LED off 2 = "+str(means1[2])
+	print "mean train LED off = "+str(means2[0])
+	print "mean test LED on = "+str(means2[1])
+	print "pval train LED off v train LED on= "+str(p_perf)
+	print "tval train LED off v train LED on= "+str(t_perf)
+	print "pval LED off 1 vs Stim50 = "+str(p_no_v_50)
+	print "tval LED off 1 v stim_50= "+str(t_no_v_50)
+	print "pval stim_50 v LED off 2= "+str(p_50_v_no)
+	print "tval stim_50 v LED off 2= "+str(t_50_v_no)
+	print "pval LED off 1 v LED off 2= "+str(p_no_v_no)
+	print "tval LED off v LED off 2= "+str(t_no_v_no)
 
 
+
+########## NEW STUFF FOR NATURE NEURO ##################
+
+##plots within session data by animal
+def plot_within_session_by_animal():
+	source_file = r"J:\Ryan\processed_data\V1_BMI_final\raw_data\R7_thru_V13_learning_event_data2.hdf5"
+	f = h5py.File(source_file, 'r+') 
+	animal_list = ["R13", "R11", "V01", "V02", "V03", "V04", "V05", "V11", "V13", "R8"]
+	##run through each animal and take the mean over all sessions
+	longest = 0 #to record the length of the longest array
+	rewarded_means = []
+	unrewarded_means = []
+	for animal in animal_list:
+		##get the rewarded targets
+		rewarded = np.asarray(f[animal]['correct_within_sessions']).mean(axis=0)
+		rewarded_means.append(rewarded)
+		#3unrewarded
+		unrewarded = np.asarray(f[animal]['t2_within_sessions']).mean(axis=0)
+		unrewarded_means.append(unrewarded)
+		##keep track of longest sessions
+		l = max(longest,rewarded.shape[0],unrewarded.shape[0])
+		if l > longest:
+			longest = l
+	f.close()
+	##standardize the lengths of all arrays
+	##append some zeros on to the other arrays to make them all the same shape
+	for idx in range(len(rewarded_means)):
+		difference = longest - rewarded_means[idx].shape[0]
+		if difference > 0:
+			rewarded_means[idx] = np.hstack((rewarded_means[idx],np.zeros(difference)))
+	for idx in range(len(unrewarded_means)):
+		difference = longest - unrewarded_means[idx].shape[0]
+		if difference > 0:
+			unrewarded_means[idx] = np.hstack((unrewarded_means[idx],np.zeros(difference)))
+	rewarded_means = np.asarray(rewarded_means)
+	unrewarded_means = np.asarray(unrewarded_means)
+	##now let's get the mean performance for the first 5 min and last 5 min
+	early_rewarded = rewarded_means[:,0:5].mean(axis=1)
+	late_rewarded = rewarded_means[:,60:65].mean(axis=1)
+	early_unrewarded = unrewarded_means[:,0:5].mean(axis=1)
+	late_unrewarded = unrewarded_means[:,60:65].mean(axis=1)
+	##do dem stats
+	#data = [early_rewarded,late_rewarded,early_unrewarded,late_unrewarded]
+	##make a pandas dataframe to do the swarmplot
+	data = collections.OrderedDict()
+	data["Early rew."]=early_rewarded
+	data["Late rew."]=late_rewarded
+	data["Early unrew."]=early_unrewarded
+	data["Late unrew."]=late_unrewarded
+	df = pd.DataFrame(data=data,index=animal_list)
+	##some stats for errorbars
+	means = np.array([early_rewarded.mean(), late_rewarded.mean(),early_unrewarded.mean(),late_unrewarded.mean()])
+	stds = np.array([early_rewarded.std(), late_rewarded.std(),early_unrewarded.std(),late_unrewarded.std()])
+	yerr = stds/np.sqrt(len(animal_list))
+	##xerr is just used to plot the mean
+	xerr = np.ones(4)*0.1
+	err_x = np.arange(0,4) ##x-vals for errorbars
+	##turn off grid
+	sns.set_style("whitegrid", {'axes.grid' : False})
+	ax = sns.stripplot(data=df,jitter=True)
+	ax.errorbar(err_x,means,yerr=yerr,xerr=xerr,fmt='none',ecolor='k',capthick=2,elinewidth=2)
+	for ticklabel in ax.get_xticklabels():
+		ticklabel.set_fontsize(14)
+	for ticklabel in ax.get_yticklabels():
+		ticklabel.set_fontsize(14)
+	plt.draw()
+	##plot it another way
+	fig, ax2 = plt.subplots(1)
+	rew = np.vstack((early_rewarded,late_rewarded))
+	unrew = np.vstack((early_unrewarded,late_unrewarded))
+	xr = np.array([0,1])
+	xu = np.array([2,3])
+	for i in range(len(animal_list)):
+		ax2.plot(xr,rew[:,i],color='r',linewidth=2,marker='o',alpha=0.5)
+		ax2.plot(xu,unrew[:,i],color='b',linewidth=2,marker='o',alpha=0.5)
+	ax2.errorbar(err_x,means,yerr=yerr,xerr=xerr,fmt='none',ecolor='k',capthick=2,elinewidth=2)
+	plt.xticks(np.arange(0,4),data.keys())
+	for ticklabel in ax2.get_xticklabels():
+		ticklabel.set_fontsize(14)
+	for ticklabel in ax2.get_yticklabels():
+		ticklabel.set_fontsize(14)
+	ax2.set_xlim(-0.1,3.1)
+	t_rewarded,pval_rewarded = stats.ttest_rel(early_rewarded, late_rewarded)
+	t_unrewarded,pval_unrewarded = stats.ttest_rel(early_unrewarded,late_unrewarded)
+	t_early,pval_early = stats.ttest_ind(early_rewarded,early_unrewarded)
+	t_late,pval_late = stats.ttest_ind(late_rewarded,late_unrewarded)
+	# fig, ax = plt.subplots()
+	# boxes = ax.boxplot(data)
+	# ax.set_ylim(-0.1,1.1)
+	# # #ax.set_xlim(-0.01, 1.6)
+	# # ax.set_xticks(idx+0.15)
+	# ax.set_xticklabels(("Rew. Early", "Rew. Late",'Un. Early','Un. Late'))
+	# ax.set_ylabel("Percent of events", fontsize = 14)
+	# #ax.text(1, 0.75, "p = " + str(pval), fontsize = 12)
+	# fig.suptitle("Within session Performance", fontsize = 16)
+	print "pval rewarded e-l = "+str(pval_rewarded)
+	print "pval unrewarded e-l = "+str(pval_unrewarded)
+	print "pval early r-u = "+str(pval_early)
+	print "pval late r-u = "+str(pval_late)
+	print "tval rewarded e-l = "+str(t_rewarded)
+	print "tval unrewarded e-l = "+str(t_unrewarded)
+	print "tval early r-u = "+str(t_early)
+	print "tval late r-u = "+str(t_late)
+	print "mean rew early = "+str(means[0])
+	print "sem rew early = "+str(yerr[0])
+	print "mean rew late = "+str(means[1])
+	print "sem rew late = "+str(yerr[1])
+	print "mean unrew early = "+str(means[2])
+	print "sem unrew early = "+str(yerr[2])
+	print "mean unrew late = "+str(means[3])
+	print "sem unrew late = "+str(yerr[3])
+
+
+def plot_within_session_light_dark2():
+	source_file = r"Z:\Data\processed_data\V1_BMI_final\raw_data\R7_thru_V13_learning_event_data2.hdf5"
+	f = h5py.File(source_file, 'r')
+	light_animals = ["R13", "R11", "R7", "R8"]
+	dark_animals = ["V01", "V02", "V03", "V04", "V05", "V11", "V13"]
+	light_data = []
+	dark_data = []
+	longest = 0
+	for l in light_animals:
+		dat = np.asarray(f[l]['correct_within_light_only']).mean(axis=0)
+		light_data.append(dat)
+		t = max(longest,dat.shape[0])
+		if t > longest:
+			longest = t
+	for d in dark_animals:
+		dat = np.asarray(f[d]['correct_within_dark_only']).mean(axis=0)
+		dark_data.append(dat)
+		t = max(longest,dat.shape[0])
+		if t > longest:
+			longest = t
+	f.close()
+	##standardize the lengths of all arrays
+	##append some zeros on to the other arrays to make them all the same shape
+	for idx in range(len(light_data)):
+		difference = longest - light_data[idx].shape[0]
+		if difference > 0:
+			light_data[idx] = np.hstack((light_data[idx],np.zeros(difference)))
+	for idx in range(len(dark_data)):
+		difference = longest -dark_data[idx].shape[0]
+		if difference > 0:
+			dark_data[idx] = np.hstack((dark_data[idx],np.zeros(difference)))
+	dark_data = np.asarray(dark_data)
+	light_data = np.asarray(light_data)
+	light_mean = np.nanmean(light_data, axis = 0)
+	light_std = np.nanstd(light_data, axis = 0)
+	light_sem = light_std/np.sqrt(light_data.shape[0])
+	dark_mean = np.nanmean(dark_data, axis = 0)
+	dark_std = np.nanstd(dark_data, axis = 0)
+	dark_sem = dark_std/np.sqrt(dark_data.shape[0])
+	x_axis = np.linspace(0,115,light_mean.shape[0])
+	fig, ax = plt.subplots()
+	ax.plot(x_axis, light_mean, linewidth = 3, color = 'yellow', label = "train light")
+	plt.fill_between(x_axis, light_mean-light_sem, light_mean+light_sem, 
+		alpha = 0.5, facecolor = 'yellow')
+	ax.plot(x_axis[0:dark_mean.size], dark_mean, linewidth = 3, color = 'k', label = "train dark")
+	plt.fill_between(x_axis[0:dark_mean.size], dark_mean-dark_sem, dark_mean+dark_sem, 
+		alpha = 0.5, facecolor = 'k')
+	for tick in ax.xaxis.get_major_ticks():
+		tick.label.set_fontsize(14)
+	for tick in ax.yaxis.get_major_ticks():
+		tick.label.set_fontsize(14)
+	ax.set_xlabel("Time in session, mins", fontsize = 16)
+	ax.set_ylabel("Percent rewarded", fontsize = 16)
+	fig.suptitle("Light vs dark training", fontsize = 18)
+	ax.set_xlim((0,50))
+	ax.fill_between(x_axis, .25,.39, alpha = 0.1, facecolor = 'cyan')
+	ax.legend()
+	##now do a test of differences and plot the bar graph
+	light_early = light_data[:,0:8].mean(axis=1)
+	light_late = light_data[:,60:65].mean(axis=1)
+	dark_early = dark_data[:6,0:8].mean(axis=1)
+	dark_late = np.array([dark_data[0,55:60],dark_data[1,65:70],dark_data[2,65:70],
+		dark_data[3,98:103],dark_data[4,104:109],dark_data[5,65:70]]).mean(axis=1)
+	t_light,p_val_light = stats.ttest_rel(light_early,light_late)
+	t_dark,p_val_dark = stats.ttest_rel(dark_early,dark_late)
+	t_light_dark,p_val_light_dark = stats.ttest_ind(dark_late,light_late)
+	#plot the bars
+	means = [light_early.mean(),light_late.mean(),dark_early.mean(),dark_late.mean()]
+	sem = [light_early.std()/np.sqrt(light_early.size),light_late.std()/np.sqrt(light_late.size),
+			dark_early.std()/np.sqrt(dark_early.size),dark_late.std()/np.sqrt(dark_late.size)]
+	labels = ['light_early','light_late','dark_early','dark_late']
+	fig, ax2 = plt.subplots(1)
+	rew = np.vstack((light_early,light_late))
+	unrew = np.vstack((dark_early,dark_late))
+	xr = np.array([0,1])
+	xu = np.array([2,3])
+	for i in range(light_early.shape[0]):
+		ax2.plot(xr,rew[:,i],color='y',linewidth=2,marker='o',alpha=0.8)
+	for i in range(dark_early.shape[0]):
+		ax2.plot(xu,unrew[:,i],color='k',linewidth=2,marker='o',alpha=0.5)
+	err_x = np.arange(0,4)
+	yerr=sem
+	xerr=np.ones(4)*0.25
+	ax2.errorbar(err_x,means,yerr=yerr,xerr=xerr,fmt='none',ecolor='k',capthick=2,elinewidth=2)
+	plt.xticks(np.arange(0,4),labels)
+	for ticklabel in ax2.get_xticklabels():
+		ticklabel.set_fontsize(14)
+	for ticklabel in ax2.get_yticklabels():
+		ticklabel.set_fontsize(14)
+	ax2.set_xlim(-0.35,3.35)
+	ax2.set_ylabel("percentage correct", fontsize = 14)
+	ax2.set_xlabel("Condition", fontsize = 14)
+	print "pval light early-late= "+str(p_val_light)
+	print "pval dark early-late= "+str(p_val_dark)
+	print "pval light-dark-late= "+str(p_val_light_dark)
+	print "tval light early-late= "+str(t_light)
+	print "tval dark early-late= "+str(t_dark)
+	print "tval light-dark-late= "+str(t_light_dark)
+	print "mean light early = "+str(means[0])
+	print "sem light early = "+str(sem[0])
+	print "mean light late = "+str(means[1])
+	print "sem light late = "+str(sem[1])
+	print "mean dark early = "+str(means[2])
+	print "sem dark early = "+str(sem[2])
+	print "mean dark late = "+str(means[3])
+	print "sem dark late = "+str(sem[3])
+
+
+def get_mean_frs2():
+	path = r"C:\Users\Ryan\Documents\data\R7_thru_V13_all_data.hdf5"
+	animal_list = ["R13", "R11", "V02", "V03", "V04", "V05", "V11", "V13", "R7", "R8"]
+	session_dict_late = {
+	"R13":["BMI_D05.plx", "BMI_D06.plx", "BMI_D07.plx", "BMI_D08.plx", "BMI_D09.plx", "BMI_D10.plx"],
+	"R11":["BMI_D05.plx", "BMI_D06.plx", "BMI_D07.plx", "BMI_D08.plx", "BMI_D09.plx", "BMI_D10.plx"],
+	"V02":["BMI_D05.plx", "BMI_D06.plx", "BMI_D07.plx", "BMI_D08.plx", "BMI_D09.plx", "BMI_D10.plx"],
+	"V03":["BMI_D05.plx", "BMI_D06.plx", "BMI_D07.plx", "BMI_D08.plx", "BMI_D09.plx"],
+	"V04":["BMI_D05.plx", "BMI_D06.plx", "BMI_D07.plx", "BMI_D08.plx", "BMI_D09.plx"],
+	"V05":["BMI_D05.plx", "BMI_D06.plx", "BMI_D07.plx", "BMI_D08.plx", "BMI_D09.plx", "BMI_D10.plx"],
+	"V11":["BMI_D05.plx", "BMI_D06.plx", "BMI_D07.plx", "BMI_D11.plx", "BMI_D09.plx", "BMI_D10.plx"],
+	"V13":["BMI_D05.plx", "BMI_D06.plx", "BMI_D04.plx"],
+	"R7":["BMI_D05.plx", "BMI_D06.plx"],
+	"R8":["BMI_D05.plx", "BMI_D06.plx"]
+	}
+
+	e1_master = []
+	e2_master = []
+	ind_master = []
+
+	longest2 = 0
+	for animal in animal_list:
+		all_e1 = []
+		all_e2 = []
+		all_ind = []
+		longest = 0
+		for session in session_dict_late[animal]:
+			e1, e2, ind = ds.get_ensemble_arrays(path, animal = animal, session = session)
+			if e1.shape[0] > longest:
+				longest = e1.shape[0]
+			for n in range(e1.shape[1]):
+				all_e1.append(ss.windowRate(e1[:,n], [500,100]))
+			for n in range(e2.shape[1]):
+				all_e2.append(ss.windowRate(e2[:,n], [500,100]))
+			for n in range(ind.shape[1]):
+				all_ind.append(ss.windowRate(ind[:,n], [500,100]))
+		for i in range(len(all_e1)):	
+			if all_e1[i].shape[0] < longest:
+				add = np.empty((longest-all_e1[i].shape[0]))
+				add[:] = np.nan
+				all_e1[i] = np.hstack((all_e1[i], add))
+		for i in range(len(all_e2)):	
+			if all_e2[i].shape[0] < longest:
+				add = np.empty((longest-all_e2[i].shape[0]))
+				add[:] = np.nan
+				all_e2[i] = np.hstack((all_e2[i], add))
+		for i in range(len(all_ind)):	
+			if all_ind[i].shape[0] < longest:
+				add = np.empty((longest-all_ind[i].shape[0]))
+				add[:] = np.nan
+				all_ind[i] = np.hstack((all_ind[i], add))
+		all_e1 = np.nanmean(np.asarray(all_e1),axis=0)
+		all_e2 = np.nanmean(np.asarray(all_e2),axis=0)
+		all_ind = np.nanmean(np.asarray(all_ind),axis=0)
+		e1_master.append(all_e1)
+		e2_master.append(all_e2)
+		ind_master.append(all_ind)
+		if longest > longest2:
+			longest2 = longest
+
+	for i in range(len(e1_master)):	
+		if e1_master[i].shape[0] < longest2:
+			add = np.empty((longest2-e1_master[i].shape[0]))
+			add[:] = np.nan
+			e1_master[i] = np.hstack((e1_master[i], add))
+	e1_master = np.asarray(e1_master)
+	
+	for i in range(len(e2_master)):	
+		if e2_master[i].shape[0] < longest2:
+			add = np.empty((longest2-e2_master[i].shape[0]))
+			add[:] = np.nan
+			e2_master[i] = np.hstack((e2_master[i], add))
+	e2_master = np.asarray(e1_master)
+	
+	ind_master[5] = ind_master[6]
+	for i in range(len(ind_master)):	
+		if ind_master[i].shape[0] < longest2:
+			add = np.empty((longest2-ind_master[i].shape[0]))
+			add[:] = np.nan
+			ind_master[i] = np.hstack((ind_master[i], add))
+	ind_master = np.asarray(ind_master)
+
+	
+
+
+	e1_early = e1_master[:,0:5*60*10].mean(axis = 1)/(5.0*60)
+	e1_late = e1_master[:,45*60*10:50*60*10].mean(axis = 1)/(5.0*60)
+
+	e2_early = e2_master[:,0:5*60*10].mean(axis = 1)/(5.0*60)
+	e2_late = e2_master[:,50*60*10:55*60*10].mean(axis = 1)/(5.0*60)
+
+	ind_early = ind_master[:,0:5*60*10].mean(axis = 1)/(5.0*60)
+	ind_late = ind_master[:,50*60*10:55*60*10].mean(axis = 1)/(5.0*60)
+
+	f_out = h5py.File(r"C:\Users\Ryan\Documents\data\R7_thru_V13_spike_rates_by_animal.hdf5",'w-')
+	
+	f_out.create_dataset("all_e1", data = all_e1)
+	f_out.create_dataset("all_e2", data = all_e2)
+	f_out.create_dataset("all_ind", data = all_ind)
+
+	f_out.create_dataset("e1_early", data = e1_early)
+	f_out.create_dataset("e2_early", data = e2_early)
+	f_out.create_dataset("ind_early", data = ind_early)
+
+	f_out.create_dataset("e1_late", data = e1_late)
+	f_out.create_dataset("e2_late", data = e2_late)
+	f_out.create_dataset("ind_late", data = ind_late)
+
+	f_out.close()
+
+def plot_fr_data2():
+	f = h5py.File(r"C:\Users\Ryan\Documents\data\R7_thru_V13_spike_rates_by_animal.hdf5", 'r')
+
+	e1_early = np.asarray(f['e1_early'])*300
+	e1_late = np.asarray(f['e1_late'])*300
+	e2_early = np.asarray(f['e2_early'])*300
+	e2_late = np.asarray(f['e2_late'])*300
+	ind_early = np.asarray(f['ind_early'])*300
+	ind_late = np.asarray(f['ind_late'])*300
+	f.close()
+
+	labels = np.array(['e1_early', 'e1_late', 'e2_early', 'e2_late', 'ind_early', 'ind_late'])
+	means = np.array([np.nanmean(e1_early), np.nanmean(e1_late), np.nanmean(e2_early), 
+		np.nanmean(e2_late),np.nanmean(ind_early), np.nanmean(ind_late)])
+	sem = np.array([np.nanstd(e1_early)/np.sqrt(94), np.nanstd(e1_late)/np.sqrt(94), 
+		np.nanstd(e2_early)/np.sqrt(92), np.nanstd(e2_late)/np.sqrt(92),
+		np.nanstd(ind_early)/np.sqrt(182), np.nanstd(ind_late)/np.sqrt(182)])
+
+	t_val_e1,p_val_e1 = stats.ttest_rel(e1_early, e1_late, nan_policy='omit')
+	t_val_e2,p_val_e2 = stats.ttest_rel(e2_early, e2_late, nan_policy='omit')
+	t_val_ind,p_val_ind = stats.ttest_rel(ind_early, ind_late, nan_policy='omit')
+
+	t_val_e1_e2_early,p_val_e1_e2_early = stats.ttest_ind(e1_early, e2_early, nan_policy='omit')
+	t_val_e1_e2_late,p_val_e1_e2_late = stats.ttest_ind(e1_late, e2_late, nan_policy='omit')
+	t_val_e1_ind_early,p_val_e1_ind_early = stats.ttest_ind(e1_early, ind_early, nan_policy='omit')
+	p_val_e1_ind_late = stats.ttest_ind(e1_late, ind_late, nan_policy='omit')[1]
+	p_val_e2_ind_early = stats.ttest_ind(e2_early, ind_early, nan_policy='omit')[1]
+	p_val_e2_ind_late = stats.ttest_ind(e2_late, ind_late, nan_policy='omit')[1]
+
+
+	idx = np.arange(6)-0.45
+	width = 1.0
+	fig, ax2 = plt.subplots()
+	bars = ax2.bar(idx, means, yerr = sem, ecolor = 'k')
+	#ax.set_ylim(0,0.9)
+	#ax.set_xlim(-0.5, 3.5)
+	# ax.set_xticks(idx+0.5)
+	# ax.set_xticklabels(labels)
+	# # for i in range(data.shape[0]):
+	# # 	plt.plot((idx+0.5), data[i,:], alpha = 0.5, color = np.random.rand(3,), marker = 'o', linewidth = 2)
+	# ax.set_ylabel("firing rate", fontsize = 14)
+	# ax.set_xlabel("Condition", fontsize = 14)
+
+	fig, ax2 = plt.subplots(1)
+	e1 = np.vstack((e1_early,e1_late))
+	e2 = np.vstack((e2_early,e2_late))
+	ind = np.vstack((ind_early,ind_late))
+	x1 = np.array([0,1])
+	x2 = np.array([2,3])
+	xi = np.array([4,5])
+	for i in range(e1_early.shape[0]):
+		ax2.plot(x1,e1[:,i],color='g',linewidth=2,marker='o',alpha=0.8)
+	for i in range(e2_early.shape[0]):
+		ax2.plot(x2,e2[:,i],color='b',linewidth=2,marker='o',alpha=0.5)
+	for i in range(ind_early.shape[0]):
+		ax2.plot(xi,ind[:,i],color='k',linewidth=2,marker='o',alpha=0.5)
+	err_x = np.arange(0,6)
+	yerr=sem
+	xerr=np.ones(6)*0.25
+	ax2.errorbar(err_x,means,yerr=yerr,xerr=xerr,fmt='none',ecolor='k',capthick=2,elinewidth=2)
+	plt.xticks(np.arange(0,6),labels)
+	for ticklabel in ax2.get_xticklabels():
+		ticklabel.set_fontsize(14)
+	for ticklabel in ax2.get_yticklabels():
+		ticklabel.set_fontsize(14)
+	ax2.set_xlim(-0.5,5.35)
+	ax2.set_ylabel("Fr, Hz", fontsize = 14)
+	ax2.set_xlabel("Condition", fontsize = 14)
+	print "pval e1 early-late= "+str(p_val_e1)
+	print "tval e1 early-late= "+str(t_val_e1)
+	print "pval e2 early-late= "+str(p_val_e2)
+	print "tval e2 early-late= "+str(t_val_e2)
+	print "pval ind early-late= "+str(p_val_ind)
+	print "tval ind early-late= "+str(t_val_ind)
+	print "mean e1 early = "+str(means[0])
+	print "mean e1 late = "+str(means[1])
+	print "mean e2 early = "+str(means[2])
+	print "mean e2 late = "+str(means[3])
+	print "mean ind early = "+str(means[4])
+	print "mean ind late = "+str(means[5])
+
+
+def plot_within_session_ratios():
+	source_file = r"J:\Ryan\processed_data\V1_BMI_final\raw_data\R7_thru_V13_learning_event_data2.hdf5"
+	f = h5py.File(source_file, 'r+') 
+	animal_list = ["R13", "R11", "V01", "V02", "V03", "V04", "V05", "V11", "V13","R8"]
+	##run through each animal and take the mean over all sessions
+	longest = 0 #to record the length of the longest array
+	##start with early sessions
+	rewarded_means = []
+	unrewarded_means = []
+	for animal in animal_list:
+		##get the rewarded targets
+		rewarded = np.asarray(f[animal]['correct_within_sessions'][0:3,:]).mean(axis=0)
+		rewarded_means.append(rewarded)
+		#3unrewarded
+		unrewarded = np.asarray(f[animal]['t2_within_sessions'][0:3,:]).mean(axis=0)
+		unrewarded_means.append(unrewarded)
+		##keep track of longest sessions
+		l = max(longest,rewarded.shape[0],unrewarded.shape[0])
+		if l > longest:
+			longest = l
+	##standardize the lengths of all arrays
+	##append some zeros on to the other arrays to make them all the same shape
+	for idx in range(len(rewarded_means)):
+		difference = longest - rewarded_means[idx].shape[0]
+		if difference > 0:
+			rewarded_means[idx] = np.hstack((rewarded_means[idx],np.zeros(difference)))
+	for idx in range(len(unrewarded_means)):
+		difference = longest - unrewarded_means[idx].shape[0]
+		if difference > 0:
+			unrewarded_means[idx] = np.hstack((unrewarded_means[idx],np.zeros(difference)))
+	rewarded_means = np.asarray(rewarded_means)
+	unrewarded_means = np.asarray(unrewarded_means)
+	unrewarded_means[-1] = unrewarded_means[-1]+0.33 ##correction for earlier code that didn't count T2
+	##now let's get the performance RATIOS 
+	early_rewarded = rewarded_means[:,0:5].mean(axis=1)
+	late_rewarded = rewarded_means[:,60:65].mean(axis=1)
+	early_unrewarded = unrewarded_means[:,0:5].mean(axis=1)
+	late_unrewarded = unrewarded_means[:,60:65].mean(axis=1)
+	early_early_ratio = early_rewarded/early_unrewarded
+	early_late_ratio = late_rewarded/late_unrewarded
+	
+	##now for late sessions
+	longest = 0 #to record the length of the longest array
+	##start with early sessions
+	rewarded_means = []
+	unrewarded_means = []
+	for animal in animal_list:
+		##get the rewarded targets
+		rewarded = np.asarray(f[animal]['correct_within_sessions'][-3:,:]).mean(axis=0)
+		rewarded_means.append(rewarded)
+		#3unrewarded
+		unrewarded = np.asarray(f[animal]['t2_within_sessions'][-3:,:]).mean(axis=0)
+		unrewarded_means.append(unrewarded)
+		##keep track of longest sessions
+		l = max(longest,rewarded.shape[0],unrewarded.shape[0])
+		if l > longest:
+			longest = l
+	##standardize the lengths of all arrays
+	##append some zeros on to the other arrays to make them all the same shape
+	for idx in range(len(rewarded_means)):
+		difference = longest - rewarded_means[idx].shape[0]
+		if difference > 0:
+			rewarded_means[idx] = np.hstack((rewarded_means[idx],np.zeros(difference)))
+	for idx in range(len(unrewarded_means)):
+		difference = longest - unrewarded_means[idx].shape[0]
+		if difference > 0:
+			unrewarded_means[idx] = np.hstack((unrewarded_means[idx],np.zeros(difference)))
+	rewarded_means = np.asarray(rewarded_means)
+	unrewarded_means = np.asarray(unrewarded_means)
+	unrewarded_means[-1] = unrewarded_means[-1]+0.33 ##correction for earlier code that didn't count T2
+	##now let's get the performance RATIOS 
+	early_rewarded = np.array([
+		rewarded_means[0,0:10].mean(),
+		rewarded_means[1,0:10].mean(),
+		rewarded_means[2,0:10].mean(),
+		rewarded_means[3,0:10].mean(),
+		rewarded_means[4,0:10].mean(),
+		rewarded_means[5,0:5].mean(),
+		rewarded_means[6,0:10].mean(),
+		rewarded_means[7,0:5].mean(),
+		rewarded_means[8,0:5].mean(),
+		rewarded_means[9,0:10].mean()])
+	late_rewarded = np.array([
+		rewarded_means[0,80:90].mean(),
+		rewarded_means[1,70:80].mean(),
+		rewarded_means[2,50:60].mean(),
+		rewarded_means[3,70:80].mean(),
+		rewarded_means[4,55:65].mean(),
+		rewarded_means[5,65:70].mean(),
+		rewarded_means[6,80:90].mean(),
+		rewarded_means[7,65:70].mean(),
+		rewarded_means[8,70:80].mean(),
+		rewarded_means[9,60:70].mean()])
+	early_unrewarded = np.array([
+		unrewarded_means[0,0:10].mean(),
+		unrewarded_means[1,0:10].mean(),
+		unrewarded_means[2,0:10].mean(),
+		unrewarded_means[3,0:10].mean(),
+		unrewarded_means[4,0:10].mean(),
+		unrewarded_means[5,0:5].mean(),
+		unrewarded_means[6,0:10].mean(),
+		unrewarded_means[7,0:5].mean(),
+		unrewarded_means[8,0:5].mean(),
+		unrewarded_means[9,0:10].mean()])
+	late_unrewarded = np.array([
+		unrewarded_means[0,80:90].mean(),
+		unrewarded_means[1,70:80].mean(),
+		unrewarded_means[2,50:60].mean(),
+		unrewarded_means[3,70:80].mean(),
+		unrewarded_means[4,55:65].mean(),
+		unrewarded_means[5,65:70].mean(),
+		unrewarded_means[6,80:90].mean(),
+		unrewarded_means[7,65:70].mean(),
+		unrewarded_means[8,70:80].mean(),
+		unrewarded_means[9,60:70].mean()])
+	late_early_ratio = early_rewarded/early_unrewarded
+	late_late_ratio = late_rewarded/late_unrewarded
+	f.close()
+
+	##do dem stats
+	#data = [early_rewarded,late_rewarded,early_unrewarded,late_unrewarded]
+	##make a pandas dataframe to do the swarmplot
+	data = collections.OrderedDict()
+	data["Early-early."]=early_early_ratio
+	data["Early-late"]=early_late_ratio
+	data["Late-early."]=late_early_ratio
+	data["Late-late."]=late_late_ratio
+	df = pd.DataFrame(data=data,index=animal_list)
+	##some stats for errorbars
+	means = np.array([early_early_ratio.mean(), early_late_ratio.mean(),
+		late_early_ratio.mean(),late_late_ratio.mean()])
+	stds = np.array([early_early_ratio.std(), early_late_ratio.std(),
+		late_early_ratio.std(),late_late_ratio.std()])
+	yerr = stds/np.sqrt(len(animal_list))
+	##xerr is just used to plot the mean
+	xerr = np.ones(4)*0.1
+	err_x = np.arange(0,4) ##x-vals for errorbars
+	##turn off grid
+	sns.set_style("whitegrid", {'axes.grid' : False})
+	ax = sns.stripplot(data=df,jitter=True)
+	ax.errorbar(err_x,means,yerr=yerr,xerr=xerr,fmt='none',ecolor='k',capthick=2,elinewidth=2)
+	for ticklabel in ax.get_xticklabels():
+		ticklabel.set_fontsize(14)
+	for ticklabel in ax.get_yticklabels():
+		ticklabel.set_fontsize(14)
+	plt.draw()
+	##plot it another way
+	fig, ax2 = plt.subplots(1)
+	rew = np.vstack((early_early_ratio,early_late_ratio))
+	unrew = np.vstack((late_early_ratio,late_late_ratio))
+	xr = np.array([0,1])
+	xu = np.array([2,3])
+	for i in range(len(animal_list)):
+		ax2.plot(xr,rew[:,i],color='cyan',linewidth=2,marker='o',alpha=0.5)
+		ax2.plot(xu,unrew[:,i],color='b',linewidth=2,marker='o',alpha=0.5)
+	ax2.errorbar(err_x,means,yerr=yerr,xerr=xerr,fmt='none',ecolor='k',capthick=2,elinewidth=2)
+	plt.xticks(np.arange(0,4),data.keys())
+	for ticklabel in ax2.get_xticklabels():
+		ticklabel.set_fontsize(14)
+	for ticklabel in ax2.get_yticklabels():
+		ticklabel.set_fontsize(14)
+	ax2.set_xlim(-0.1,3.1)
+	tval_early,pval_early = stats.ttest_rel(early_early_ratio, early_late_ratio)
+	tval_late,pval_late = stats.ttest_rel(late_early_ratio,late_late_ratio)
+	# t_early,pval_early = stats.ttest_ind(early_rewarded,early_unrewarded)
+	# t_late,pval_late = stats.ttest_ind(late_rewarded,late_unrewarded)
+	# fig, ax = plt.subplots()
+	# boxes = ax.boxplot(data)
+	# ax.set_ylim(-0.1,1.1)
+	# # #ax.set_xlim(-0.01, 1.6)
+	# # ax.set_xticks(idx+0.15)
+	# ax.set_xticklabels(("Rew. Early", "Rew. Late",'Un. Early','Un. Late'))
+	# ax.set_ylabel("Percent of events", fontsize = 14)
+	# #ax.text(1, 0.75, "p = " + str(pval), fontsize = 12)
+	# fig.suptitle("Within session Performance", fontsize = 16)
+	print "pval early e-l = "+str(pval_early)
+	print "tval early e-l = "+str(tval_early)
+	print "pval late e-l = "+str(pval_late)
+	print "tval late e-l = "+str(tval_late)
+	print "mean early-early = "+str(means[0])
+	print "mean early-late = "+str(means[1])
+	print "mean late-early = "+str(means[2])
+	print "mean late-late = "+str(means[3])
+
+
+#######################################################
+#########################################################
+##REBUTTAL
+######################################################
+
+"""
+A function to get the relationship between mean firing rates
+in E1 VS performance, and mean firing ratets in E2 vs performance
+"""
+def get_frs_vs_performance():
+	##the main source file
+	source_file = r"C:\Users\Ryan\Documents\data\R7_thru_V13_all_data.hdf5"
+	f = h5py.File(source_file,'r')
+	animal_list = f.keys() ##list of all animals in this file
+	##the data to save
+	e1_rates = []
+	e2_rates = []
+	session_ids = []
+	p_correct = []
+	##go session by session for each animal and save the mean fr of e1 units and e2
+	##units over the whole session, as well as the mean performance over the whole session
+	for animal in animal_list:
+		session_list = f[animal].keys() ##the names of all the sessions for this animal
+		for session in session_list:
+			session_ids.append(animal+"_"+session)
+			group = f[animal][session] ##the data group
+			e1_names = [n for n in group['e1_units'].keys() if not n.endswith("_wf")]
+			e2_names = [n for n in group['e2_units'].keys() if not n.endswith("_wf")]
+			##get the mean spike rates for all e1 and e2 units
+			e1_rate = []
+			e2_rate = []
+			for name in e1_names:
+				n_spikes = group['e1_units'][name][0,:].sum() ##the total spikes in the whole session
+				n_seconds = group['e1_units'][name].shape[1]/1000.0
+				e1_rate.append(n_spikes/n_seconds)
+			e1_rates.append(np.mean(e1_rate))
+			for name in e2_names:
+				n_spikes = group['e2_units'][name][0,:].sum()
+				n_seconds = group['e2_units'][name].shape[1]/1000.0
+				e2_rate.append(n_spikes/n_seconds)
+			e2_rates.append(np.mean(e2_rate))
+			##now get the performance for this session
+			try:
+				n_t1 = float(group['event_arrays']['t1'].size)
+			except KeyError:
+				n_t1 = 0
+			try: 
+				n_t2 = float(group['event_arrays']['t2'].size)
+			except KeyError:
+				n_t2 = 0
+			try:
+				n_miss = float(group['event_arrays']['miss'].size)
+			except KeyError:
+				n_miss = 0
+			score = n_t1/(n_t1+n_t2+n_miss)
+			p_correct.append(score)
+	##now that we have this data, plot the scatter plots and the correlations
+	##first make one for E1 frs VS perforomance
+	e1_rates = np.nan_to_num(np.asarray(e1_rates)[np.argsort(e1_rates)])+1
+	e2_rates = np.nan_to_num(np.asarray(e2_rates)[np.argsort(e2_rates)])+1
+	p_correct1 = np.nan_to_num(np.asarray(p_correct)[np.argsort(e1_rates)])
+	p_correct2 = np.nan_to_num(np.asarray(p_correct)[np.argsort(e2_rates)])
+	fig,(ax1,ax2) = plt.subplots(2,sharex=True)
+	ax1.scatter(e1_rates,p_correct,alpha=0.5,marker='o',color='g')
+	ax2.scatter(e2_rates,p_correct,alpha=0.5,marker='o',color='b')
+	##the best fit lines
+	par1 = np.polyfit(e1_rates,p_correct1,1,full=True)
+	slope1=par1[0][0]
+	intercept1=par1[0][1]
+	xl1 = [min(e1_rates), max(e1_rates)]
+	yl1 = [slope1*xx + intercept1  for xx in xl1]
+	# coefficient of determination, plot text
+	variance1 = np.var(p_correct1)
+	residuals1 = np.var([(slope1*xx + intercept1 - yy)  for xx,yy in zip(e1_rates,p_correct1)])
+	Rsqr1 = np.round(1-residuals1/variance1, decimals=5)
+	ax1.text(.9*max(e1_rates)+.1*min(e2_rates),.9*max(p_correct1)+.1*min(p_correct1),
+		'$R^2 = %0.5f$'% Rsqr1, fontsize=14)
+	ax1.plot(e1_rates, np.poly1d(np.polyfit(e1_rates,p_correct1,1))(e1_rates))
+
+	par2 = np.polyfit(e2_rates,p_correct2,1,full=True)
+	slope2=par2[0][0]
+	intercept2=par2[0][1]
+	xl2 = [min(e2_rates), max(e2_rates)]
+	yl2 = [slope2*xx + intercept2  for xx in xl2]
+	# coefficient of determination, plot text
+	variance2 = np.var(p_correct2)
+	residuals2 = np.var([(slope2*xx + intercept2 - yy)  for xx,yy in zip(e2_rates,p_correct2)])
+	Rsqr2 = np.round(1-residuals2/variance2, decimals=5)
+	plt.text(.9*max(e2_rates)+.1*min(e2_rates),.9*max(p_correct2)+.1*min(p_correct2),
+		'$R^2 = %0.5f$'% Rsqr2, fontsize=14)
+	ax2.plot(e2_rates, np.poly1d(np.polyfit(e2_rates,p_correct1,1))(e2_rates))	
+
+	ax1.set_title("E1 units",fontsize=14)
+	ax2.set_title("E2_units",fontsize=14)
+	ax1.set_ylabel("Percent correct",fontsize=14)
+	ax2.set_ylabel("Percent correct",fontsize=14)
+	ax2.set_xlabel("Mean FR, Hz",fontsize=14)
+	f.close()
+	return e1_rates,e2_rates,p_correct
 
 
 
