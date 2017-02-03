@@ -608,7 +608,7 @@ Args:
 -f_in: file path to an hdf5 file saved by the save_session_data function
 -trigger: name of the event to use as the trigger (ie "t1")
 -event_group: name of the event group to take data from ie "V1_units"
-- window in the format "[-5000, 5000]" which would take 5 secs of data before and after
+- window in the format "[5000, 5000]" which would take 5 secs of data before and after
 	an event timestamp
 
 Outputs:
