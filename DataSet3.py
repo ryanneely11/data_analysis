@@ -7,7 +7,10 @@ _author__ = 'Ryan'
 import GuiStuff as gs
 import os
 import numpy as np
-import plxread
+try:
+	import plxread
+except ImportError:
+	print "Warning: plxread not imported"
 import h5py
 import RatUnits4 as ru
 #from progressbar import *

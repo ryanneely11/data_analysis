@@ -4528,7 +4528,7 @@ A function to do logistic regression analysis on the indirect units, to see
 how many of them are predictuve of E1 vs E2 choice.
 """
 def log_regress_units():
-	unit_type = 'V1_units' ##the type of units to run regression on
+	unit_type = 'Str_units' ##the type of units to run regression on
 	animal_list = None
 	session_range = None
 	window = [2000,0]
@@ -4540,7 +4540,7 @@ def log_regress_units():
 	##in dimensions trials x units x bins, and then y; the binary matrix
 	## of target 1 and target 2 values.
 	source_file = r"J:\Ryan\processed_data\V1_BMI_final\raw_data\R7_thru_V13_all_data.hdf5"
-	save_file = r"J:\Ryan\V1_BMI\NatureNeuro\rebuttal\data"
+	save_file = r"J:\Ryan\V1_BMI\NatureNeuro\rebuttal\Str_log_regression.hdf5"
 	f = h5py.File(source_file,'r')
 	##make some arrays to store
 	if animal_list is None:
@@ -4554,47 +4554,47 @@ def log_regress_units():
 		else: 
 			session_list = [x for x in f[animal].keys() if int(x[-6:-4]) in session_range]
 		for session in session_list:
-		##make sure that this file had at least 20 trials of each type
-		try:
-			n_t1 = float(group['event_arrays']['t1'].size)
-		except KeyError:
-			n_t1 = 0
-		try: 
-			n_t2 = float(group['event_arrays']['t2'].size)
-		except KeyError:
-			n_t2 = 0
-		if (n_t1 >= 20) and (n_t2 >= 20):
-			##now make sure that this file contains at least one unit of the type that we want to analyze
+			##make sure that this file had at least 20 trials of each type
 			try:
-				unit_list = [x for x in f[animal][session][unit_type].keys() if not x.endswith("_wf")]
+				n_t1 = float(f[animal][session]['event_arrays']['t1'].size)
 			except KeyError:
-				unit_list = []
-			if len(unit_list) > 0:
-				##add the number of total units to the data array
-				total_units.append(len(unit_list))
-				##now get the data for these units
-				t1_spikes,lfps,ul = ds.load_single_group_triggered_data(source_file,
-					't1',unit_type,window,animal=animal,session=session)
-				t2_spikes,lfps,ul = ds.load_single_group_triggered_data(source_file,
-					't2',unit_type,window,animal=animal,session=session)
-				##transpose these into trials x units x bins
-				t1_spikes = np.transpose(t1_spikes,(2,0,1))
-				t2_spikes = np.transpose(t2_spikes,(2,0,1))
-				##now make our y dataset, which is just the trial outcome for all the trials
-				t1s = np.ones(t1_spikes.shape[0])
-				t2s = np.zeros(t2_spikes.shape[0])
-				y = np.concatenate((t1s,t2s),axis=0)
-				X = np.concatenate((t1_spikes,t2_spikes),axis=0)
-				###not really sure if this is necessary, but lets just mix up the arrays
-				idx = np.random.permutation(np.arange(y.shape[0]))
-				y = y[idx]
-				X = X[idx,:,:]
-				##finally, we can actually do the regression
-				sig_idx = lr.regress_array(X,y)
-				##now just add the counts to the animal's array
-				sig_units.append(sig_idx.size)
-		##now save these data arrays in the global dictionary
-		results[animal] = [np.asarray(sig_units),np.asarray(total_units)]
+				n_t1 = 0
+			try: 
+				n_t2 = float(f[animal][session]['event_arrays']['t2'].size)
+			except KeyError:
+				n_t2 = 0
+			if (n_t1 >= 20) and (n_t2 >= 20):
+				##now make sure that this file contains at least one unit of the type that we want to analyze
+				try:
+					unit_list = [x for x in f[animal][session][unit_type].keys() if not x.endswith("_wf")]
+				except KeyError:
+					unit_list = []
+				if len(unit_list) > 0:
+					##add the number of total units to the data array
+					total_units.append(len(unit_list))
+					##now get the data for these units
+					t1_spikes,lfps,ul = ds.load_single_group_triggered_data(source_file,
+						't1',unit_type,window,animal=animal,session=session)
+					t2_spikes,lfps,ul = ds.load_single_group_triggered_data(source_file,
+						't2',unit_type,window,animal=animal,session=session)
+					##transpose these into trials x units x bins
+					t1_spikes = np.transpose(t1_spikes,(2,0,1))
+					t2_spikes = np.transpose(t2_spikes,(2,0,1))
+					##now make our y dataset, which is just the trial outcome for all the trials
+					t1s = np.ones(t1_spikes.shape[0])
+					t2s = np.zeros(t2_spikes.shape[0])
+					y = np.concatenate((t1s,t2s),axis=0)
+					X = np.concatenate((t1_spikes,t2_spikes),axis=0)
+					###not really sure if this is necessary, but lets just mix up the arrays
+					idx = np.random.permutation(np.arange(y.shape[0]))
+					y = y[idx]
+					X = X[idx,:,:]
+					##finally, we can actually do the regression
+					sig_idx = lr.regress_array(X,y)
+					##now just add the counts to the animal's array
+					sig_units.append(sig_idx.size)
+			##now save these data arrays in the global dictionary
+			results[animal] = [np.asarray(sig_units),np.asarray(total_units)]
 	##now save the data
 	f.close()
 	f_out = h5py.File(save_file,'w-')
