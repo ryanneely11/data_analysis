@@ -4610,26 +4610,47 @@ def log_regress_units():
 A function to plot the results from the aboove function
 """
 def plot_log_regression():
-	datafile = r"K:\Ryan\V1_BMI\NatureNeuro\rebuttal\data\indirect_log_regression.hdf5"
+	datafile = r"J:\Str_log_regression.hdf5"
 	f = h5py.File(datafile,'r')
 	animal_list = f.keys()
 	##store the means of all the animals
-	means = []
+	totals = []
+	sigs = []
 	for a in animal_list:
 		total_units = np.asarray(f[a]['total_units'])
 		sig_units = np.asarray(f[a]['sig_units'])
-		means.append(sig_units/total_units)
-	means = equalize_arrs(means)*100
-	mean = np.nanmean(means,axis=0)
-	serr = stats.sem(means,axis=0)
+		totals.append(total_units)
+		sigs.append(sig_units)
+	totals = equalize_arrs(totals)
+	sigs = equalize_arrs(sigs)
+	perc = sigs/totals
+	mean = np.nanmean(perc,axis=0)
+	serr = np.nanstd(perc,axis=0)/perc.shape[0]
 	fig,ax = plt.subplots(1)
 	x_axis = np.arange(1,mean.size+1)
 	ax.errorbar(x_axis,mean,yerr=serr,color='k',linewidth=2)
-	for i in range(means.shape[0]):
-		ax.plot(means[i,:],color='k',linewidth=1,alpha=0.5)
+	for i in range(perc.shape[0]):
+		ax.plot(x_axis,perc[i,:],color='k',linewidth=1,alpha=0.5)
 	ax.set_xlabel("Training day",fontsize=14)
 	ax.set_ylabel("Percent of units",fontsize=14)
 	ax.set_title("Indirect units predictive of target choice",fontsize=14)
+	##now for the totals and the raw sig numbers
+	fig,(ax1,ax2) = plt.subplots(2,sharex=True)
+	mean_total = np.nanmean(totals,axis=0)
+	serr_total = np.nanstd(totals,axis=0)/totals.shape[0]
+	mean_sig = np.nanmean(sigs,axis=0)
+	serr_sig = np.nanstd(sigs,axis=0)/sigs.shape[0]
+	ax1.set_ylabel("Number of units",fontsize=14)
+	ax2.set_ylabel("Number of units",fontsize=14)
+	ax2.set_xlabel("Training day",fontsize=14)
+	ax1.set_xticklabels([])
+	ax1.set_title("Number of significan units",fontsize=14)
+	ax2.set_title ("Total number of units",fontsize=14)
+	ax1.errorbar(x_axis,mean_sig,yerr=serr_sig,color='k',linewidth=2)
+	ax2.errorbar(x_axis,mean_total,yerr=serr_total,color='k',linewidth=2)
+	for i in range(totals.shape[0]):
+		ax1.plot(x_axis,sigs[i,:],alpha=0.5,color='k')
+		ax2.plot(x_axis,totals[i,:],alpha=0.5,color='k')
 	f.close()
 
 """
