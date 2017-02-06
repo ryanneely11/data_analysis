@@ -4606,7 +4606,31 @@ def log_regress_units():
 	print "Done"
 	return results
 
-
+"""
+A function to plot the results from the aboove function
+"""
+def plot_log_regression():
+	datafile = r"K:\Ryan\V1_BMI\NatureNeuro\rebuttal\data\indirect_log_regression.hdf5"
+	f = h5py.File(datafile,'r')
+	animal_list = f.keys()
+	##store the means of all the animals
+	means = []
+	for a in animal_list:
+		total_units = np.asarray(f[a]['total_units'])
+		sig_units = np.asarray(f[a]['sig_units'])
+		means.append(sig_units/total_units)
+	means = equalize_arrs(means)*100
+	mean = np.nanmean(means,axis=0)
+	serr = stats.sem(means,axis=0)
+	fig,ax = plt.subplots(1)
+	x_axis = np.arange(1,mean.size+1)
+	ax.errorbar(x_axis,mean,yerr=serr,color='k',linewidth=2)
+	for i in range(means.shape[0]):
+		ax.plot(means[i,:],color='k',linewidth=1,alpha=0.5)
+	ax.set_xlabel("Training day",fontsize=14)
+	ax.set_ylabel("Percent of units",fontsize=14)
+	ax.set_title("Indirect units predictive of target choice",fontsize=14)
+	f.close()
 
 """
 Another helper function to bin spike matrices.
@@ -4639,3 +4663,22 @@ def bin_spikes(data,bin_width):
 		bin_vals.append(data[idx:idx+bin_width].sum())
 		idx += bin_width
 	return np.asarray(bin_vals)
+
+"""
+a function to equalize the length of different-length arrays
+by adding np.nans
+Inputs:
+	-list of arrays (1-d) of different shapes
+Returns:
+	2-d array of even size
+"""
+def equalize_arrs(arrlist):
+	longest = 0
+	for i in range(len(arrlist)):
+		if arrlist[i].shape[0] > longest:
+			longest = arrlist[i].shape[0]
+	result = np.zeros((len(arrlist),longest))
+	result[:] = np.nan
+	for i in range(len(arrlist)):
+		result[i,0:arrlist[i].shape[0]] = arrlist[i]
+	return result
