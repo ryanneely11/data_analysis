@@ -4528,7 +4528,7 @@ A function to do logistic regression analysis on the indirect units, to see
 how many of them are predictuve of E1 vs E2 choice.
 """
 def log_regress_units():
-	unit_type = 'Str_units' ##the type of units to run regression on
+	unit_type = 'V1_units' ##the type of units to run regression on
 	animal_list = None
 	session_range = None
 	window = [2000,0]
@@ -4540,7 +4540,7 @@ def log_regress_units():
 	##in dimensions trials x units x bins, and then y; the binary matrix
 	## of target 1 and target 2 values.
 	source_file = r"J:\Ryan\processed_data\V1_BMI_final\raw_data\R7_thru_V13_all_data.hdf5"
-	save_file = r"J:\Ryan\V1_BMI\NatureNeuro\rebuttal\Str_log_regression.hdf5"
+	save_file = r"J:\Ryan\V1_BMI\NatureNeuro\rebuttal\indirect_log_regression.hdf5"
 	f = h5py.File(source_file,'r')
 	##make some arrays to store
 	if animal_list is None:
