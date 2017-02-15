@@ -4606,6 +4606,98 @@ def log_regress_units():
 	print "Done"
 	return results
 
+
+"""
+A function to do logistic regression analysis on the indirect units, as a group, to see
+how many of them are predictuve of E1 vs E2 choice.
+"""
+def log_regress_grouped_units():
+	unit_type = 'V1_units' ##the type of units to run regression on
+	animal_list = None
+	session_range = None
+	window = [2000,0]
+	##make some dictionaries to store the results
+	results = {}
+	##we should be able to run regression for each session as a whole.
+	##first, we need to get two arrays: X; the data matrix of spike data
+	##in dimensions trials x units x bins, and then y; the binary matrix
+	## of target 1 and target 2 values.
+	source_file = r"J:\Ryan\processed_data\V1_BMI_final\raw_data\R7_thru_V13_all_data.hdf5"
+	save_file = r"J:\Ryan\V1_BMI\NatureNeuro\rebuttal\grouped_ind_log_regression.hdf5"
+	f = h5py.File(source_file,'r')
+	##make some arrays to store
+	if animal_list is None:
+		animal_list = f.keys()
+	for animal in animal_list:
+		##these will be the arrays to store data from each training day
+		total_units = []
+		pred_strength = []
+		pred_sig = []
+		if session_range is None:
+			session_list = f[animal].keys()
+		else: 
+			session_list = [x for x in f[animal].keys() if int(x[-6:-4]) in session_range]
+		for session in session_list:
+			##make sure that this file had at least 20 trials of each type
+			try:
+				n_t1 = float(f[animal][session]['event_arrays']['t1'].size)
+			except KeyError:
+				n_t1 = 0
+			try: 
+				n_t2 = float(f[animal][session]['event_arrays']['t2'].size)
+			except KeyError:
+				n_t2 = 0
+			if (n_t1 >= 20) and (n_t2 >= 20):
+				##now make sure that this file contains at least one unit of the type that we want to analyze
+				try:
+					unit_list = [x for x in f[animal][session][unit_type].keys() if not x.endswith("_wf")]
+				except KeyError:
+					unit_list = []
+				if len(unit_list) > 0:
+					##add the number of total units to the data array
+					total_units.append(len(unit_list))
+					##now get the data for these units
+					t1_spikes,lfps,ul = ds.load_single_group_triggered_data(source_file,
+						't1',unit_type,window,animal=animal,session=session)
+					t2_spikes,lfps,ul = ds.load_single_group_triggered_data(source_file,
+						't2',unit_type,window,animal=animal,session=session)
+					##data shape returned is units x time x trials;
+					##sum spike rates over the interval for each unit
+					t1_spikes = t1_spikes.sum(axis=1) ##now shape is units x trials;
+					t2_spikes = t2_spikes.sum(axis=1)
+					##value is the sum of spikes over that interval for each unit and trial
+					##transpose these into trials x units
+					t1_spikes = t1_spikes.T
+					t2_spikes = t2_spikes.T
+					##now make our y dataset, which is just the trial outcome for all the trials
+					t1s = np.ones(t1_spikes.shape[0])
+					t2s = np.zeros(t2_spikes.shape[0])
+					y = np.concatenate((t1s,t2s),axis=0)
+					X = np.concatenate((t1_spikes,t2_spikes),axis=0)
+					###not really sure if this is necessary, but lets just mix up the arrays
+					idx = np.random.permutation(np.arange(y.shape[0]))
+					y = y[idx]
+					X = X[idx,:,:]
+					##finally, we can actually do the regression
+					sig = lr.permutation_test(X,y)
+					strength = lr.run_cv(X,y)
+					##now just add the counts to the animal's array
+					pred_strength.append(strength)
+					pred_sig.append(sig)
+			##now save these data arrays in the global dictionary
+			results[animal] = [np.asarray(pred_sig),np.asarray(pred_strength),np.asarray(total_units)]
+	##now save the data
+	f.close()
+	f_out = h5py.File(save_file,'w-')
+	for key in results.keys():
+		group = f_out.create_group(key)
+		group.create_dataset("total_units",data=results[key][2])
+		group.create_dataset("sig_vals",data=results[key][0])
+		group.create_dataset("pred_strength",data=results[key][1])
+	f_out.close()
+	print "Done"
+	return results
+
 """
 A function to plot the results from the aboove function
 """
