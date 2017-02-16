@@ -4677,9 +4677,9 @@ def log_regress_grouped_units():
 					###not really sure if this is necessary, but lets just mix up the arrays
 					idx = np.random.permutation(np.arange(y.shape[0]))
 					y = y[idx]
-					X = X[idx,:,:]
+					X = X[idx,:]
 					##finally, we can actually do the regression
-					sig = lr.permutation_test(X,y)
+					sig = lr.permutation_test((X,y))
 					strength = lr.run_cv(X,y)
 					##now just add the counts to the animal's array
 					pred_strength.append(strength)
