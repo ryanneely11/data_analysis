@@ -4612,7 +4612,7 @@ A function to do logistic regression analysis on the indirect units, as a group,
 how many of them are predictuve of E1 vs E2 choice.
 """
 def log_regress_grouped_units():
-	unit_type = 'V1_units' ##the type of units to run regression on
+	unit_type = 'Str_units' ##the type of units to run regression on
 	animal_list = None
 	session_range = None
 	window = [2000,0]
@@ -4623,7 +4623,7 @@ def log_regress_grouped_units():
 	##in dimensions trials x units x bins, and then y; the binary matrix
 	## of target 1 and target 2 values.
 	source_file = r"J:\Ryan\processed_data\V1_BMI_final\raw_data\R7_thru_V13_all_data.hdf5"
-	save_file = r"J:\Ryan\V1_BMI\NatureNeuro\rebuttal\grouped_ind_log_regression.hdf5"
+	save_file = r"J:\Ryan\V1_BMI\NatureNeuro\rebuttal\grouped_DMS_log_regression.hdf5"
 	f = h5py.File(source_file,'r')
 	##make some arrays to store
 	if animal_list is None:
@@ -4697,6 +4697,69 @@ def log_regress_grouped_units():
 	f_out.close()
 	print "Done"
 	return results
+
+##function to plot the results from the above function
+def plot_log_groups():
+	datafile = r"K:\Ryan\V1_BMI\NatureNeuro\rebuttal\data\grouped_ind_log_regression.hdf5"
+	f = h5py.File(datafile,'r')
+	animal_list = f.keys()
+	##store the means of all the animals
+	totals = []
+	sig_vals = []
+	accuracies = []
+	for a in animal_list:
+		total_units = np.asarray(f[a]['total_units'])
+		sig = np.asarray(f[a]['sig_vals'])
+		accuracy = np.asarray(f[a]['pred_strength'])
+		totals.append(total_units)
+		sig_vals.append(sig)
+		accuracies.append(accuracy)
+	totals = equalize_arrs(totals)
+	sig_vals = equalize_arrs(sig_vals)
+	accuracies = equalize_arrs(accuracies)
+	x_axis = np.arange(1,totals.shape[1]+1)
+	##count the number of animals for each session with significant predictability
+	##first, the total number of animals that we have data for for this day
+	total_animals = np.zeros(totals.shape[1])
+	##and the total animals with significant predictability
+	sig_animals = np.zeros(totals.shape[1])
+	for i in range(totals.shape[1]):
+		total_animals[i] = float(sig_vals[:,i][~np.isnan(sig_vals[:,i])].size)
+		sig_animals[i] = float(np.where(sig_vals[:,i]<=0.05)[0].size)
+	sig_perc = sig_animals/total_animals
+	##now do the plots
+	fig,(ax1,ax2,ax3) = plt.subplots(3,sharex=True)
+	mean_total = np.nanmean(totals,axis=0)
+	serr_total = np.nanstd(totals,axis=0)/totals.shape[0]
+	mean_acc = np.nanmean(accuracies,axis=0)
+	serr_acc = np.nanstd(accuracies,axis=0)/accuracies.shape[0]
+	ax1.set_ylabel("Prediction\n accuracy",fontsize=14)
+	ax2.set_ylabel("Number\n of units",fontsize=14)
+	ax3.set_ylabel("Percent\n significant",fontsize=14)
+	ax3.set_xlabel("Training day",fontsize=14)
+	ax1.set_title("Prediction accuracy of indirect population",fontsize=14)
+	ax2.set_title ("Total number of indirect units",fontsize=14)
+	ax3.set_title("Percent of animals with significant prediction by indirect units",fontsize=14)
+	ax1.errorbar(x_axis,mean_acc,yerr=serr_acc,color='k',linewidth=2)
+	ax2.errorbar(x_axis,mean_total,yerr=serr_total,color='k',linewidth=2)
+	ax3.plot(sig_perc,color='k',linewidth=2)
+	for tick in ax1.xaxis.get_major_ticks():
+		tick.label.set_fontsize(14)
+	for tick in ax1.yaxis.get_major_ticks():
+		tick.label.set_fontsize(14)
+	for tick in ax2.xaxis.get_major_ticks():
+		tick.label.set_fontsize(14)
+	for tick in ax2.yaxis.get_major_ticks():
+		tick.label.set_fontsize(14)
+	for tick in ax3.xaxis.get_major_ticks():
+		tick.label.set_fontsize(14)
+	for tick in ax3.yaxis.get_major_ticks():
+		tick.label.set_fontsize(14)
+	for i in range(totals.shape[0]):
+		ax1.plot(x_axis,accuracies[i,:],alpha=0.5,color='k')
+		ax2.plot(x_axis,totals[i,:],alpha=0.5,color='k')
+	f.close()
+
 
 def linear_regression_direct_indirect():
 	unit_type = 'V1_units' ##the type of units to predict e1 and e2 unit activity on
@@ -4795,7 +4858,7 @@ def linear_regression_direct_indirect():
 	return results
 
 """
-A function to plot the results from the aboove function
+A function to plot the results from the LR function (individual units)
 """
 def plot_log_regression():
 	datafile = r"K:\Ryan\V1_BMI\NatureNeuro\rebuttal\indirect_log_regression.hdf5"
