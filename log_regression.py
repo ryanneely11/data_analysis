@@ -27,7 +27,7 @@ def run_cv(X,y):
 	lr = linear_model.LogisticRegressionCV(penalty='l2',fit_intercept=True,
 		solver='liblinear',max_iter=1000,n_jobs=1)
 	##make a scorer object using matthews correlation
-	scorer = make_scorer(cohen_kappa_score)
+	scorer = make_scorer(accuracy_score)
 	##make a cross validation object to use for x-validation
 	kf = KFold(n_splits=3,shuffle=True)
 	score = cross_val_score(lr,X,y,n_jobs=1,cv=kf,scoring=scorer) ##3-fold x-validation using kappa score
@@ -62,7 +62,7 @@ def permutation_test(args):
 	lr = linear_model.LogisticRegressionCV(penalty='l2',fit_intercept=True,
 		solver='liblinear',max_iter=1000,n_jobs=1) ##set up the model
 	##make a scorer object using matthews correlation
-	scorer = make_scorer(cohen_kappa_score)
+	scorer = make_scorer(accuracy_score)
 	##make a cross validation object to use for x-validation
 	kf = KFold(n_splits=3,shuffle=True) ##VERY important that shuffle == True (not default in sklearn)
 	##get the accuary score for the actual data
