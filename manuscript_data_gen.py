@@ -4610,7 +4610,7 @@ def log_regress_units():
 A function to plot the results from the aboove function
 """
 def plot_log_regression():
-	datafile = r"J:\Str_log_regression.hdf5"
+	datafile = r"K:\Ryan\V1_BMI\NatureNeuro\rebuttal\indirect_log_regression.hdf5"
 	f = h5py.File(datafile,'r')
 	animal_list = f.keys()
 	##store the means of all the animals
@@ -4623,7 +4623,7 @@ def plot_log_regression():
 		sigs.append(sig_units)
 	totals = equalize_arrs(totals)
 	sigs = equalize_arrs(sigs)
-	perc = sigs/totals
+	perc = (sigs/totals)*100
 	mean = np.nanmean(perc,axis=0)
 	serr = np.nanstd(perc,axis=0)/perc.shape[0]
 	fig,ax = plt.subplots(1)
@@ -4634,6 +4634,10 @@ def plot_log_regression():
 	ax.set_xlabel("Training day",fontsize=14)
 	ax.set_ylabel("Percent of units",fontsize=14)
 	ax.set_title("Indirect units predictive of target choice",fontsize=14)
+	for tick in ax.xaxis.get_major_ticks():
+		tick.label.set_fontsize(14)
+	for tick in ax.yaxis.get_major_ticks():
+		tick.label.set_fontsize(14)
 	##now for the totals and the raw sig numbers
 	fig,(ax1,ax2) = plt.subplots(2,sharex=True)
 	mean_total = np.nanmean(totals,axis=0)
@@ -4643,11 +4647,18 @@ def plot_log_regression():
 	ax1.set_ylabel("Number of units",fontsize=14)
 	ax2.set_ylabel("Number of units",fontsize=14)
 	ax2.set_xlabel("Training day",fontsize=14)
-	ax1.set_xticklabels([])
-	ax1.set_title("Number of significan units",fontsize=14)
-	ax2.set_title ("Total number of units",fontsize=14)
+	ax1.set_title("Number of significant indirect units",fontsize=14)
+	ax2.set_title ("Total number of indirect units",fontsize=14)
 	ax1.errorbar(x_axis,mean_sig,yerr=serr_sig,color='k',linewidth=2)
 	ax2.errorbar(x_axis,mean_total,yerr=serr_total,color='k',linewidth=2)
+	for tick in ax1.xaxis.get_major_ticks():
+		tick.label.set_fontsize(14)
+	for tick in ax1.yaxis.get_major_ticks():
+		tick.label.set_fontsize(14)
+	for tick in ax2.xaxis.get_major_ticks():
+		tick.label.set_fontsize(14)
+	for tick in ax2.yaxis.get_major_ticks():
+		tick.label.set_fontsize(14)
 	for i in range(totals.shape[0]):
 		ax1.plot(x_axis,sigs[i,:],alpha=0.5,color='k')
 		ax2.plot(x_axis,totals[i,:],alpha=0.5,color='k')
