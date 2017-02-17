@@ -4849,6 +4849,71 @@ def linear_regression_direct_indirect():
 	print "Done"
 	return results
 
+##function to plot the results from the above function
+def plot_lin_regression():
+	datafile = "/Volumes/Untitled/Ryan/V1_BMI/NatureNeuro/rebuttal/data/direct_indirect_regression.hdf5"
+	f = h5py.File(datafile,'r')
+	animal_list = f.keys()
+	##store the means of all the animals
+	totals = []
+	sig_vals = []
+	var_explained = []
+	for a in animal_list:
+		total_units = np.asarray(f[a]['total_units'])
+		sig = np.asarray(f[a]['sig_val'])
+		var = np.asarray(f[a]['var_explained'])
+		totals.append(total_units)
+		sig_vals.append(sig)
+		var_explained.append(var)
+	totals = equalize_arrs(totals)
+	sig_vals = equalize_arrs(sig_vals)
+	var_explained = equalize_arrs(var_explained)
+	x_axis = np.arange(1,totals.shape[1]+1)
+	##count the number of animals for each session with significant predictability
+	##first, the total number of animals that we have data for for this day
+	total_animals = np.zeros(totals.shape[1])
+	##and the total animals with significant predictability
+	sig_animals = np.zeros(totals.shape[1])
+	for i in range(totals.shape[1]):
+		total_animals[i] = float(sig_vals[:,i][~np.isnan(sig_vals[:,i])].size)
+		sig_animals[i] = float(np.where(sig_vals[:,i]<=0.05)[0].size)
+	sig_perc = sig_animals/total_animals
+	##now do the plots
+	fig,(ax1,ax2,ax3) = plt.subplots(3,sharex=True)
+	mean_total = np.nanmean(totals,axis=0)
+	serr_total = np.nanstd(totals,axis=0)/totals.shape[0]
+	mean_var = np.nanmean(var_explained,axis=0)
+	serr_var = np.nanstd(var_explained,axis=0)/var_explained.shape[0]
+	ax1.set_ylabel("Explained variance score",fontsize=14)
+	ax2.set_ylabel("Number\n of units",fontsize=14)
+	ax3.set_ylabel("Percent\n significant",fontsize=14)
+	ax3.set_xlabel("Training day",fontsize=14)
+	ax1.set_title("Variance of direct units explained by indirect units",fontsize=14)
+	ax2.set_title ("Total number of indirect units",fontsize=14)
+	ax3.set_title("Percent of animals with significant E1/E2 prediction by indirect units",fontsize=14)
+	ax1.errorbar(x_axis,mean_var,yerr=serr_var,color='k',linewidth=2)
+	ax2.errorbar(x_axis,mean_total,yerr=serr_total,color='k',linewidth=2)
+	ax3.plot(x_axis,sig_perc,color='k',linewidth=2)
+	for tick in ax1.xaxis.get_major_ticks():
+		tick.label.set_fontsize(14)
+	for tick in ax1.yaxis.get_major_ticks():
+		tick.label.set_fontsize(14)
+	for tick in ax2.xaxis.get_major_ticks():
+		tick.label.set_fontsize(14)
+	for tick in ax2.yaxis.get_major_ticks():
+		tick.label.set_fontsize(14)
+	for tick in ax3.xaxis.get_major_ticks():
+		tick.label.set_fontsize(14)
+	for tick in ax3.yaxis.get_major_ticks():
+		tick.label.set_fontsize(14)
+	for i in range(totals.shape[0]):
+		ax1.plot(x_axis,var_explained[i,:],alpha=0.5,color='k')
+		ax2.plot(x_axis,totals[i,:],alpha=0.5,color='k')
+	ax1.set_xlim(0,10)
+	ax2.set_xlim(0,10)
+	ax3.set_xlim(0,10)
+	f.close()
+
 """
 A function to plot the results from the LR function (individual units)
 """
