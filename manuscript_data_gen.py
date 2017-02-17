@@ -4766,7 +4766,7 @@ def linear_regression_direct_indirect():
 	unit_type = 'V1_units' ##the type of units to predict e1 and e2 unit activity on
 	animal_list = None
 	session_range = None
-	window = [2000,0]
+	window = [1000,0]
 	##make some dictionaries to store the results
 	results = {}
 	##we should be able to run regression for each session as a whole.
