@@ -13,6 +13,7 @@ import pandas as pd
 import collections
 import sys
 import log_regression as lr
+import lin_regression as linr
 sns.set_style("whitegrid", {'axes.grid' : False})
 	
 def get_performance_data():
@@ -4700,7 +4701,7 @@ def log_regress_grouped_units():
 
 ##function to plot the results from the above function
 def plot_log_groups():
-	datafile = r"K:\Ryan\V1_BMI\NatureNeuro\rebuttal\data\grouped_ind_log_regression.hdf5"
+	datafile = "/Volumes/Untitled/Ryan/V1_BMI/NatureNeuro/rebuttal/data/grouped_DMS_log_regression.hdf5"
 	f = h5py.File(datafile,'r')
 	animal_list = f.keys()
 	##store the means of all the animals
@@ -4773,7 +4774,7 @@ def linear_regression_direct_indirect():
 	##in dimensions trials x units x bins, and then y; the binary matrix
 	## of target 1 and target 2 values.
 	source_file = r"J:\Ryan\processed_data\V1_BMI_final\raw_data\R7_thru_V13_all_data.hdf5"
-	save_file = r"J:\Ryan\V1_BMI\NatureNeuro\rebuttal\grouped_ind_log_regression.hdf5"
+	save_file = r"J:\Ryan\V1_BMI\NatureNeuro\rebuttal\direct_indirect_regression.hdf5"
 	f = h5py.File(source_file,'r')
 	##make some arrays to store
 	if animal_list is None:
@@ -4781,8 +4782,8 @@ def linear_regression_direct_indirect():
 	for animal in animal_list:
 		##these will be the arrays to store data from each training day
 		total_units = []
-		pred_strength = []
-		pred_sig = []
+		var_explained = []
+		sig = []
 		if session_range is None:
 			session_list = f[animal].keys()
 		else: 
@@ -4805,54 +4806,45 @@ def linear_regression_direct_indirect():
 					unit_list = []
 				if len(unit_list) > 0:
 					##get the list of e1 and e2 units
-					e1_list = [x for x in f[animal][session][e1_units].keys() if not x.endswith("_wf")]
-					e2_list = [x for x in f[animal][session][e1_units].keys() if not x.endswith("_wf")]
-					direct_list = e1_list+e2_list
-
-
-
-
-
+					e1_list = [x for x in f[animal][session]['e1_units'].keys() if not x.endswith("_wf")]
+					e2_list = [x for x in f[animal][session]['e1_units'].keys() if not x.endswith("_wf")]
 					##add the number of total units to the data array
 					total_units.append(len(unit_list))
-					##now get the data for these units
-					t1_spikes,lfps,ul = ds.load_single_group_triggered_data(source_file,
+					##now get the data for each unit type; we'll stick with just the rewarded targets
+					e1_t1_spikes,lfps,ul = ds.load_single_group_triggered_data(source_file,
+						't1','e1_units',window,animal=animal,session=session)
+					e2_t1_spikes,lfps,ul = ds.load_single_group_triggered_data(source_file,
+						't1','e2_units',window,animal=animal,session=session)
+					##now concatenate these into just 'direct' units
+					direct_spikes = np.concatenate((e1_t1_spikes,e2_t1_spikes),axis=0)
+					##now get the data for the indirect units
+					indirect_spikes,lfps,ul = ds.load_single_group_triggered_data(source_file,
 						't1',unit_type,window,animal=animal,session=session)
-					t2_spikes,lfps,ul = ds.load_single_group_triggered_data(source_file,
-						't2',unit_type,window,animal=animal,session=session)
-					##data shape returned is units x time x trials;
-					##sum spike rates over the interval for each unit
-					t1_spikes = t1_spikes.sum(axis=1) ##now shape is units x trials;
-					t2_spikes = t2_spikes.sum(axis=1)
-					##value is the sum of spikes over that interval for each unit and trial
-					##transpose these into trials x units
-					t1_spikes = t1_spikes.T
-					t2_spikes = t2_spikes.T
-					##now make our y dataset, which is just the trial outcome for all the trials
-					t1s = np.ones(t1_spikes.shape[0])
-					t2s = np.zeros(t2_spikes.shape[0])
-					y = np.concatenate((t1s,t2s),axis=0)
-					X = np.concatenate((t1_spikes,t2_spikes),axis=0)
-					###not really sure if this is necessary, but lets just mix up the arrays
-					idx = np.random.permutation(np.arange(y.shape[0]))
-					y = y[idx]
-					X = X[idx,:,:]
-					##finally, we can actually do the regression
-					sig = lr.permutation_test(X,y)
-					strength = lr.run_cv(X,y)
-					##now just add the counts to the animal's array
-					pred_strength.append(strength)
-					pred_sig.append(sig)
+					##data shape here is units x time x trials
+					##now sum the spike counts over the sample interval
+					direct_spikes = direct_spikes.sum(axis=1)
+					indirect_spikes = indirect_spikes.sum(axis=1)
+					##now shape is units x trials
+					##reshape into trials x units
+					direct_spikes = direct_spikes.T
+					indirect_spikes = indirect_spikes.T
+					##now we want to run this through a linear regression
+					##first get the variance explained
+					ve = linr.run_cv(indirect_spikes,direct_spikes)
+					p = linr.permutation_test(indirect_spikes,direct_spikes)
+					##now add to the results
+					var_explained.append(ve)
+					sig.append(p)
 			##now save these data arrays in the global dictionary
-			results[animal] = [np.asarray(pred_sig),np.asarray(pred_strength),np.asarray(total_units)]
+			results[animal] = [np.asarray(sig),np.asarray(var_explained),np.asarray(total_units)]
 	##now save the data
 	f.close()
 	f_out = h5py.File(save_file,'w-')
 	for key in results.keys():
 		group = f_out.create_group(key)
 		group.create_dataset("total_units",data=results[key][2])
-		group.create_dataset("sig_vals",data=results[key][0])
-		group.create_dataset("pred_strength",data=results[key][1])
+		group.create_dataset("sig_val",data=results[key][0])
+		group.create_dataset("var_explained",data=results[key][1])
 	f_out.close()
 	print "Done"
 	return results
