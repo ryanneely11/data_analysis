@@ -14,6 +14,11 @@ import collections
 import sys
 import log_regression as lr
 import lin_regression as linr
+import RatUnits4 as ru
+try:
+	import plxread
+except ImportError:
+	print "Warning: plxread not imported"
 sns.set_style("whitegrid", {'axes.grid' : False})
 	
 def get_performance_data():
@@ -4987,8 +4992,8 @@ def get_rev1_bs():
 		a_group = save_file.create_group(animal)
 		for session in session_list:
 			s_group = a_group.create_group(session)
-			file_v = os.path.join(root_dir,animal,session,".plx") ##the file path to the volitional part
-			file_pb = os.path.join(root_dir,animal,session,"_pb.plx") ##path to the playback part
+			file_v = os.path.join(root_dir,animal,session)+".plx" ##the file path to the volitional part
+			file_pb = os.path.join(root_dir,animal,session)+"_pb.plx" ##path to the playback part
 			##get the E1 and E2 unis for this session
 			e1_list = ru.animals[animal][1][session+".plx"]['units']['e1_units']
 			e2_list = ru.animals[animal][1][session+".plx"]['units']['e2_units']
