@@ -4977,11 +4977,11 @@ A function to look at the online volitional target-locked modulations
 compared to the ones observed during rewarded tone playback
 """
 def get_rev1_bs():
-	root_dir = r""
+	root_dir = r"K:\Ryan\V1_BMI"
 	animal_list = ['V14','V15','V16']
-	session_list = ['BMI_D06','BMI_D07']
-	window = [3000,3000]
-	save_file = h5py.File(r"",'w-')
+	session_list = ['BMI_D06']
+	window = [6000,6000]
+	save_file = h5py.File(r"K:\Ryan\V1_BMI\NatureNeuro\rebuttal\data\test.hdf5",'w-')
 	##open the file 
 	for animal in animal_list:
 		a_group = save_file.create_group(animal)
@@ -5093,10 +5093,211 @@ def plot_rev1_bs():
 	e1_t2_pb = []
 	e2_t1_pb = []
 	e2_t2_pb = []
-	##go through each animal and concatenate all the arrays
+	##go through each animal and take the average of the sessions 
 	for animal in animal_list:
+		e1t1v = []
+		e1t2v = []
+		e2t1v = []
+		e2t2v = []
+		### the playback ones
+		e1t1pb = []
+		e1t2pb = []
+		e2t1pb = []
+		e2t2pb = []
 		for session in f[animal].keys():
-			e1t1v.append(np.asarray(f[animal][session]['e1_t1_v']).mean(axis=))
+			e1t1v.append(np.asarray(f[animal][session]['e1_t1_v']))
+			e1t2v.append(np.asarray(f[animal][session]['e1_t2_v']))
+			e2t1v.append(np.asarray(f[animal][session]['e2_t1_v']))
+			e2t2v.append(np.asarray(f[animal][session]['e2_t2_v']))
+			##repeat for playback
+			e1t1pb.append(np.asarray(f[animal][session]['e1_t1_pb']))
+			e1t2pb.append(np.asarray(f[animal][session]['e1_t2_pb']))
+			e2t1pb.append(np.asarray(f[animal][session]['e2_t1_pb']))
+			e2t2pb.append(np.asarray(f[animal][session]['e2_t2_pb']))
+		##now concatenate trials from both sessions, and add to the animal average
+		##also take the across animal average over both sessions and all units
+		e1_t1_v.append(np.concatenate(e1t1v,axis=2).mean(axis=0))
+		e1_t2_v.append(np.concatenate(e1t2v,axis=2).mean(axis=0))
+		e2_t1_v.append(np.concatenate(e2t1v,axis=2).mean(axis=0))
+		e2_t2_v.append(np.concatenate(e2t1v,axis=2).mean(axis=0))
+		##same for playback
+		e1_t1_pb.append(np.concatenate(e1t1pb,axis=2).mean(axis=0))
+		e1_t2_pb.append(np.concatenate(e1t2pb,axis=2).mean(axis=0))
+		e2_t1_pb.append(np.concatenate(e2t1pb,axis=2).mean(axis=0))
+		e2_t2_pb.append(np.concatenate(e2t1pb,axis=2).mean(axis=0))
+	##now convert to a numpy array
+	e1_t1_v = np.asarray(e1_t1_v) ##now shape is animals x time x trials, averaged over units
+	e1_t2_v = np.asarray(e1_t2_v)
+	e2_t1_v = np.asarray(e2_t1_v)
+	e2_t2_v = np.asarray(e2_t2_v)
+	##repeat for playback
+	e1_t1_pb = np.asarray(e1_t1_pb) ##now shape is animals x time x trials, averaged over units
+	e1_t2_pb = np.asarray(e1_t2_pb)
+	e2_t1_pb = np.asarray(e2_t1_pb)
+	e2_t2_pb = np.asarray(e2_t2_pb)
+	##now I probably want to look at the averages for each animal separately
+	e1_t1_v_means = np.zeros((e1_t1_v.shape[0],e1_t1_v.shape[1]))
+	e1_t2_v_means = np.zeros((e1_t2_v.shape[0],e1_t2_v.shape[1]))
+	e2_t1_v_means = np.zeros((e2_t1_v.shape[0],e2_t1_v.shape[1]))
+	e2_t2_v_means = np.zeros((e2_t2_v.shape[0],e2_t2_v.shape[1]))
+	####
+	e1_t1_pb_means = np.zeros((e1_t1_pb.shape[0],e1_t1_pb.shape[1]))
+	e1_t2_pb_means = np.zeros((e1_t2_pb.shape[0],e1_t2_pb.shape[1]))
+	e2_t1_pb_means = np.zeros((e2_t1_pb.shape[0],e2_t1_pb.shape[1]))
+	e2_t2_pb_means = np.zeros((e2_t2_pb.shape[0],e2_t2_pb.shape[1]))
+	for a in range(e1_t1_v.shape[0]):
+		e1_t1_v_means[a,:] = stats.zscore(ss.windowRate(e1_t1_v[a],[100,50]).mean(axis=1)) ##this is the average trace for this animal, over all units/trials
+		e1_t2_v_means[a,:] = stats.zscore(ss.windowRate(e1_t2_v[a],[100,50]).mean(axis=1))
+		e2_t1_v_means[a,:] = stats.zscore(ss.windowRate(e2_t1_v[a],[100,50]).mean(axis=1))
+		e2_t2_v_means[a,:] = stats.zscore(ss.windowRate(e2_t1_v[a],[100,50]).mean(axis=1))
+		###
+		e1_t1_pb_means[a,:] = stats.zscore(ss.windowRate(e1_t1_pb[a],[100,50]).mean(axis=1)) ##this is the average trace for this animal, over all units/trials
+		e1_t2_pb_means[a,:] = stats.zscore(ss.windowRate(e1_t2_pb[a],[100,50]).mean(axis=1))
+		e2_t1_pb_means[a,:] = stats.zscore(ss.windowRate(e2_t1_pb[a],[100,50]).mean(axis=1))
+		e2_t2_pb_means[a,:] = stats.zscore(ss.windowRate(e2_t1_pb[a],[100,50]).mean(axis=1))
+	##now get the means and std errs
+	e1_t1_v_mean = e1_t1_v_means.mean(axis=0)
+	e1_t2_v_mean = e1_t2_v_means.mean(axis=0)
+	e2_t1_v_mean = e2_t1_v_means.mean(axis=0)
+	e2_t2_v_mean = e2_t2_v_means.mean(axis=0)
+	##now the std dev
+	e1_t1_v_serr = e1_t1_v_means.std(axis=0)/np.sqrt(e1_t1_v_means.shape[0])
+	e1_t2_v_serr = e1_t2_v_means.std(axis=0)/np.sqrt(e1_t2_v_means.shape[0])
+	e2_t1_v_serr = e1_t2_v_means.std(axis=0)/np.sqrt(e2_t1_v_means.shape[0])
+	e2_t2_v_serr = e2_t2_v_means.std(axis=0)/np.sqrt(e2_t2_v_means.shape[0])
+	###repeat for the pb
+	e1_t1_pb_mean = e1_t1_pb_means.mean(axis=0)
+	e1_t2_pb_mean = e1_t2_pb_means.mean(axis=0)
+	e2_t1_pb_mean = e2_t1_pb_means.mean(axis=0)
+	e2_t2_pb_mean = e2_t2_pb_means.mean(axis=0)
+	##now the std dev
+	e1_t1_pb_serr = e1_t1_pb_means.std(axis=0)/np.sqrt(e1_t1_pb_means.shape[0])
+	e1_t2_pb_serr = e1_t2_pb_means.std(axis=0)/np.sqrt(e1_t2_pb_means.shape[0])
+	e2_t1_pb_serr = e1_t2_pb_means.std(axis=0)/np.sqrt(e2_t1_pb_means.shape[0])
+	e2_t2_pb_serr = e2_t2_pb_means.std(axis=0)/np.sqrt(e2_t2_pb_means.shape[0])
+	##now plot this BS!!!
+	x = np.linespace(-6,6,12000)
+	t1_fig = plt.figure()
+	t1_fig.suptitle("Rewarded target",fontsize=14)
+	ax_v = t1_fig.add_subplot(121)
+	ax_v.set_title("Online control",fontsize=14,weight='bold')
+	ax_v.set_ylabel("Firing rate, z-scored",fontsize=14)
+	ax_v.set_xlabel("Time to target, s",fontsize=14)
+	ax_v.set_xlim(-5,5)
+	for ticklabel in ax_v.get_xticklabels():
+		ticklabel.set_fontsize(14)
+	for ticklabel in ax_v.get_yticklabels():
+		ticklabel.set_fontsize(14)
+	ax_v.plot(x,e1_t1_v_mean,linewidth=2,color='g',label='E1')
+	ax_v.fill_between(x,e1_t1_v_mean-e1_t1_v_serr,e1_t1_v_mean+e1_t1_v_serr,color='g',alpha=0.5)
+	ax_v.plot(x,e2_t1_v_mean,linewidth=2,color='b',label='E2')
+	ax_v.fill_between(x,e2_t1_v_mean-e2_t1_v_serr,e2_t1_v_mean-e2_t1_v_serr,color='b',alpha=0.5)
+	ax_pb = t1_fig.add_subplot(122)
+	ax_pb.set_title("Tone playback",fontsize=14,weight='bold')
+	ax_pb.set_ylabel("Firing rate, z-scored",fontsize=14)
+	ax_pb.set_xlabel("Time to target, s",fontsize=14)
+	ax_pb.set_xlim(-5,5)
+	for ticklabel in ax_pb.get_xticklabels():
+		ticklabel.set_fontsize(14)
+	for ticklabel in ax_pb.get_yticklabels():
+		ticklabel.set_fontsize(14)
+	ax_pb.plot(x,e1_t1_pb_mean,linewidth=2,color='g',label='E1')
+	ax_pb.fill_between(x,e1_t1_pb_mean-e1_t1_pb_serr,e1_t1_pb_mean+e1_t1_pb_serr,color='g',alpha=0.5)
+	ax_pb.plot(x,e2_t1_v_mean,linewidth=2,color='b',label='E2')
+	ax_pb.fill_between(x,e2_t1_pb_mean-e2_t1_pb_serr,e2_t1_pb_mean-e2_t1_pb_serr,color='b',alpha=0.5)
+	ax_pb.legend(bbox_to_anchor(1.2,1))
+	##repeat for target 2
+	t2_fig = plt.figure()
+	t2_fig.suptitle("Unrewarded target",fontsize=14)
+	ax_v = t2_fig.add_subplot(121)
+	ax_v.set_title("Online control",fontsize=14,weight='bold')
+	ax_v.set_ylabel("Firing rate, z-scored",fontsize=14)
+	ax_v.set_xlabel("Time to target, s",fontsize=14)
+	ax_v.set_xlim(-5,5)
+	for ticklabel in ax_v.get_xticklabels():
+		ticklabel.set_fontsize(14)
+	for ticklabel in ax_v.get_yticklabels():
+		ticklabel.set_fontsize(14)
+	ax_v.plot(x,e1_t2_v_mean,linewidth=2,color='g',label='E1')
+	ax_v.fill_between(x,e1_t2_v_mean-e1_t2_v_serr,e1_t2_v_mean+e1_t2_v_serr,color='g',alpha=0.5)
+	ax_v.plot(x,e2_t1_v_mean,linewidth=2,color='b',label='E2')
+	ax_v.fill_between(x,e2_t2_v_mean-e2_t2_v_serr,e2_t2_v_mean-e2_t2_v_serr,color='b',alpha=0.5)
+	ax_pb = t2_fig.add_subplot(122)
+	ax_pb.set_title("Tone playback",fontsize=14,weight='bold')
+	ax_pb.set_ylabel("Firing rate, z-scored",fontsize=14)
+	ax_pb.set_xlabel("Time to target, s",fontsize=14)
+	ax_pb.set_xlim(-5,5)
+	for ticklabel in ax_pb.get_xticklabels():
+		ticklabel.set_fontsize(14)
+	for ticklabel in ax_pb.get_yticklabels():
+		ticklabel.set_fontsize(14)
+	ax_pb.plot(x,e1_t2_pb_mean,linewidth=2,color='g',label='E1')
+	ax_pb.fill_between(x,e1_t2_pb_mean-e1_t2_pb_serr,e1_t2_pb_mean+e1_t2_pb_serr,color='g',alpha=0.5)
+	ax_pb.plot(x,e2_t2_v_mean,linewidth=2,color='b',label='E2')
+	ax_pb.fill_between(x,e2_t2_pb_mean-e2_t2_pb_serr,e2_t2_pb_mean-e2_t2_pb_serr,color='b',alpha=0.5)
+	ax_pb.legend(bbox_to_anchor(1.2,1))
+	###now I guess we can also plot the modulation depths
+	e1_t1_mod_v = abs(e1_t1_v_means).max(axis=1)
+	e1_t2_mod_v = abs(e1_t2_v_means).max(axis=1)
+	e2_t1_mod_v = abs(e2_t1_v_means).max(axis=1)
+	e2_t2_mod_v = abs(e2_t2_v_means).max(axis=1)
+	###
+	e1_t1_mod_pb = abs(e1_t1_pb_means).max(axis=1)
+	e1_t2_mod_pb = abs(e1_t2_pb_means).max(axis=1)
+	e2_t1_mod_pb = abs(e2_t1_pb_means).max(axis=1)
+	e2_t2_mod_pb = abs(e2_t2_pb_means).max(axis=1)
+	##let's say we only care about the rewarded target
+	e1_mod = np.vstack((e1_t1_mod_v,e1_t1_mod_pb)) ##now shape is conditions x animals
+	e2_mod = np.vstack((e2_t1_mod_v,e2_t1_mod_pb))
+	e1_mod_mean = e1_mod.mean(axis=1)
+	e1_mod_serr = e1_mod.std(axis=1)/np.sqrt(e1_t1_mod_v.shape[0])
+	##and for E2
+	e2_mod_mean = e1_mod.mean(axis=1)
+	e2_mod_serr = e2_mod.std(axis=1)/np.sqrt(e1_t1_mod_v.shape[0])
+	##now do the plotting
+	t1_mod_fig = plt.figure()
+	ax_e1 = t1_mod_fig.add_subplot(121)
+	x2 = np.array([0,1])
+	err_x = np.array([0,1])
+	for i in range(e1_mod.shape[1]):
+		ax_e1.plot(x2,e1_mod[:,i],color='g',linewidth=2,marker='o')
+	ax_e1.errorbar(x2,e1_mod_mean,yerr=e1_mod_err,xerr=err_x,fmt='none',ecolor='k',capthick=2,elinewidth=2)
+	plt.xticks(np.arange(0,2),['Online','Playback'])
+	for ticklabel in ax_e1.get_xticklabels():
+		ticklabel.set_fontsize(14)
+	for ticklabel in ax_e1.get_yticklabels():
+		ticklabel.set_fontsize(14)
+	ax_e1.set_xlim(-0.3,1.3)
+	ax_e1.set_ylabel("Modulation depth",fontsize=14)
+	ax_e1.set_title("Average E1 modulation depth",fontsize=14)
+	##now for E2
+	ax_e2 = t1_mod_fig.add_subplot(122)
+	for i in range(e2_mod.shape[1]):
+		ax_e2.plot(x2,e2_mod[:,i],color='b',linewidth=2,marker='o')
+	ax_e2.errorbar(x2,e2_mod_mean,yerr=e2_mod_err,xerr=err_x,fmt='none',ecolor='k',capthick=2,elinewidth=2)
+	plt.xticks(np.arange(0,2),['Online','Playback'])
+	for ticklabel in ax_e2.get_xticklabels():
+		ticklabel.set_fontsize(14)
+	for ticklabel in ax_e2.get_yticklabels():
+		ticklabel.set_fontsize(14)
+	ax_e2.set_xlim(-0.3,1.3)
+	ax_e2.set_ylabel("Modulation depth",fontsize=14)
+	ax_e2.set_title("Average E2 modulation depth",fontsize=14)
+	#finally do some significance testing
+	pval_e1 = stats.ttest_rel(e1_t1_mod_v, e1_t1_mod_pb)[1]
+	tval_e1 =stats.ttest_rel(e1_t1_mod_v, e1_t1_mod_pb)[0]
+	pval_e2 = stats.ttest_rel(e2_t1_mod_v, e2_t1_mod_pb)[1]
+	tval_e2 =stats.ttest_rel(e2_t1_mod_v, e2_t1_mod_pb)[0]
+	print "E1 online mean = "+str(e1_t1_mod_v.mean())
+	print "E1 playback mean = "+str(e1_t1_mod_pb.mean())
+	print "E1 pval = "+str(pval_e1)
+	print "E1 tval = "+str(tval_e1)
+	print "E2 online mean = "+str(e2_t1_mod_v.mean())
+	print "E2 playback mean = "+str(e2_t1_mod_pb.mean())
+	print "E2 pval = "+str(pval_e2)
+	print "E2 tval = "+str(tval_e2)
+
+
 
 
 
