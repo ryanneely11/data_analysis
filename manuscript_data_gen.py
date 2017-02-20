@@ -4984,9 +4984,9 @@ compared to the ones observed during rewarded tone playback
 def get_rev1_bs():
 	root_dir = r"K:\Ryan\V1_BMI"
 	animal_list = ['V14','V15','V16']
-	session_list = ['BMI_D06']
+	session_list = ['BMI_D06','BMI_D07']
 	window = [6000,6000]
-	save_file = h5py.File(r"K:\Ryan\V1_BMI\NatureNeuro\rebuttal\data\test.hdf5",'w-')
+	save_file = h5py.File(r"K:\Ryan\V1_BMI\NatureNeuro\rebuttal\data\rev1_expt.hdf5",'w-')
 	##open the file 
 	for animal in animal_list:
 		a_group = save_file.create_group(animal)
