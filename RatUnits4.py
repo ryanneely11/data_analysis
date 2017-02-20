@@ -20,6 +20,203 @@ elif _platform == 'win32':
 
 animals = {
 
+"V14": [prefix+"/V14", {   
+
+   "BMI_D01.plx":
+      {'units':{
+      'e1_units':[u'sig005a', u'sig006a'],
+      'e2_units':[u'sig008a', u'sig014a'], 
+      'V1_units': ['sig007a', 'sig004c', 'sig004b', 'sig004a', 'sig007b', 'sig011a', 'sig015b', 'sig015a', 'sig013a', 'sig012b', 'sig012a', 'sig011b', 'sig007c']},
+       'lfp':{
+       'V1_lfp':['AD001','AD002','AD003','AD004','AD005','AD006','AD007','AD008','AD009','AD010','AD011','AD012','AD013','AD014','AD015','AD016']},
+       'events':{'t1':['Event011'], 't2':['Event012'], 'miss':['Event010']},
+       'control_cells':'V1'},
+
+   "BMI_D02.plx":
+      {'units':{
+      'e1_units':[u'sig005a', u'sig006a'],
+      'e2_units':[u'sig008a', u'sig014a'], 
+      'V1_units': ['sig004a', 'sig011a', 'sig016a', 'sig013a', 'sig012a', 'sig015a', 'sig011b', 'sig012b', 'sig007a']},
+       'lfp':{
+       'V1_lfp':['AD001','AD002','AD003','AD004','AD005','AD006','AD007','AD008','AD009','AD010','AD011','AD012','AD013','AD014','AD015','AD016']},
+       'events':{'t1':['Event011'], 't2':['Event012'], 'miss':['Event010']},
+       'control_cells':'V1'},
+
+   "BMI_D03.plx":
+      {'units':{
+      'e1_units':[u'sig005a', u'sig006a'],
+      'e2_units':[u'sig008a', u'sig014a'], 
+      'V1_units': ['sig016a', 'sig015a', 'sig012a', 'sig004a', 'sig013a', 'sig011a', 'sig007a']},
+       'lfp':{
+       'V1_lfp':['AD001','AD002','AD003','AD004','AD005','AD006','AD007','AD008','AD009','AD010','AD011','AD012','AD013','AD014','AD015','AD016']},
+       'events':{'t1':['Event011'], 't2':['Event012'], 'miss':['Event010']},
+       'control_cells':'V1'},
+
+   "BMI_D04.plx":
+      {'units':{
+      'e1_units':[u'sig005a', u'sig006a'],
+      'e2_units':[u'sig008a', u'sig014a'], 
+      'V1_units': ['sig004a', 'sig011a', 'sig012a', 'sig015a', 'sig016a', 'sig013a', 'sig007a']},
+       'lfp':{
+       'V1_lfp':['AD001','AD002','AD003','AD004','AD005','AD006','AD007','AD008','AD009','AD010','AD011','AD012','AD013','AD014','AD015','AD016']},
+       'events':{'t1':['Event011'], 't2':['Event012'], 'miss':['Event010']},
+       'control_cells':'V1'},
+
+   "BMI_D05.plx":
+      {'units':{
+      'e1_units':[u'sig005a', u'sig006a'],
+      'e2_units':[u'sig008a', u'sig014a'], 
+      'V1_units': ['sig004a', 'sig016a', 'sig015a', 'sig013a', 'sig012a', 'sig011a']},
+       'lfp':{
+       'V1_lfp':['AD001','AD002','AD003','AD004','AD005','AD006','AD007','AD008','AD009','AD010','AD011','AD012','AD013','AD014','AD015','AD016']},
+       'events':{'t1':['Event011'], 't2':['Event012'], 'miss':['Event010']},
+       'control_cells':'V1'},
+
+   "BMI_D06.plx":
+      {'units':{
+      'e1_units':[u'sig005a', u'sig006a'],
+      'e2_units':[u'sig008a', u'sig014a'], 
+      'V1_units': ['sig007a', 'sig004c', 'sig004b', 'sig004a', 'sig007b', 'sig011a', 'sig015b', 'sig015a', 'sig013a', 'sig012b', 'sig012a', 'sig011b', 'sig007c']},
+       'lfp':{
+       'V1_lfp':['AD001','AD002','AD003','AD004','AD005','AD006','AD007','AD008','AD009','AD010','AD011','AD012','AD013','AD014','AD015','AD016']},
+       'events':{'t1':['Event011'], 't2':['Event012'], 'miss':['Event010']},
+       'control_cells':'V1'},
+
+
+}],
+
+
+"V15": [prefix+"/V15", {   
+
+   "BMI_D01.plx":
+      {'units':{
+      'e1_units': ['sig001a', 'sig002a'],
+      'e2_units': ['sig009a', 'sig010a'], 
+      'V1_units': []},
+       'lfp':{
+       'V1_lfp':['AD001','AD002','AD003','AD004','AD005','AD006','AD007','AD008','AD009','AD010','AD011','AD012','AD013','AD014','AD015','AD016']},
+       'events':{'t1':['Event011'], 't2':['Event012'], 'miss':['Event010']},
+       'control_cells':'V1'},
+
+   "BMI_D02.plx":
+      {'units':{
+      'e1_units': ['sig001a', 'sig002a'],
+      'e2_units': ['sig009a', 'sig010a'],
+      'V1_units': ['sig014a', 'sig015a']},
+       'lfp':{
+       'V1_lfp':['AD001','AD002','AD003','AD004','AD005','AD006','AD007','AD008','AD009','AD010','AD011','AD012','AD013','AD014','AD015','AD016']},
+       'events':{'t1':['Event011'], 't2':['Event012'], 'miss':['Event010']},
+       'control_cells':'V1'},
+
+   "BMI_D03.plx":
+      {'units':{
+      'e1_units': ['sig001a', 'sig002a'],
+      'e2_units': ['sig009a', 'sig010a'],
+      'V1_units': ['sig014a', 'sig015a']},
+       'lfp':{
+       'V1_lfp':['AD001','AD002','AD003','AD004','AD005','AD006','AD007','AD008','AD009','AD010','AD011','AD012','AD013','AD014','AD015','AD016']},
+       'events':{'t1':['Event011'], 't2':['Event012'], 'miss':['Event010']},
+       'control_cells':'V1'},
+
+   "BMI_D04.plx":
+      {'units':{
+      'e1_units': ['sig001a', 'sig002a'],
+      'e2_units': ['sig010a', 'sig009a'],
+      'V1_units': ['sig015a', 'sig014a']},
+       'lfp':{
+       'V1_lfp':['AD001','AD002','AD003','AD004','AD005','AD006','AD007','AD008','AD009','AD010','AD011','AD012','AD013','AD014','AD015','AD016']},
+       'events':{'t1':['Event011'], 't2':['Event012'], 'miss':['Event010']},
+       'control_cells':'V1'},
+
+   "BMI_D05.plx":
+      {'units':{
+      'e1_units': ['sig001a', 'sig002a'],
+      'e2_units': ['sig009a', 'sig010a'],
+      'V1_units': ['sig014a', 'sig015a']},
+       'lfp':{
+       'V1_lfp':['AD001','AD002','AD003','AD004','AD005','AD006','AD007','AD008','AD009','AD010','AD011','AD012','AD013','AD014','AD015','AD016']},
+       'events':{'t1':['Event011'], 't2':['Event012'], 'miss':['Event010']},
+       'control_cells':'V1'},
+
+   "BMI_D06.plx":
+      {'units':{
+      'e1_units':[u'sig005a', u'sig006a'],
+      'e2_units':[u'sig008a', u'sig014a'], 
+      'V1_units': ['sig007a', 'sig004c', 'sig004b', 'sig004a', 'sig007b', 'sig011a', 'sig015b', 'sig015a', 'sig013a', 'sig012b', 'sig012a', 'sig011b', 'sig007c']},
+       'lfp':{
+       'V1_lfp':['AD001','AD002','AD003','AD004','AD005','AD006','AD007','AD008','AD009','AD010','AD011','AD012','AD013','AD014','AD015','AD016']},
+       'events':{'t1':['Event011'], 't2':['Event012'], 'miss':['Event010']},
+       'control_cells':'V1'},
+
+
+}],
+
+
+"V16": [prefix+"/V16", {   
+
+   "BMI_D01.plx":
+      {'units':{
+      'e1_units': ['sig003a', 'sig008a'],
+      'e2_units': ['sig013a', 'sig015a'], 
+      'V1_units': []},
+       'lfp':{
+       'V1_lfp':['AD001','AD002','AD003','AD004','AD005','AD006','AD007','AD008','AD009','AD010','AD011','AD012','AD013','AD014','AD015','AD016']},
+       'events':{'t1':['Event011'], 't2':['Event012'], 'miss':['Event010']},
+       'control_cells':'V1'},
+
+   "BMI_D02.plx":
+      {'units':{
+      'e1_units': ['sig007a', 'sig008a'],
+      'e2_units': ['sig015a', 'sig016a'], 
+      'V1_units': ['sig003a', 'sig013a']},
+       'lfp':{
+       'V1_lfp':['AD001','AD002','AD003','AD004','AD005','AD006','AD007','AD008','AD009','AD010','AD011','AD012','AD013','AD014','AD015','AD016']},
+       'events':{'t1':['Event011'], 't2':['Event012'], 'miss':['Event010']},
+       'control_cells':'V1'},
+
+   "BMI_D03.plx":
+      {'units':{
+      'e1_units': ['sig007a', 'sig008a'],
+      'e2_units': ['sig015a', 'sig016a'], 
+      'V1_units': ['sig003a', 'sig013a', 'sig011a', 'sig005a']},
+       'lfp':{
+       'V1_lfp':['AD001','AD002','AD003','AD004','AD005','AD006','AD007','AD008','AD009','AD010','AD011','AD012','AD013','AD014','AD015','AD016']},
+       'events':{'t1':['Event011'], 't2':['Event012'], 'miss':['Event010']},
+       'control_cells':'V1'},
+
+   "BMI_D04.plx":
+      {'units':{
+      'e1_units': ['sig007a', 'sig008a'],
+      'e2_units': ['sig015a', 'sig016a'], 
+      'V1_units': ['sig003a', 'sig007b', 'sig011a', 'sig005a', 'sig013a']},
+       'lfp':{
+       'V1_lfp':['AD001','AD002','AD003','AD004','AD005','AD006','AD007','AD008','AD009','AD010','AD011','AD012','AD013','AD014','AD015','AD016']},
+       'events':{'t1':['Event011'], 't2':['Event012'], 'miss':['Event010']},
+       'control_cells':'V1'},
+
+   "BMI_D05.plx":
+      {'units':{
+      'e1_units': ['sig007a', 'sig008a'],
+      'e2_units': ['sig015a', 'sig016a'],
+      'V1_units': ['sig003a', 'sig016b', 'sig011a', 'sig005a', 'sig007b', 'sig013a']},
+       'lfp':{
+       'V1_lfp':['AD001','AD002','AD003','AD004','AD005','AD006','AD007','AD008','AD009','AD010','AD011','AD012','AD013','AD014','AD015','AD016']},
+       'events':{'t1':['Event011'], 't2':['Event012'], 'miss':['Event010']},
+       'control_cells':'V1'},
+
+   "BMI_D06.plx":
+      {'units':{
+      'e1_units':[u'sig005a', u'sig006a'],
+      'e2_units':[u'sig008a', u'sig014a'], 
+      'V1_units': ['sig007a', 'sig004c', 'sig004b', 'sig004a', 'sig007b', 'sig011a', 'sig015b', 'sig015a', 'sig013a', 'sig012b', 'sig012a', 'sig011b', 'sig007c']},
+       'lfp':{
+       'V1_lfp':['AD001','AD002','AD003','AD004','AD005','AD006','AD007','AD008','AD009','AD010','AD011','AD012','AD013','AD014','AD015','AD016']},
+       'events':{'t1':['Event011'], 't2':['Event012'], 'miss':['Event010']},
+       'control_cells':'V1'},
+
+
+}],
+
 "V01": [prefix+"/V01", {   
 
    "BMI_D14.plx":
@@ -30,7 +227,7 @@ animals = {
        'lfp':{
        'Str_lfp':['AD017','AD018','AD019','AD020','AD021','AD022','AD023','AD024','AD025','AD026','AD027','AD028','AD029','AD030','AD031','AD032']},
        'events':{'t1':['Event011'], 't2':['Event012'], 'miss':['Event010']},
-       'control_cells':'Str'},
+       'control_cells':'V1'},
 
    "BMI_D13.plx": ####this was a contingency reversal session (@25mins)
       {'units':{
@@ -40,7 +237,7 @@ animals = {
        'lfp':{
        'Str_lfp':['AD017','AD018','AD019','AD020','AD021','AD022','AD023','AD024','AD025','AD026','AD027','AD028','AD029','AD030','AD031','AD032']},
        'events':{'t1':['Event011'], 't2':['Event012'], 'miss':['Event010']},
-       'control_cells':'Str'},
+       'control_cells':'V1'},
 
 
    "BMI_D12.plx":
@@ -51,7 +248,7 @@ animals = {
        'lfp':{
        'Str_lfp':['AD017','AD018','AD019','AD020','AD021','AD022','AD023','AD024','AD025','AD026','AD027','AD028','AD029','AD030','AD031','AD032']},
        'events':{'t1':['Event011'], 't2':['Event012'], 'miss':['Event010']},
-       'control_cells':'Str'},
+       'control_cells':'V1'},
 
   "BMI_D11.plx":
       {'units':{
@@ -61,7 +258,7 @@ animals = {
        'lfp':{
        'Str_lfp':['AD017','AD018','AD019','AD020','AD021','AD022','AD023','AD024','AD025','AD026','AD027','AD028','AD029','AD030','AD031','AD032']},
        'events':{'t1':['Event011'], 't2':['Event012'], 'miss':['Event010']},
-       'control_cells':'Str'},
+       'control_cells':'V1'},
 
   "BMI_D10.plx":
       {'units':{
@@ -71,7 +268,7 @@ animals = {
        'lfp':{
        'Str_lfp':['AD017','AD018','AD019','AD020','AD021','AD022','AD023','AD024','AD025','AD026','AD027','AD028','AD029','AD030','AD031','AD032']},
        'events':{'t1':['Event011'], 't2':['Event012'], 'miss':['Event010']},
-       'control_cells':'Str'},
+       'control_cells':'V1'},
 
   "BMI_D09.plx":
       {'units':{
@@ -81,7 +278,7 @@ animals = {
        'lfp':{
        'Str_lfp':['AD017','AD018','AD019','AD020','AD021','AD022','AD023','AD024','AD025','AD026','AD027','AD028','AD029','AD030','AD031','AD032']},
        'events':{'t1':['Event011'], 't2':['Event012'], 'miss':['Event010']},
-       'control_cells':'Str'},
+       'control_cells':'V1'},
 
   "BMI_D08.plx":
       {'units':{
@@ -91,7 +288,7 @@ animals = {
        'lfp':{
        'Str_lfp':['AD017','AD018','AD019','AD020','AD021','AD022','AD023','AD024','AD025','AD026','AD027','AD028','AD029','AD030','AD031','AD032']},
        'events':{'t1':['Event011'], 't2':['Event012'], 'miss':['Event010']},
-       'control_cells':'Str'},
+       'control_cells':'V1'},
 
   "BMI_D07.plx":
       {'units':{
@@ -101,7 +298,7 @@ animals = {
        'lfp':{
        'Str_lfp':['AD017','AD018','AD019','AD020','AD021','AD022','AD023','AD024','AD025','AD026','AD027','AD028','AD029','AD030','AD031','AD032']},
        'events':{'t1':['Event011'], 't2':['Event012'], 'miss':['Event010']},
-       'control_cells':'Str'},
+       'control_cells':'V1'},
 
     "BMI_D06.plx":
       {'units':{
@@ -111,7 +308,7 @@ animals = {
        'lfp':{
        'Str_lfp':['AD017','AD018','AD019','AD020','AD021','AD022','AD023','AD024','AD025','AD026','AD027','AD028','AD029','AD030','AD031','AD032']},
        'events':{'t1':['Event011'], 't2':['Event012'], 'miss':['Event010']},
-       'control_cells':'Str'},
+       'control_cells':'V1'},
   
   "BMI_D05.plx":
       {'units':{
@@ -121,7 +318,7 @@ animals = {
        'lfp':{
        'Str_lfp':['AD017','AD018','AD019','AD020','AD021','AD022','AD023','AD024','AD025','AD026','AD027','AD028','AD029','AD030','AD031','AD032']},
        'events':{'t1':['Event011'], 't2':['Event012'], 'miss':['Event010']},
-       'control_cells':'Str'},
+       'control_cells':'V1'},
 
   "BMI_D04.plx":
       {'units':{
@@ -131,7 +328,7 @@ animals = {
        'lfp':{
        'Str_lfp':['AD017','AD018','AD019','AD020','AD021','AD022','AD023','AD024','AD025','AD026','AD027','AD028','AD029','AD030','AD031','AD032']},
        'events':{'t1':['Event011'], 't2':['Event012'], 'miss':['Event010']},
-       'control_cells':'Str'},
+       'control_cells':'V1'},
 
   "BMI_D03.plx":
       {'units':{
@@ -141,7 +338,7 @@ animals = {
        'lfp':{
        'Str_lfp':['AD017','AD018','AD019','AD020','AD021','AD022','AD023','AD024','AD025','AD026','AD027','AD028','AD029','AD030','AD031','AD032']},
        'events':{'t1':['Event011'], 't2':['Event012'], 'miss':['Event010']},
-       'control_cells':'Str'},
+       'control_cells':'V1'},
 
   "BMI_D02.plx":
       {'units':{
@@ -151,7 +348,7 @@ animals = {
        'lfp':{
        'Str_lfp':['AD017','AD018','AD019','AD020','AD021','AD022','AD023','AD024','AD025','AD026','AD027','AD028','AD029','AD030','AD031','AD032']},
        'events':{'t1':['Event011'], 't2':['Event012'], 'miss':['Event010']},
-       'control_cells':'Str'},
+       'control_cells':'V1'},
 
   "BMI_D01.plx":
       {'units':{
@@ -161,7 +358,7 @@ animals = {
        'lfp':{
        'Str_lfp':['AD017','AD018','AD019','AD020','AD021','AD022','AD023','AD024','AD025','AD026','AD027','AD028','AD029','AD030','AD031','AD032']},
        'events':{'t1':['Event011'], 't2':['Event012'], 'miss':['Event010']},
-       'control_cells':'Str'},
+       'control_cells':'V1'},
 }],
 
 "V02": [prefix+"/V02", {  

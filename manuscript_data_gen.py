@@ -4973,6 +4973,134 @@ def plot_log_regression():
 	f.close()
 
 """
+A function to look at the online volitional target-locked modulations
+compared to the ones observed during rewarded tone playback
+"""
+def get_rev1_bs():
+	root_dir = r""
+	animal_list = ['V14','V15','V16']
+	session_list = ['BMI_D06','BMI_D07']
+	window = [3000,3000]
+	save_file = h5py.File(r"",'w-')
+	##open the file 
+	for animal in animal_list:
+		a_group = save_file.create_group(animal)
+		for session in session_list:
+			s_group = a_group.create_group(session)
+			file_v = os.path.join(root_dir,animal,session,".plx") ##the file path to the volitional part
+			file_pb = os.path.join(root_dir,animal,session,"_pb.plx") ##path to the playback part
+			##get the E1 and E2 unis for this session
+			e1_list = ru.animals[animal][1][session+".plx"]['units']['e1_units']
+			e2_list = ru.animals[animal][1][session+".plx"]['units']['e2_units']
+			##start with the non-manipulation file
+			v_data = plxread.import_file(file_v,AD_channels=range(1,97),save_wf=True,
+				import_unsorted=False,verbose=False)
+			pb_data = plxread.import_file(file_pb,AD_channels=range(1,97),save_wf=True,
+				import_unsorted=False,verbose=False)
+			##what is the duration of this file
+			duration_v = None
+			for arr in v_data.keys():
+				if arr.startswith('AD') and arr.endswith('_ts'):
+					duration_v = int(np.ceil((v_data[arr].max()*1000)/100)*100)+1
+					break
+			else: print "No A/D timestamp data found!!!"
+			duration_pb = None
+			for arr in pb_data.keys():
+				if arr.startswith('AD') and arr.endswith('_ts'):
+					duration_pb = int(np.ceil((pb_data[arr].max()*1000)/100)*100)+1
+					break
+			else: print "No A/D timestamp data found!!!"
+			##now get the E1 unit data 
+			e1_v = []
+			e1_pb = []
+			for unit in e1_list:
+				spiketrain_v = v_data[unit] * 1000 #timestamps in ms
+				##convert to binary array
+				spiketrain_v = np.histogram(spiketrain_v,bins=duration_v,range=(0,duration_v))
+				spiketrain_v = spiketrain_v[0].astype(bool).astype(int)
+				e1_v.append(spiketrain_v)
+				##repeat for pb data
+				spiketrain_pb = pb_data[unit] * 1000 #timestamps in ms
+				##convert to binary array
+				spiketrain_pb = np.histogram(spiketrain_pb,bins=duration_pb,range=(0,duration_pb))
+				spiketrain_pb = spiketrain_pb[0].astype(bool).astype(int)
+				e1_pb.append(spiketrain_pb)
+			##convert to a numpy array
+			e1_v = np.asarray(e1_v)
+			e1_pb = np.asarray(e1_pb)
+			##now get the E2 unit data 
+			e2_v = []
+			e2_pb = []
+			for unit in e2_list:
+				spiketrain_v = v_data[unit] * 1000 #timestamps in ms
+				##convert to binary array
+				spiketrain_v = np.histogram(spiketrain_v,bins=duration_v,range=(0,duration_v))
+				spiketrain_v = spiketrain_v[0].astype(bool).astype(int)
+				e2_v.append(spiketrain_v)
+				##repeat for pb data
+				spiketrain_pb = pb_data[unit] * 1000 #timestamps in ms
+				##convert to binary array
+				spiketrain_pb = np.histogram(spiketrain_pb,bins=duration_pb,range=(0,duration_pb))
+				spiketrain_pb = spiketrain_pb[0].astype(bool).astype(int)
+				e2_pb.append(spiketrain_pb)
+			##convert to a numpy array
+			e2_v = np.asarray(e2_v)
+			e2_pb = np.asarray(e2_pb)
+			##we are also going to need the T1 and T2 timestamps fo each file
+			t1_id = ru.animals[animal][1][session+".plx"]['events']['t1'][0] ##the event name in the plexon file
+			t2_id = ru.animals[animal][1][session+".plx"]['events']['t2'][0]
+			##get the event ts for each file
+			t1_v = v_data[t1_id]*1000.0
+			t2_v = v_data[t2_id]*1000.0
+			t1_pb = pb_data[t1_id]*1000.0
+			t2_pb = pb_data[t2_id]*1000.0
+			##now get the time-locked data
+			t1_e1_v = ds.get_data_window(t1_v,window[0],window[1],e1_v)
+			t2_e1_v = ds.get_data_window(t2_v,window[0],window[1],e1_v)
+			t1_e2_v = ds.get_data_window(t1_v,window[0],window[1],e2_v)
+			t2_e2_v = ds.get_data_window(t2_v,window[0],window[1],e2_v)
+			##repeat for playback data
+			t1_e1_pb = ds.get_data_window(t1_pb,window[0],window[1],e1_pb)
+			t2_e1_pb = ds.get_data_window(t2_pb,window[0],window[1],e1_pb)
+			t1_e2_pb = ds.get_data_window(t1_pb,window[0],window[1],e2_pb)
+			t2_e2_pb = ds.get_data_window(t2_pb,window[0],window[1],e2_pb)
+			##save all of this data to the save file
+			s_group.create_dataset('t1_e1_v',data=t1_e1_v)
+			s_group.create_dataset('t2_e1_v',data=t2_e1_v)
+			s_group.create_dataset('t1_e2_v',data=t1_e2_v)
+			s_group.create_dataset('t2_e2_v',data=t2_e2_v)
+			s_group.create_dataset('t1_e1_pb',data=t1_e1_pb)
+			s_group.create_dataset('t2_e1_pb',data=t2_e1_pb)
+			s_group.create_dataset('t1_e2_pb',data=t1_e2_pb)
+			s_group.create_dataset('t2_e2_pb',data=t2_e2_pb)
+	save_file.close()
+	print 'Done'
+
+"""
+a function to plot the playback data saved by the above function
+"""
+def plot_rev1_bs():
+	datafile = r""
+	f = h5py.File(datafile,'r')
+	animal_list = f.keys()
+	##lists to save the data averaged by animal
+	e1_t1_v = []
+	e1_t2_v = []
+	e2_t1_v = []
+	e2_t2_v = []
+	##same for the playback data
+	e1_t1_pb = []
+	e1_t2_pb = []
+	e2_t1_pb = []
+	e2_t2_pb = []
+	##go through each animal and concatenate all the arrays
+	for animal in animal_list:
+		for session in f[animal].keys():
+			e1t1v.append(np.asarray(f[animal][session]['e1_t1_v']).mean(axis=))
+
+
+
+"""
 Another helper function to bin spike matrices.
 Inputs should be in shape trials x units x bins
 """
