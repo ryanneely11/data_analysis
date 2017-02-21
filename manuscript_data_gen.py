@@ -5314,12 +5314,12 @@ def get_peg_e1_e2():
 	root_dir = r"K:\Ryan\V1_BMI"
 	animal_list = ['V14','V15','V16']
 	session_list = ['BMI_D08']
-	save_file = h5py.File(r"K:\Ryan\V1_BMI\NatureNeuro\rebuttal\data\peg_expt.hdf5",'w-')
 	##open the file 
+	p_e1 = []
+	p_e2 =[]
+	p_ctrl = []
 	for animal in animal_list:
-		a_group = save_file.create_group(animal)
 		for session in session_list:
-			s_group = a_group.create_group(session)
 			filepath = os.path.join(root_dir,animal,session)+".plx" ##the file path to the volitional part
 			##start with the non-manipulation file
 			data = plxread.import_file(file_v,AD_channels=range(1,97),save_wf=True,
@@ -5401,6 +5401,9 @@ def get_peg_e1_e2():
 				else:
 					print "unrecognized event ID: "+ids[i]
 					i+=1
+			p_e1.append(float(correct_e1)/(incorrect_e1+correct_e1))
+			p_e2.append(float(correct_e2)/(incorrect_e2+correct_e2))
+			p_ctrl.append(float(correct)/(incorrect+correct))
 
 
 
