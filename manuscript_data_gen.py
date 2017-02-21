@@ -5085,7 +5085,7 @@ def get_rev1_bs():
 a function to plot the playback data saved by the above function
 """
 def plot_rev1_bs():
-	datafile = r""
+	datafile = "/Volumes/Untitled/Ryan/V1_BMI/NatureNeuro/rebuttal/data/rev1_expt.hdf5"
 	f = h5py.File(datafile,'r')
 	animal_list = f.keys()
 	##lists to save the data averaged by animal
@@ -5100,6 +5100,7 @@ def plot_rev1_bs():
 	e2_t2_pb = []
 	##go through each animal and take the average of the sessions 
 	for animal in animal_list:
+		print "working on animal "+animal
 		e1t1v = []
 		e1t2v = []
 		e2t1v = []
@@ -5110,56 +5111,57 @@ def plot_rev1_bs():
 		e2t1pb = []
 		e2t2pb = []
 		for session in f[animal].keys():
-			e1t1v.append(np.asarray(f[animal][session]['e1_t1_v']))
-			e1t2v.append(np.asarray(f[animal][session]['e1_t2_v']))
-			e2t1v.append(np.asarray(f[animal][session]['e2_t1_v']))
-			e2t2v.append(np.asarray(f[animal][session]['e2_t2_v']))
+			print "working on session "+session
+			e1t1v.append(np.asarray(f[animal][session]['t1_e1_v']))
+			e1t2v.append(np.asarray(f[animal][session]['t2_e1_v']))
+			e2t1v.append(np.asarray(f[animal][session]['t1_e2_v']))
+			e2t2v.append(np.asarray(f[animal][session]['t2_e2_v']))
 			##repeat for playback
-			e1t1pb.append(np.asarray(f[animal][session]['e1_t1_pb']))
-			e1t2pb.append(np.asarray(f[animal][session]['e1_t2_pb']))
-			e2t1pb.append(np.asarray(f[animal][session]['e2_t1_pb']))
-			e2t2pb.append(np.asarray(f[animal][session]['e2_t2_pb']))
+			e1t1pb.append(np.asarray(f[animal][session]['t1_e1_pb']))
+			e1t2pb.append(np.asarray(f[animal][session]['t2_e1_pb']))
+			e2t1pb.append(np.asarray(f[animal][session]['t1_e2_pb']))
+			e2t2pb.append(np.asarray(f[animal][session]['t2_e2_pb']))
 		##now concatenate trials from both sessions, and add to the animal average
-		##also take the across animal average over both sessions and all units
-		e1_t1_v.append(np.concatenate(e1t1v,axis=2).mean(axis=0))
-		e1_t2_v.append(np.concatenate(e1t2v,axis=2).mean(axis=0))
-		e2_t1_v.append(np.concatenate(e2t1v,axis=2).mean(axis=0))
-		e2_t2_v.append(np.concatenate(e2t1v,axis=2).mean(axis=0))
+		##also take the across animal average over both sessions and all trials
+		e1_t1_v.append(np.concatenate(e1t1v,axis=2).mean(axis=2))
+		e1_t2_v.append(np.concatenate(e1t2v,axis=2).mean(axis=2))
+		e2_t1_v.append(np.concatenate(e2t1v,axis=2).mean(axis=2))
+		e2_t2_v.append(np.concatenate(e2t2v,axis=2).mean(axis=2))
 		##same for playback
-		e1_t1_pb.append(np.concatenate(e1t1pb,axis=2).mean(axis=0))
-		e1_t2_pb.append(np.concatenate(e1t2pb,axis=2).mean(axis=0))
-		e2_t1_pb.append(np.concatenate(e2t1pb,axis=2).mean(axis=0))
-		e2_t2_pb.append(np.concatenate(e2t1pb,axis=2).mean(axis=0))
+		e1_t1_pb.append(np.concatenate(e1t1pb,axis=2).mean(axis=2))
+		e1_t2_pb.append(np.concatenate(e1t2pb,axis=2).mean(axis=2))
+		e2_t1_pb.append(np.concatenate(e2t1pb,axis=2).mean(axis=2))
+		e2_t2_pb.append(np.concatenate(e2t1pb,axis=2).mean(axis=2))
 	##now convert to a numpy array
-	e1_t1_v = np.asarray(e1_t1_v) ##now shape is animals x time x trials, averaged over units
+	e1_t1_v = np.asarray(e1_t1_v) ##now shape is animals x units x time, averaged over sessions
 	e1_t2_v = np.asarray(e1_t2_v)
 	e2_t1_v = np.asarray(e2_t1_v)
 	e2_t2_v = np.asarray(e2_t2_v)
 	##repeat for playback
-	e1_t1_pb = np.asarray(e1_t1_pb) ##now shape is animals x time x trials, averaged over units
+	e1_t1_pb = np.asarray(e1_t1_pb)
 	e1_t2_pb = np.asarray(e1_t2_pb)
 	e2_t1_pb = np.asarray(e2_t1_pb)
 	e2_t2_pb = np.asarray(e2_t2_pb)
 	##now I probably want to look at the averages for each animal separately
-	e1_t1_v_means = np.zeros((e1_t1_v.shape[0],e1_t1_v.shape[1]))
-	e1_t2_v_means = np.zeros((e1_t2_v.shape[0],e1_t2_v.shape[1]))
-	e2_t1_v_means = np.zeros((e2_t1_v.shape[0],e2_t1_v.shape[1]))
-	e2_t2_v_means = np.zeros((e2_t2_v.shape[0],e2_t2_v.shape[1]))
+	e1_t1_v_means = np.zeros((e1_t1_v.shape[0],238)) ##being lazy and not calculating this other dimension
+	e1_t2_v_means = np.zeros((e1_t2_v.shape[0],238))
+	e2_t1_v_means = np.zeros((e2_t1_v.shape[0],238))
+	e2_t2_v_means = np.zeros((e2_t2_v.shape[0],238))
 	####
-	e1_t1_pb_means = np.zeros((e1_t1_pb.shape[0],e1_t1_pb.shape[1]))
-	e1_t2_pb_means = np.zeros((e1_t2_pb.shape[0],e1_t2_pb.shape[1]))
-	e2_t1_pb_means = np.zeros((e2_t1_pb.shape[0],e2_t1_pb.shape[1]))
-	e2_t2_pb_means = np.zeros((e2_t2_pb.shape[0],e2_t2_pb.shape[1]))
+	e1_t1_pb_means = np.zeros((e1_t1_pb.shape[0],238))
+	e1_t2_pb_means = np.zeros((e1_t2_pb.shape[0],238))
+	e2_t1_pb_means = np.zeros((e2_t1_pb.shape[0],238))
+	e2_t2_pb_means = np.zeros((e2_t2_pb.shape[0],238))
 	for a in range(e1_t1_v.shape[0]):
-		e1_t1_v_means[a,:] = stats.zscore(ss.windowRate(e1_t1_v[a],[100,50]).mean(axis=1)) ##this is the average trace for this animal, over all units/trials
-		e1_t2_v_means[a,:] = stats.zscore(ss.windowRate(e1_t2_v[a],[100,50]).mean(axis=1))
-		e2_t1_v_means[a,:] = stats.zscore(ss.windowRate(e2_t1_v[a],[100,50]).mean(axis=1))
-		e2_t2_v_means[a,:] = stats.zscore(ss.windowRate(e2_t1_v[a],[100,50]).mean(axis=1))
+		e1_t1_v_means[a,:] = stats.zscore(ss.windowRate(e1_t1_v[a,:,:].T,[100,50]).mean(axis=1)) ##this is the average trace for this animal, over all units/trials
+		e1_t2_v_means[a,:] = stats.zscore(ss.windowRate(e1_t2_v[a,:,:].T,[100,50]).mean(axis=1))
+		e2_t1_v_means[a,:] = stats.zscore(ss.windowRate(e2_t1_v[a,:,:].T,[100,50]).mean(axis=1))
+		e2_t2_v_means[a,:] = stats.zscore(ss.windowRate(e2_t2_v[a,:,:].T,[100,50]).mean(axis=1))
 		###
-		e1_t1_pb_means[a,:] = stats.zscore(ss.windowRate(e1_t1_pb[a],[100,50]).mean(axis=1)) ##this is the average trace for this animal, over all units/trials
-		e1_t2_pb_means[a,:] = stats.zscore(ss.windowRate(e1_t2_pb[a],[100,50]).mean(axis=1))
-		e2_t1_pb_means[a,:] = stats.zscore(ss.windowRate(e2_t1_pb[a],[100,50]).mean(axis=1))
-		e2_t2_pb_means[a,:] = stats.zscore(ss.windowRate(e2_t1_pb[a],[100,50]).mean(axis=1))
+		e1_t1_pb_means[a,:] = stats.zscore(ss.windowRate(e1_t1_pb[a,:,:].T,[100,50]).mean(axis=1)) ##this is the average trace for this animal, over all units/trials
+		e1_t2_pb_means[a,:] = stats.zscore(ss.windowRate(e1_t2_pb[a,:,:].T,[100,50]).mean(axis=1))
+		e2_t1_pb_means[a,:] = stats.zscore(ss.windowRate(e2_t1_pb[a,:,:].T,[100,50]).mean(axis=1))
+		e2_t2_pb_means[a,:] = stats.zscore(ss.windowRate(e2_t1_pb[a,:,:].T,[100,50]).mean(axis=1))
 	##now get the means and std errs
 	e1_t1_v_mean = e1_t1_v_means.mean(axis=0)
 	e1_t2_v_mean = e1_t2_v_means.mean(axis=0)
@@ -5181,7 +5183,7 @@ def plot_rev1_bs():
 	e2_t1_pb_serr = e1_t2_pb_means.std(axis=0)/np.sqrt(e2_t1_pb_means.shape[0])
 	e2_t2_pb_serr = e2_t2_pb_means.std(axis=0)/np.sqrt(e2_t2_pb_means.shape[0])
 	##now plot this BS!!!
-	x = np.linespace(-6,6,12000)
+	x = np.linspace(-6,6,e1_t1_v_means.shape[1])
 	t1_fig = plt.figure()
 	t1_fig.suptitle("Rewarded target",fontsize=14)
 	ax_v = t1_fig.add_subplot(121)
@@ -5189,6 +5191,7 @@ def plot_rev1_bs():
 	ax_v.set_ylabel("Firing rate, z-scored",fontsize=14)
 	ax_v.set_xlabel("Time to target, s",fontsize=14)
 	ax_v.set_xlim(-5,5)
+	ax_v.set_ylim(-4,6)
 	for ticklabel in ax_v.get_xticklabels():
 		ticklabel.set_fontsize(14)
 	for ticklabel in ax_v.get_yticklabels():
@@ -5196,21 +5199,22 @@ def plot_rev1_bs():
 	ax_v.plot(x,e1_t1_v_mean,linewidth=2,color='g',label='E1')
 	ax_v.fill_between(x,e1_t1_v_mean-e1_t1_v_serr,e1_t1_v_mean+e1_t1_v_serr,color='g',alpha=0.5)
 	ax_v.plot(x,e2_t1_v_mean,linewidth=2,color='b',label='E2')
-	ax_v.fill_between(x,e2_t1_v_mean-e2_t1_v_serr,e2_t1_v_mean-e2_t1_v_serr,color='b',alpha=0.5)
+	ax_v.fill_between(x,e2_t1_v_mean+e2_t1_v_serr,e2_t1_v_mean-e2_t1_v_serr,color='b',alpha=0.5)
 	ax_pb = t1_fig.add_subplot(122)
 	ax_pb.set_title("Tone playback",fontsize=14,weight='bold')
 	ax_pb.set_ylabel("Firing rate, z-scored",fontsize=14)
 	ax_pb.set_xlabel("Time to target, s",fontsize=14)
 	ax_pb.set_xlim(-5,5)
+	ax_pb.set_ylim(-4,6)
 	for ticklabel in ax_pb.get_xticklabels():
 		ticklabel.set_fontsize(14)
 	for ticklabel in ax_pb.get_yticklabels():
 		ticklabel.set_fontsize(14)
 	ax_pb.plot(x,e1_t1_pb_mean,linewidth=2,color='g',label='E1')
 	ax_pb.fill_between(x,e1_t1_pb_mean-e1_t1_pb_serr,e1_t1_pb_mean+e1_t1_pb_serr,color='g',alpha=0.5)
-	ax_pb.plot(x,e2_t1_v_mean,linewidth=2,color='b',label='E2')
-	ax_pb.fill_between(x,e2_t1_pb_mean-e2_t1_pb_serr,e2_t1_pb_mean-e2_t1_pb_serr,color='b',alpha=0.5)
-	ax_pb.legend(bbox_to_anchor(1.2,1))
+	ax_pb.plot(x,e2_t1_pb_mean,linewidth=2,color='b',label='E2')
+	ax_pb.fill_between(x,e2_t1_pb_mean+e2_t1_pb_serr,e2_t1_pb_mean-e2_t1_pb_serr,color='b',alpha=0.5)
+	ax_pb.legend()
 	##repeat for target 2
 	t2_fig = plt.figure()
 	t2_fig.suptitle("Unrewarded target",fontsize=14)
@@ -5219,28 +5223,30 @@ def plot_rev1_bs():
 	ax_v.set_ylabel("Firing rate, z-scored",fontsize=14)
 	ax_v.set_xlabel("Time to target, s",fontsize=14)
 	ax_v.set_xlim(-5,5)
+	ax_v.set_ylim(-4,6)
 	for ticklabel in ax_v.get_xticklabels():
 		ticklabel.set_fontsize(14)
 	for ticklabel in ax_v.get_yticklabels():
 		ticklabel.set_fontsize(14)
 	ax_v.plot(x,e1_t2_v_mean,linewidth=2,color='g',label='E1')
 	ax_v.fill_between(x,e1_t2_v_mean-e1_t2_v_serr,e1_t2_v_mean+e1_t2_v_serr,color='g',alpha=0.5)
-	ax_v.plot(x,e2_t1_v_mean,linewidth=2,color='b',label='E2')
-	ax_v.fill_between(x,e2_t2_v_mean-e2_t2_v_serr,e2_t2_v_mean-e2_t2_v_serr,color='b',alpha=0.5)
+	ax_v.plot(x,e2_t2_v_mean,linewidth=2,color='b',label='E2')
+	ax_v.fill_between(x,e2_t2_v_mean+e2_t2_v_serr,e2_t2_v_mean-e2_t2_v_serr,color='b',alpha=0.5)
 	ax_pb = t2_fig.add_subplot(122)
 	ax_pb.set_title("Tone playback",fontsize=14,weight='bold')
 	ax_pb.set_ylabel("Firing rate, z-scored",fontsize=14)
 	ax_pb.set_xlabel("Time to target, s",fontsize=14)
 	ax_pb.set_xlim(-5,5)
+	ax_pb.set_ylim(-4,6)
 	for ticklabel in ax_pb.get_xticklabels():
 		ticklabel.set_fontsize(14)
 	for ticklabel in ax_pb.get_yticklabels():
 		ticklabel.set_fontsize(14)
 	ax_pb.plot(x,e1_t2_pb_mean,linewidth=2,color='g',label='E1')
 	ax_pb.fill_between(x,e1_t2_pb_mean-e1_t2_pb_serr,e1_t2_pb_mean+e1_t2_pb_serr,color='g',alpha=0.5)
-	ax_pb.plot(x,e2_t2_v_mean,linewidth=2,color='b',label='E2')
-	ax_pb.fill_between(x,e2_t2_pb_mean-e2_t2_pb_serr,e2_t2_pb_mean-e2_t2_pb_serr,color='b',alpha=0.5)
-	ax_pb.legend(bbox_to_anchor(1.2,1))
+	ax_pb.plot(x,e2_t2_pb_mean,linewidth=2,color='b',label='E2')
+	ax_pb.fill_between(x,e2_t2_pb_mean+e2_t2_pb_serr,e2_t2_pb_mean-e2_t2_pb_serr,color='b',alpha=0.5)
+	ax_pb.legend()
 	###now I guess we can also plot the modulation depths
 	e1_t1_mod_v = abs(e1_t1_v_means).max(axis=1)
 	e1_t2_mod_v = abs(e1_t2_v_means).max(axis=1)
@@ -5263,29 +5269,31 @@ def plot_rev1_bs():
 	t1_mod_fig = plt.figure()
 	ax_e1 = t1_mod_fig.add_subplot(121)
 	x2 = np.array([0,1])
-	err_x = np.array([0,1])
+	err_x = np.array([0.2,0.2])
 	for i in range(e1_mod.shape[1]):
 		ax_e1.plot(x2,e1_mod[:,i],color='g',linewidth=2,marker='o')
-	ax_e1.errorbar(x2,e1_mod_mean,yerr=e1_mod_err,xerr=err_x,fmt='none',ecolor='k',capthick=2,elinewidth=2)
+	ax_e1.errorbar(x2,e1_mod_mean,yerr=e1_mod_serr,xerr=err_x,fmt='none',ecolor='k',capthick=2,elinewidth=2)
 	plt.xticks(np.arange(0,2),['Online','Playback'])
 	for ticklabel in ax_e1.get_xticklabels():
 		ticklabel.set_fontsize(14)
 	for ticklabel in ax_e1.get_yticklabels():
 		ticklabel.set_fontsize(14)
-	ax_e1.set_xlim(-0.3,1.3)
+	ax_e1.set_xlim(-0.5,1.5)
+	ax_e1.set_ylim(2.5,5.5)
 	ax_e1.set_ylabel("Modulation depth",fontsize=14)
 	ax_e1.set_title("Average E1 modulation depth",fontsize=14)
 	##now for E2
 	ax_e2 = t1_mod_fig.add_subplot(122)
 	for i in range(e2_mod.shape[1]):
 		ax_e2.plot(x2,e2_mod[:,i],color='b',linewidth=2,marker='o')
-	ax_e2.errorbar(x2,e2_mod_mean,yerr=e2_mod_err,xerr=err_x,fmt='none',ecolor='k',capthick=2,elinewidth=2)
+	ax_e2.errorbar(x2,e2_mod_mean,yerr=e2_mod_serr,xerr=err_x,fmt='none',ecolor='k',capthick=2,elinewidth=2)
 	plt.xticks(np.arange(0,2),['Online','Playback'])
 	for ticklabel in ax_e2.get_xticklabels():
 		ticklabel.set_fontsize(14)
 	for ticklabel in ax_e2.get_yticklabels():
 		ticklabel.set_fontsize(14)
-	ax_e2.set_xlim(-0.3,1.3)
+	ax_e2.set_xlim(-0.5,1.5)
+	ax_e2.set_ylim(2.5,5.5)
 	ax_e2.set_ylabel("Modulation depth",fontsize=14)
 	ax_e2.set_title("Average E2 modulation depth",fontsize=14)
 	#finally do some significance testing
@@ -5301,6 +5309,99 @@ def plot_rev1_bs():
 	print "E2 playback mean = "+str(e2_t1_mod_pb.mean())
 	print "E2 pval = "+str(pval_e2)
 	print "E2 tval = "+str(tval_e2)
+
+def get_peg_e1_e2():
+	root_dir = r"K:\Ryan\V1_BMI"
+	animal_list = ['V14','V15','V16']
+	session_list = ['BMI_D08']
+	save_file = h5py.File(r"K:\Ryan\V1_BMI\NatureNeuro\rebuttal\data\peg_expt.hdf5",'w-')
+	##open the file 
+	for animal in animal_list:
+		a_group = save_file.create_group(animal)
+		for session in session_list:
+			s_group = a_group.create_group(session)
+			filepath = os.path.join(root_dir,animal,session)+".plx" ##the file path to the volitional part
+			##start with the non-manipulation file
+			data = plxread.import_file(file_v,AD_channels=range(1,97),save_wf=True,
+				import_unsorted=False,verbose=False)
+			##we are going to need the T1 and T2 timestamps fo each file
+			t1_id = ru.animals[animal][1][session+".plx"]['events']['t1'][0] ##the event name in the plexon file
+			t2_id = ru.animals[animal][1][session+".plx"]['events']['t2'][0]
+			miss_id = ru.animals[animal][1][session+".plx"]['events']['miss'][0]
+			peg_e1_id = ru.animals[animal][1][session+".plx"]['events']['peg_e1'][0]
+			peg_e2_id = ru.animals[animal][1][session+".plx"]['events']['peg_e2'][0]
+			##get the event ts for each file
+			t1 = data[t1_id]*1000.0
+			t2 = data[t2_id]*1000.0
+			miss = data[miss_id]*1000.0
+			e1_catch = pb_data[peg_e1_id]*1000.0
+			e2_catch = pb_data[peg_e2_id]*1000.0
+			##now we'll make 2 arrays; one with the event IDs, and the other with the event TS
+			ids = []
+			ts = []
+			for i in range(t1.size):
+				ids.append('t1')
+				ts.append(t1[i])
+			for j in range(t2.size):
+				ids.append('t2')
+				ts.append(t2[j])
+			for k in range(miss.size):
+				ids.append('miss')
+				ts.append(miss[k])
+			for l in range(e1_catch.size):
+				ids.append('e1_catch')
+				ts.append(e1_catch[l])
+			for m in range(e2_catch.size):
+				ids.append('e2_catch')
+				ts.append(e1_catch[m])
+			##now put everything in order
+			ids = np.asaray(ids)
+			ts = np.asarray(ts)
+			idx = np.argsort(ts)
+			ids = ids[idx]
+			ts = ts[idx]
+			##now make sure I didn't screw up and put 2 catch trials in a row
+			i = 0
+			while i < idx.size:
+				current_id = ids[i]
+				next_id = ids[i+1]
+				if (current_id == 'e1_catch' and next_id == 'e1_catch') or
+						(current_id == 'e2_catch' and next_id == 'e2_catch'):
+					np.delete(ids,i)
+					np.delete(ts,i)
+				else:
+					i+=1
+			##OK, now we want to know the percent correct for regular trials, e1_fix trials and e2_fix trials
+			##gonna combine miss and unrewarded
+			correct_e1 = 0
+			incorrect_e1 = 0
+			correct_e2 = 0
+			incorrect_e2 = 0
+			correct = 0
+			incorrect = 0
+			while i < idx.size:
+				if ids[i] = 'e1_catch': ##case e1 catch trial
+					if ids[i+1] == 't1':
+						correct_e1 += 1
+					elif ids[i+1] == 't2' or ids[i+1] == 'miss':
+						incorrect_e1 += 1
+					i+=2
+				elif ids[i] == 'e2_catch': ##case e2 catch trial
+					if ids[i+1] == 't1':
+						correct_e2 += 1
+					elif ids[i+1] == 't2' or ids[i+1] == 'miss':
+						incorrect_e2 += 1
+					i+=2
+				elif ids[i] == 't1':
+					correct += 1
+					i+=1
+				elif ids[i] == 't2' or ids[i] == 'miss':
+					incorrect += 1
+					i+=1
+				else:
+					print "unrecognized event ID: "+ids[i]
+					i+=1
+
 
 
 
