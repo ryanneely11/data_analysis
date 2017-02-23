@@ -5322,7 +5322,7 @@ def get_peg_e1_e2():
 		for session in session_list:
 			filepath = os.path.join(root_dir,animal,session)+".plx" ##the file path to the volitional part
 			##start with the non-manipulation file
-			data = plxread.import_file(file_v,AD_channels=range(1,97),save_wf=True,
+			data = plxread.import_file(filepath,AD_channels=range(1,97),save_wf=True,
 				import_unsorted=False,verbose=False)
 			##we are going to need the T1 and T2 timestamps fo each file
 			t1_id = ru.animals[animal][1][session+".plx"]['events']['t1'][0] ##the event name in the plexon file
@@ -5334,8 +5334,8 @@ def get_peg_e1_e2():
 			t1 = data[t1_id]*1000.0
 			t2 = data[t2_id]*1000.0
 			miss = data[miss_id]*1000.0
-			e1_catch = pb_data[peg_e1_id]*1000.0
-			e2_catch = pb_data[peg_e2_id]*1000.0
+			e1_catch = data[peg_e1_id]*1000.0
+			e2_catch = data[peg_e2_id]*1000.0
 			##now we'll make 2 arrays; one with the event IDs, and the other with the event TS
 			ids = []
 			ts = []
@@ -5353,24 +5353,27 @@ def get_peg_e1_e2():
 				ts.append(e1_catch[l])
 			for m in range(e2_catch.size):
 				ids.append('e2_catch')
-				ts.append(e1_catch[m])
+				ts.append(e2_catch[m])
 			##now put everything in order
-			ids = np.asaray(ids)
+			ids = np.asarray(ids)
 			ts = np.asarray(ts)
 			idx = np.argsort(ts)
 			ids = ids[idx]
 			ts = ts[idx]
 			##now make sure I didn't screw up and put 2 catch trials in a row
 			i = 0
-			while i < idx.size:
+			del_idx = []
+			last_id = ''
+			for i in range(ids.size):
 				current_id = ids[i]
-				next_id = ids[i+1]
-				if (current_id == 'e1_catch' and next_id == 'e1_catch') or
-						(current_id == 'e2_catch' and next_id == 'e2_catch'):
-					np.delete(ids,i)
-					np.delete(ts,i)
-				else:
-					i+=1
+				if (last_id == 'e1_catch' and current_id == 'e1_catch') or (last_id == 
+					'e2_catch' and current_id == 'e2_catch'):
+					del_idx.append(i)
+					print "repeat of "+current_id
+				last_id = current_id
+			
+			for d in range(len(del_idx)):
+				np.delete(ids,del_idx[d])
 			##OK, now we want to know the percent correct for regular trials, e1_fix trials and e2_fix trials
 			##gonna combine miss and unrewarded
 			correct_e1 = 0
@@ -5379,8 +5382,9 @@ def get_peg_e1_e2():
 			incorrect_e2 = 0
 			correct = 0
 			incorrect = 0
-			while i < idx.size:
-				if ids[i] = 'e1_catch': ##case e1 catch trial
+			i = 0
+			while i < ids.size:
+				if ids[i] == 'e1_catch': ##case e1 catch trial
 					if ids[i+1] == 't1':
 						correct_e1 += 1
 					elif ids[i+1] == 't2' or ids[i+1] == 'miss':
@@ -5404,7 +5408,43 @@ def get_peg_e1_e2():
 			p_e1.append(float(correct_e1)/(incorrect_e1+correct_e1))
 			p_e2.append(float(correct_e2)/(incorrect_e2+correct_e2))
 			p_ctrl.append(float(correct)/(incorrect+correct))
-
+	p_ctrl = np.asarray(p_ctrl)
+	p_e1 = np.asarray(p_e1)
+	p_e2 = np.asarray(p_e2)
+	means = np.array([p_ctrl.mean(),p_e1.mean(),p_e2.mean()])
+	sems = np.array([stats.sem(p_ctrl),stats.sem(p_e1),stats.sem(p_e2)])
+	labels1 = ["Control","Fixed E1","Fixed E2"]
+	plot_data = np.vstack((p_ctrl,p_e1,p_e2))
+	fig, ax2 = plt.subplots(1)
+	x = np.array([0,1,2])
+	err_x = np.array([0,1,2])
+	yerr = sems
+	xerr = np.ones(3)*0.25
+	colors = ['k','g','b']
+	for i in range(plot_data.shape[1]):
+		ax2.plot(np.zeros(3)+i,plot_data[i,:],color=colors[i],linewidth=2,marker='o',linestyle='none')
+	ax2.errorbar(err_x,means,yerr=yerr,xerr=xerr,fmt='none',ecolor='k',capthick=2,elinewidth=2)
+	plt.xticks(np.arange(0,3),labels1)
+	for ticklabel in ax2.get_xticklabels():
+		ticklabel.set_fontsize(14)
+	for ticklabel in ax2.get_yticklabels():
+		ticklabel.set_fontsize(14)
+	ax2.set_xlim(-0.3,2.3)
+	ax2.set_ylim(-0.1,0.8)
+	ax2.set_ylabel("Percent correct",fontsize=14)
+	ax2.set_title("Training with fixed ensembles",fontsize=14)
+	pval_e1 = stats.ttest_rel(p_ctrl, p_e1)[1]
+	tval_e1 =stats.ttest_rel(p_ctrl, p_e1)[0]
+	pval_e2 = stats.ttest_rel(p_ctrl, p_e2)[1]
+	tval_e2 =stats.ttest_rel(p_ctrl, p_e2)[0]
+	print "ctrl mean = "+str(p_ctrl.mean())
+	print "peg e1 mean = "+str(p_e1.mean())
+	print "E1 pval = "+str(pval_e1)
+	print "E1 tval = "+str(tval_e1)
+	print "peg e2 mean = "+str(p_e2.mean())
+	print "E2 pval = "+str(pval_e2)
+	print "E2 tval = "+str(tval_e2)
+	return p_ctrl,p_e1,p_e2
 
 
 

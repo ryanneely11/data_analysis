@@ -92,6 +92,15 @@ animals = {
        'events':{'t1':['Event011'], 't2':['Event012'], 'miss':['Event010']},
        'control_cells':'V1'},
 
+   "BMI_D08.plx":
+      {'units':{
+      'e1_units': ['sig005a', 'sig006a'],
+      'e2_units': ['sig008a', 'sig014a'],  
+      'V1_units': ['sig004a', 'sig011a', 'sig012a', 'sig013a', 'sig015a', 'sig016a']},
+       'lfp':{
+       'V1_lfp':['AD001','AD002','AD003','AD004','AD005','AD006','AD007','AD008','AD009','AD010','AD011','AD012','AD013','AD014','AD015','AD016']},
+       'events':{'t1':['Event011'], 't2':['Event012'], 'miss':['Event010'], 'peg_e1':['Event008'], 'peg_e2':['Event009']},
+       'control_cells':'V1'},
 }],
 
 
@@ -167,6 +176,17 @@ animals = {
        'events':{'t1':['Event011'], 't2':['Event012'], 'miss':['Event010']},
        'control_cells':'V1'},
 
+   "BMI_D08.plx":
+      {'units':{
+      'e1_units': ['sig001a', 'sig002a'],
+      'e2_units': ['sig009a', 'sig010a'], 
+      'V1_units': ['sig001b', 'sig014a', 'sig015a']},
+       'lfp':{
+       'V1_lfp':['AD001','AD002','AD003','AD004','AD005','AD006','AD007','AD008','AD009','AD010','AD011','AD012','AD013','AD014','AD015','AD016']},
+       'events':{'t1':['Event011'], 't2':['Event012'], 'miss':['Event010'], 'peg_e1':['Event008'], 'peg_e2':['Event009']},
+       'control_cells':'V1'},
+
+
 }],
 
 
@@ -240,6 +260,16 @@ animals = {
        'lfp':{
        'V1_lfp':['AD001','AD002','AD003','AD004','AD005','AD006','AD007','AD008','AD009','AD010','AD011','AD012','AD013','AD014','AD015','AD016']},
        'events':{'t1':['Event011'], 't2':['Event012'], 'miss':['Event010']},
+       'control_cells':'V1'},
+
+   "BMI_D08.plx":
+      {'units':{
+      'e1_units': ['sig007a', 'sig008a'],
+      'e2_units': ['sig015a', 'sig016a'], 
+      'V1_units': ['sig014a', 'sig012b', 'sig013a', 'sig012a', 'sig011a', 'sig006a', 'sig005a', 'sig004a', 'sig003a', 'sig002a']},
+       'lfp':{
+       'V1_lfp':['AD001','AD002','AD003','AD004','AD005','AD006','AD007','AD008','AD009','AD010','AD011','AD012','AD013','AD014','AD015','AD016']},
+       'events':{'t1':['Event011'], 't2':['Event012'], 'miss':['Event010'], 'peg_e1':['Event008'], 'peg_e2':['Event009']},
        'control_cells':'V1'},
 }],
 
