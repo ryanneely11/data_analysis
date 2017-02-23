@@ -5257,10 +5257,16 @@ def plot_rev1_bs():
 	e1_t2_mod_pb = abs(e1_t2_pb_means).max(axis=1)
 	e2_t1_mod_pb = abs(e2_t1_pb_means).max(axis=1)
 	e2_t2_mod_pb = abs(e2_t2_pb_means).max(axis=1)
+	##now do the combination of all ensembles
+	t1_mod_v = np.concatenate((e1_t1_mod_v,e2_t1_mod_v))
+	t1_mod_pb = np.concatenate((e1_t1_mod_pb,e2_t1_mod_pb))
 	##let's say we only care about the rewarded target
 	e1_mod = np.vstack((e1_t1_mod_v,e1_t1_mod_pb)) ##now shape is conditions x animals
 	e2_mod = np.vstack((e2_t1_mod_v,e2_t1_mod_pb))
+	all_mod = np.vstack((t1_mod_v,t1_mod_pb))
 	e1_mod_mean = e1_mod.mean(axis=1)
+	all_mod_mean = all_mod.mean(axis=1)
+	all_mod_serr = all_mod.std(axis=1)/np.sqrt(all_mod.shape[0])
 	e1_mod_serr = e1_mod.std(axis=1)/np.sqrt(e1_t1_mod_v.shape[0])
 	##and for E2
 	e2_mod_mean = e1_mod.mean(axis=1)
@@ -5296,11 +5302,31 @@ def plot_rev1_bs():
 	ax_e2.set_ylim(2.5,5.5)
 	ax_e2.set_ylabel("Modulation depth",fontsize=14)
 	ax_e2.set_title("Average E2 modulation depth",fontsize=14)
+	all_mod_fig = plt.figure()
+	ax_all = all_mod_fig.add_subplot(111)
+	x2 = np.array([0,1])
+	err_x = np.array([0.2,0.2])
+	for i in range(e1_mod.shape[1]):
+		ax_all.plot(x2,e1_mod[:,i],color='g',linewidth=2,marker='o')
+	for i in range(e2_mod.shape[1]):
+		ax_all.plot(x2,e2_mod[:,i],color='b',linewidth=2,marker='o')
+	ax_e1.errorbar(x2,all_mod_mean,yerr=all_mod_serr,xerr=err_x,fmt='none',ecolor='k',capthick=2,elinewidth=2)
+	plt.xticks(np.arange(0,2),['Online','Playback'])
+	for ticklabel in ax_all.get_xticklabels():
+		ticklabel.set_fontsize(14)
+	for ticklabel in ax_all.get_yticklabels():
+		ticklabel.set_fontsize(14)
+	ax_all.set_xlim(-0.5,1.5)
+	ax_all.set_ylim(2.5,5.5)
+	ax_all.set_ylabel("Modulation depth",fontsize=14)
+	ax_all.set_title("Average ensemble modulation depth",fontsize=14)
 	#finally do some significance testing
 	pval_e1 = stats.ttest_rel(e1_t1_mod_v, e1_t1_mod_pb)[1]
 	tval_e1 =stats.ttest_rel(e1_t1_mod_v, e1_t1_mod_pb)[0]
 	pval_e2 = stats.ttest_rel(e2_t1_mod_v, e2_t1_mod_pb)[1]
 	tval_e2 =stats.ttest_rel(e2_t1_mod_v, e2_t1_mod_pb)[0]
+	pval_all = stats.ttest_rel(t1_mod_v,t1_mod_pb)[1]
+	tval_all = stats.ttest_rel(t1_mod_v,t1_mod_pb)[0]
 	print "E1 online mean = "+str(e1_t1_mod_v.mean())
 	print "E1 playback mean = "+str(e1_t1_mod_pb.mean())
 	print "E1 pval = "+str(pval_e1)
@@ -5309,6 +5335,11 @@ def plot_rev1_bs():
 	print "E2 playback mean = "+str(e2_t1_mod_pb.mean())
 	print "E2 pval = "+str(pval_e2)
 	print "E2 tval = "+str(tval_e2)
+	print "all playback mean = "+str(t1_mod_pb.mean())
+	print "all online mean = "+str(t1_mod_v.mean())
+	print "all pval = "+str(pval_all)
+	print "all tval = "+str(tval_all)
+
 
 def get_peg_e1_e2():
 	root_dir = r"K:\Ryan\V1_BMI"
