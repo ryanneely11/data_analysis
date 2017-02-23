@@ -4914,9 +4914,9 @@ def plot_lin_regression():
 	for i in range(totals.shape[0]):
 		ax1.plot(x_axis,var_explained[i,:],alpha=0.5,color='k')
 		ax2.plot(x_axis,totals[i,:],alpha=0.5,color='k')
-	ax1.set_xlim(0,10)
-	ax2.set_xlim(0,10)
-	ax3.set_xlim(0,10)
+	ax1.set_xlim(0,12)
+	ax2.set_xlim(0,12)
+	ax3.set_xlim(0,12)
 	f.close()
 
 """
@@ -5310,7 +5310,7 @@ def plot_rev1_bs():
 		ax_all.plot(x2,e1_mod[:,i],color='g',linewidth=2,marker='o')
 	for i in range(e2_mod.shape[1]):
 		ax_all.plot(x2,e2_mod[:,i],color='b',linewidth=2,marker='o')
-	ax_e1.errorbar(x2,all_mod_mean,yerr=all_mod_serr,xerr=err_x,fmt='none',ecolor='k',capthick=2,elinewidth=2)
+	ax_all.errorbar(x2,all_mod_mean,yerr=all_mod_serr,xerr=err_x,fmt='none',ecolor='k',capthick=2,elinewidth=2)
 	plt.xticks(np.arange(0,2),['Online','Playback'])
 	for ticklabel in ax_all.get_xticklabels():
 		ticklabel.set_fontsize(14)
