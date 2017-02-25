@@ -5485,9 +5485,9 @@ def get_time_locked_lfp():
 	unit_type = 'V1_lfp' ##the type of units to run regression on
 	root_dir = "/Volumes/Untitled/Ryan/V1_BMI"
 	animal_list = ['m11','m13','m15','m17']
-	session_list = ['BMI_D05','BMI_D06','BMI_D07']
+	session_list = ['BMI_D09','BMI_D10','BMI_D11']
 	window = [5000,1000]
-	save_file = "/Volumes/Untitled/Ryan/V1_BMI/NatureNeuro/rebuttal/data/jaws_lfp_early.hdf5"
+	save_file = "/Volumes/Untitled/Ryan/V1_BMI/NatureNeuro/rebuttal/data/jaws_lfp_late.hdf5"
 	f_out = h5py.File(save_file,'w-')
 	for animal in animal_list:
 		a_group = f_out.create_group(animal)
@@ -5509,11 +5509,12 @@ def get_time_locked_lfp():
 	f_out.close()
 
 def get_mouse_lfp_spec():
-	datafile = "/Volumes/Untitled/Ryan/V1_BMI/NatureNeuro/rebuttal/data/jaws_lfp_early.hdf5"
-	save_file = "/Volumes/Untitled/Ryan/V1_BMI/NatureNeuro/rebuttal/data/jaws_specgrams_early.hdf5"
+	datafile = "/Volumes/Untitled/Ryan/V1_BMI/NatureNeuro/rebuttal/data/jaws_lfp_late.hdf5"
+	save_file = "/Volumes/Untitled/Ryan/V1_BMI/NatureNeuro/rebuttal/data/jaws_specgrams_late2.hdf5"
 	f = h5py.File(datafile,'r')
 	f_out = h5py.File(save_file,'w')
 	animals = f.keys()
+	all_sessions = []
 	for animal in animals:
 		session_data = []
 		sessions = f[animal].keys()
@@ -5522,8 +5523,10 @@ def get_mouse_lfp_spec():
 			S, t, fr, Serr = ss.lfpSpecGram(data,[0.5,0.05],Fs=1000.0,fpass=[0,100],err=None,
 				sigType='lfp',norm=True)
 			session_data.append(S)
+			all_sessions.append(S)
 		session_data = np.asarray(session_data)
 		f_out.create_dataset(animal,data=session_data)
+	f_out.create_dataset('all_sessions',data=np.asarray(all_sessions))
 	f.close()
 	f_out.close()
 	print 'done'
@@ -5532,26 +5535,55 @@ def plot_mouse_lfp_spec():
 	f_early = "/Volumes/Untitled/Ryan/V1_BMI/NatureNeuro/rebuttal/data/jaws_specgrams_early.hdf5"
 	f_late = "/Volumes/Untitled/Ryan/V1_BMI/NatureNeuro/rebuttal/data/jaws_specgrams_late.hdf5"
 	f = h5py.File(f_early,'r')
-	plt.figure()
+	vmin = 0.8
+	vmax = 1.35
+	fig, (ax1,ax2) = plt.subplots(2)
 	data_all = []
 	for animal in f.keys():
 		data_all.append(np.asarray(f[animal]).mean(axis=0))
 	data_all = np.asarray(data_all)
-	plt.imshow(data_all.mean(axis=0).T,aspect='auto',origin='lower',extent=(-4,4,0,100))
+	cax1 = ax1.imshow(data_all.mean(axis=0).T,aspect='auto',origin='lower',extent=(-4,4,0,100),
+		vmin=vmin,vmax=vmax)
+	ax1.set_title("Late learning w/stim (days 4-6)",fontsize=16,weight='bold')
+	ax1.set_ylabel("Frequency, Hz",fontsize=16)
+	ax1.set_xticks([])
+	f.close()
+	f = h5py.File(f_late,'r')
+	data_all = []
+	for animal in f.keys():
+		data_all.append(np.asarray(f[animal]).mean(axis=0))
+	data_all = np.asarray(data_all)
+	cax2 = ax2.imshow(data_all.mean(axis=0).T,aspect='auto',origin='lower',extent=(-4,4,0,100),
+		vmin=vmin,vmax=vmax)
+	cbaxes = fig.add_axes([0.85, 0.08, 0.08, 0.85]) 
+	cb = plt.colorbar(cax2, cax=cbaxes, label = 'Normalized power') 
+	ax2.set_title("Late learning, no stim (days 9-11)",fontsize=16,weight='bold')
+	ax2.set_xlabel("Time to target",fontsize=16)
+	ax2.set_ylabel("Frequency, Hz",fontsize=16)
+	for tick in ax2.xaxis.get_major_ticks():
+		tick.label1.set_fontsize(16)
+	for tick in ax2.yaxis.get_major_ticks():
+		tick.label.set_fontsize(16)
+	f.close()
+	#plt.tight_layout()
+	##do the same but average sessions
+	f = h5py.File(f_early,'r')
+	plt.figure()
+	data_all = np.asarray(f['all_sessions'])
+	plt.imshow(data_all.mean(axis=0).T,aspect='auto',origin='lower',extent=(-4,4,0,100),
+		vmin=vmin,vmax=vmax)
 	plt.colorbar()
-	plt.title("Early specgram",fontsize=14)
+	plt.title("Early specgram by session",fontsize=14)
 	plt.xlabel("Time to target",fontsize=14)
-	plt.ylabel("Frequency, Hz")
+	plt.ylabel("Frequency, Hz",fontsize=14)
 	f.close()
 	f = h5py.File(f_late,'r')
 	plt.figure()
-	data_all = []
-	for animal in f.keys():
-		data_all.append(np.asarray(f[animal]).mean(axis=0))
-	data_all = np.asarray(data_all)
-	plt.imshow(data_all.mean(axis=0).T,aspect='auto',origin='lower',extent=(-4,4,0,100))
+	data_all = np.asarray(f['all_sessions'])
+	plt.imshow(data_all.mean(axis=0).T,aspect='auto',origin='lower',extent=(-4,4,0,100),
+		vmin=vmin,vmax=vmax)
 	plt.colorbar()
-	plt.title("Late specgram",fontsize=14)
+	plt.title("Late specgram by session",fontsize=14)
 	plt.xlabel("Time to target",fontsize=14)
 	plt.ylabel("Frequency, Hz",fontsize=14)
 	f.close()
