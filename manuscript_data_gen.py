@@ -5477,7 +5477,36 @@ def get_peg_e1_e2():
 	print "E2 tval = "+str(tval_e2)
 	return p_ctrl,p_e1,p_e2
 
-
+"""
+A function to do logistic regression analysis on the indirect units, as a group, to see
+how many of them are predictuve of E1 vs E2 choice.
+"""
+def get_time_locked_lfp():
+	unit_type = 'V1_lfp' ##the type of units to run regression on
+	root_dir = r"L:\Ryan\V1_BMI"
+	animal_list = ['m11','m13','m15','m17']
+	session_list = ['BMI_D10','BMI_D11','BMI_D12']
+	window = [4000,4000]
+	save_file = r"L:\Ryan\V1_BMI\NatureNeuro\rebuttal\data\jaws_lfp_late.hdf5"
+	f_out = h5py.File(save_file,'w-')
+	for animal in animal_list:
+		a_group = f_out.create_group(animal)
+		for session in session_list:
+			print "Working on "+animal+" "+session
+			filepath = os.path.join(root_dir,animal,session)+".plx" ##the file path to the volitional part
+			##start with the non-manipulation file
+			data = plxread.import_file(filepath,AD_channels=range(1,200),save_wf=False,
+				import_unsorted=False,verbose=False)
+			##we are going to need the T1 and T2 timestamps fo each file
+			t1_id = ru.animals[animal][1][session+".plx"]['events']['t1'][0] ##the event name in the plexon file
+			lfp_id = ru.animals[animal][1][session+'.plx']['lfp'][unit_type][0] ##we'll just take the first LFP channel since many only have one chan anyway
+			t1_ts = data[t1_id]*1000
+			lfp = data[lfp_id]
+			traces = get_data_window_lfp(lfp,t1_ts,window[0],window[1])
+			if traces != None:
+				a_group.create_dataset(session,data=traces)
+	print 'done!'
+	f_out.close()
 
 
 
@@ -5531,3 +5560,24 @@ def equalize_arrs(arrlist):
 	for i in range(len(arrlist)):
 		result[i,0:arrlist[i].shape[0]] = arrlist[i]
 	return result
+
+def get_data_window_lfp(lfp, centers, pre_win, post_win):
+	verbose = True
+	centers = np.squeeze(np.asarray(centers)).astype(np.int64)
+	data = np.squeeze(lfp)
+	N = data.size
+	removed = 0
+	for j, center in enumerate(centers):
+		if center <= pre_win or center + post_win >= N:
+			centers[j] = centers[j-1]
+			removed +=1
+			if verbose:
+				print "Index too close to start or end to take a full window. Deleting event at "+str(center)
+	if removed >= centers.size:
+		traces = None
+	else:
+		traces = np.zeros((pre_win+post_win, len(centers)))
+		##the actual windowing functionality:
+		for n, idx in enumerate(centers):
+				traces[:,n] = data[idx-pre_win:idx+post_win]
+	return traces

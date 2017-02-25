@@ -83,8 +83,8 @@ def save_session_data(file_path, verbose = True, chunk_sessions = False):
 				chunk_start =int(raw_input("Enter the start time (mins) for "+animal+" "+current_session))*1000*60
 				chunk_end =int(raw_input("Enter the end time (mins) for "+animal+" "+current_session))*1000*60
 			##load the file into memory after generating the full file path
-			session_data = plxread.import_file(os.path.join(ru.animals[animal][0],current_session), 
-				AD_channels = range(1,97), save_wf = True, import_unsorted = False, verbose = False)
+			session_data = plxread.import_file(os.path.normpath(os.path.join(ru.animals[animal][0],current_session)), 
+				AD_channels = range(1,200), save_wf = True, import_unsorted = False, verbose = False)
 			##dont abort everything if file doesn't exist
 			if session_data == None:
 				print "File " + current_session +" does not exist! Skipping..."
