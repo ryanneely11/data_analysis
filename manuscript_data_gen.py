@@ -8,7 +8,7 @@ from scipy import stats
 import multiprocessing as mp
 import spike_field_coherence as SFC
 from scipy.stats.mstats import zscore
-import seaborn as sns
+#import seaborn as sns
 import pandas as pd
 import collections
 import sys
@@ -19,7 +19,7 @@ try:
 	import plxread
 except ImportError:
 	print "Warning: plxread not imported"
-sns.set_style("whitegrid", {'axes.grid' : False})
+#sns.set_style("whitegrid", {'axes.grid' : False})
 	
 def get_performance_data():
 	##functions to generate data for the manuscript
@@ -5483,11 +5483,11 @@ how many of them are predictuve of E1 vs E2 choice.
 """
 def get_time_locked_lfp():
 	unit_type = 'V1_lfp' ##the type of units to run regression on
-	root_dir = r"L:\Ryan\V1_BMI"
+	root_dir = "/Volumes/Untitled/Ryan/V1_BMI"
 	animal_list = ['m11','m13','m15','m17']
-	session_list = ['BMI_D10','BMI_D11','BMI_D12']
-	window = [4000,4000]
-	save_file = r"L:\Ryan\V1_BMI\NatureNeuro\rebuttal\data\jaws_lfp_late.hdf5"
+	session_list = ['BMI_D05','BMI_D06','BMI_D07']
+	window = [5000,1000]
+	save_file = "/Volumes/Untitled/Ryan/V1_BMI/NatureNeuro/rebuttal/data/jaws_lfp_early.hdf5"
 	f_out = h5py.File(save_file,'w-')
 	for animal in animal_list:
 		a_group = f_out.create_group(animal)
@@ -5507,6 +5507,57 @@ def get_time_locked_lfp():
 				a_group.create_dataset(session,data=traces)
 	print 'done!'
 	f_out.close()
+
+def get_mouse_lfp_spec():
+	datafile = "/Volumes/Untitled/Ryan/V1_BMI/NatureNeuro/rebuttal/data/jaws_lfp_early.hdf5"
+	save_file = "/Volumes/Untitled/Ryan/V1_BMI/NatureNeuro/rebuttal/data/jaws_specgrams_early.hdf5"
+	f = h5py.File(datafile,'r')
+	f_out = h5py.File(save_file,'w')
+	animals = f.keys()
+	for animal in animals:
+		session_data = []
+		sessions = f[animal].keys()
+		for session in sessions:
+			data = np.asarray(f[animal][session])
+			S, t, fr, Serr = ss.lfpSpecGram(data,[0.5,0.05],Fs=1000.0,fpass=[0,100],err=None,
+				sigType='lfp',norm=True)
+			session_data.append(S)
+		session_data = np.asarray(session_data)
+		f_out.create_dataset(animal,data=session_data)
+	f.close()
+	f_out.close()
+	print 'done'
+
+def plot_mouse_lfp_spec():
+	f_early = "/Volumes/Untitled/Ryan/V1_BMI/NatureNeuro/rebuttal/data/jaws_specgrams_early.hdf5"
+	f_late = "/Volumes/Untitled/Ryan/V1_BMI/NatureNeuro/rebuttal/data/jaws_specgrams_late.hdf5"
+	f = h5py.File(f_early,'r')
+	plt.figure()
+	data_all = []
+	for animal in f.keys():
+		data_all.append(np.asarray(f[animal]).mean(axis=0))
+	data_all = np.asarray(data_all)
+	plt.imshow(data_all.mean(axis=0).T,aspect='auto',origin='lower',extent=(-4,4,0,100))
+	plt.colorbar()
+	plt.title("Early specgram",fontsize=14)
+	plt.xlabel("Time to target",fontsize=14)
+	plt.ylabel("Frequency, Hz")
+	f.close()
+	f = h5py.File(f_late,'r')
+	plt.figure()
+	data_all = []
+	for animal in f.keys():
+		data_all.append(np.asarray(f[animal]).mean(axis=0))
+	data_all = np.asarray(data_all)
+	plt.imshow(data_all.mean(axis=0).T,aspect='auto',origin='lower',extent=(-4,4,0,100))
+	plt.colorbar()
+	plt.title("Late specgram",fontsize=14)
+	plt.xlabel("Time to target",fontsize=14)
+	plt.ylabel("Frequency, Hz",fontsize=14)
+	f.close()
+
+
+
 
 
 
