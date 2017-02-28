@@ -5485,32 +5485,40 @@ def get_time_locked_lfp():
 	unit_type = 'V1_lfp' ##the type of units to run regression on
 	root_dir = "/Volumes/Untitled/Ryan/V1_BMI"
 	animal_list = ['m11','m13','m15','m17']
-	session_list = ['BMI_D09','BMI_D10','BMI_D11']
-	window = [5000,1000]
-	save_file = "/Volumes/Untitled/Ryan/V1_BMI/NatureNeuro/rebuttal/data/jaws_lfp_late.hdf5"
-	f_out = h5py.File(save_file,'w-')
-	for animal in animal_list:
-		a_group = f_out.create_group(animal)
-		for session in session_list:
-			print "Working on "+animal+" "+session
-			filepath = os.path.join(root_dir,animal,session)+".plx" ##the file path to the volitional part
-			##start with the non-manipulation file
-			data = plxread.import_file(filepath,AD_channels=range(1,200),save_wf=False,
-				import_unsorted=False,verbose=False)
-			##we are going to need the T1 and T2 timestamps fo each file
-			t1_id = ru.animals[animal][1][session+".plx"]['events']['t1'][0] ##the event name in the plexon file
-			lfp_id = ru.animals[animal][1][session+'.plx']['lfp'][unit_type][0] ##we'll just take the first LFP channel since many only have one chan anyway
-			t1_ts = data[t1_id]*1000
-			lfp = data[lfp_id]
-			traces = get_data_window_lfp(lfp,t1_ts,window[0],window[1])
-			if traces != None:
-				a_group.create_dataset(session,data=traces)
-	print 'done!'
+	session_list = ['BMI_D04','BMI_D05','BMI_D06','BMI_D07']
+	window = [3000,3000]
+	save_file = "/Volumes/Untitled/Ryan/V1_BMI/NatureNeuro/rebuttal/data/jaws_lfp_early.hdf5"
+	f_out = h5py.File(save_file,'a')
 	f_out.close()
+	for animal in animal_list:
+		f_out = h5py.File(save_file,'a')
+		try:
+			a_group = f_out[animal]
+			f_out.close()
+		except KeyError:
+			a_group = f_out.create_group(animal)
+			f_out.close()
+			for session in session_list:
+				print "Working on "+animal+" "+session
+				filepath = os.path.join(root_dir,animal,session)+".plx" ##the file path to the volitional part
+				##start with the non-manipulation file
+				data = plxread.import_file(filepath,AD_channels=range(1,200),save_wf=False,
+					import_unsorted=False,verbose=False)
+				##we are going to need the T1 and T2 timestamps fo each file
+				t1_id = ru.animals[animal][1][session+".plx"]['events']['t1'][0] ##the event name in the plexon file
+				lfp_id = ru.animals[animal][1][session+'.plx']['lfp'][unit_type][0] ##we'll just take the first LFP channel since many only have one chan anyway
+				t1_ts = data[t1_id]*1000
+				lfp = data[lfp_id]
+				traces = get_data_window_lfp(lfp,t1_ts,window[0],window[1])
+				if traces != None:
+					f_out = h5py.File(save_file,'a')
+					f_out[animal].create_dataset(session,data=traces)
+					f_out.close()
+	print 'done!'
 
 def get_mouse_lfp_spec():
-	datafile = "/Volumes/Untitled/Ryan/V1_BMI/NatureNeuro/rebuttal/data/jaws_lfp_late.hdf5"
-	save_file = "/Volumes/Untitled/Ryan/V1_BMI/NatureNeuro/rebuttal/data/jaws_specgrams_late2.hdf5"
+	datafile = "/Volumes/Untitled/Ryan/V1_BMI/NatureNeuro/rebuttal/data/jaws_lfp_early.hdf5"
+	save_file = "/Volumes/Untitled/Ryan/V1_BMI/NatureNeuro/rebuttal/data/jaws_specgrams_early.hdf5"
 	f = h5py.File(datafile,'r')
 	f_out = h5py.File(save_file,'w')
 	animals = f.keys()
@@ -5520,7 +5528,7 @@ def get_mouse_lfp_spec():
 		sessions = f[animal].keys()
 		for session in sessions:
 			data = np.asarray(f[animal][session])
-			S, t, fr, Serr = ss.lfpSpecGram(data,[0.5,0.05],Fs=1000.0,fpass=[0,100],err=None,
+			S, t, fr, Serr = ss.lfpSpecGram(data,[0.3,0.01],Fs=1000.0,fpass=[0,100],err=None,
 				sigType='lfp',norm=True)
 			session_data.append(S)
 			all_sessions.append(S)
@@ -5536,16 +5544,17 @@ def plot_mouse_lfp_spec():
 	f_late = "/Volumes/Untitled/Ryan/V1_BMI/NatureNeuro/rebuttal/data/jaws_specgrams_late.hdf5"
 	f = h5py.File(f_early,'r')
 	vmin = 0.8
-	vmax = 1.35
+	vmax = 1.2
 	fig, (ax1,ax2) = plt.subplots(2)
 	data_all = []
 	for animal in f.keys():
 		data_all.append(np.asarray(f[animal]).mean(axis=0))
 	data_all = np.asarray(data_all)
-	cax1 = ax1.imshow(data_all.mean(axis=0).T,aspect='auto',origin='lower',extent=(-4,4,0,100),
+	cax1 = ax1.imshow(data_all.mean(axis=0).T,aspect='auto',origin='lower',extent=(-2.2,3.8,0,100),
 		vmin=vmin,vmax=vmax)
 	ax1.set_title("Late learning w/stim (days 4-6)",fontsize=16,weight='bold')
 	ax1.set_ylabel("Frequency, Hz",fontsize=16)
+	ax1.set_xlim(-1,1)
 	ax1.set_xticks([])
 	f.close()
 	f = h5py.File(f_late,'r')
@@ -5553,13 +5562,14 @@ def plot_mouse_lfp_spec():
 	for animal in f.keys():
 		data_all.append(np.asarray(f[animal]).mean(axis=0))
 	data_all = np.asarray(data_all)
-	cax2 = ax2.imshow(data_all.mean(axis=0).T,aspect='auto',origin='lower',extent=(-4,4,0,100),
+	cax2 = ax2.imshow(data_all.mean(axis=0).T,aspect='auto',origin='lower',extent=(-2.2,3.8,0,100),
 		vmin=vmin,vmax=vmax)
 	cbaxes = fig.add_axes([0.85, 0.08, 0.08, 0.85]) 
 	cb = plt.colorbar(cax2, cax=cbaxes, label = 'Normalized power') 
 	ax2.set_title("Late learning, no stim (days 9-11)",fontsize=16,weight='bold')
 	ax2.set_xlabel("Time to target",fontsize=16)
 	ax2.set_ylabel("Frequency, Hz",fontsize=16)
+	ax2.set_xlim(-1,1)
 	for tick in ax2.xaxis.get_major_ticks():
 		tick.label1.set_fontsize(16)
 	for tick in ax2.yaxis.get_major_ticks():
@@ -5570,7 +5580,7 @@ def plot_mouse_lfp_spec():
 	f = h5py.File(f_early,'r')
 	plt.figure()
 	data_all = np.asarray(f['all_sessions'])
-	plt.imshow(data_all.mean(axis=0).T,aspect='auto',origin='lower',extent=(-4,4,0,100),
+	plt.imshow(data_all.mean(axis=0).T,aspect='auto',origin='lower',extent=(-3,3,0,100),
 		vmin=vmin,vmax=vmax)
 	plt.colorbar()
 	plt.title("Early specgram by session",fontsize=14)
@@ -5580,12 +5590,58 @@ def plot_mouse_lfp_spec():
 	f = h5py.File(f_late,'r')
 	plt.figure()
 	data_all = np.asarray(f['all_sessions'])
-	plt.imshow(data_all.mean(axis=0).T,aspect='auto',origin='lower',extent=(-4,4,0,100),
+	plt.imshow(data_all.mean(axis=0).T,aspect='auto',origin='lower',extent=(-3,3,0,100),
 		vmin=vmin,vmax=vmax)
 	plt.colorbar()
 	plt.title("Late specgram by session",fontsize=14)
 	plt.xlabel("Time to target",fontsize=14)
 	plt.ylabel("Frequency, Hz",fontsize=14)
+	f.close()
+
+
+def get_mouse_ensemble_data():
+	unit_type = 'e1_units' ##the type of units to run analysis on
+	root_dir = "/Volumes/Untitled/Ryan/V1_BMI"
+	animal_list = ['m11','m13','m15','m17']
+	session_list = ['BMI_D09','BMI_D10','BMI_D11']
+	window = [3000,3000]
+	save_file = "/Volumes/Untitled/Ryan/V1_BMI/NatureNeuro/rebuttal/data/jaws_lfp_late.hdf5"
+	f_out = h5py.File(save_file,'w-')
+	for animal in animal_list:
+		a_group = f_out.create_group(animal)
+		for session in session_list:
+			try:
+				dataset = a_group[session+"_e1"]
+			except KeyError:	
+				print "Working on "+animal+" "+session
+				filepath = os.path.join(root_dir,animal,session)+".plx" ##the file path to the volitional part
+				##start with the non-manipulation file
+				data = plxread.import_file(filepath,AD_channels=range(1,200),save_wf=False,
+					import_unsorted=False,verbose=False)
+				##we are going to need the T1 and units from each file
+				t1_id = ru.animals[animal][1][session+".plx"]['events']['t1'][0] ##the event name in the plexon file
+				e1_ids = ru.animals[animal][1][session+'.plx']['units']['e1_units']
+				e2_ids = ru.animals[animal][1][session+'.plx']['units']['e2_units']
+				lfp_id = ru.animals[animal][1][session+'.plx']['lfp'][0]
+				duration = int(np.ceil((data[lfp_id+'_ts'].max()*1000)/100)*100)+1
+				t1 = data[t1_id]*1000.0
+				e1_data = []
+				for i in range(len(e1_ids)):
+					spiketrain = data[e1_ids[i]]*1000.0
+					##convert to binary array
+					spiketrain = np.histogram(spiketrain,bins=duration,range=(0,duration))
+					spiketrain = spiketrain[0].astype(bool).astype(int)
+					e1_data.append(spiketrain)
+				e1_data = np.asarray(e1_data)
+				a_group.create_dataset(session+'_e1',data=e1_data)
+				for i in range(len(e2_ids)):
+					spiketrain = data[e2_ids[i]]*1000.0
+					##convert to binary array
+					spiketrain = np.histogram(spiketrain,bins=duration,range=(0,duration))
+					spiketrain = spiketrain[0].astype(bool).astype(int)
+					e2_data.append(spiketrain)
+				e2_data = np.asarray(e2_data)
+				a_group.create_dataset(session+'_e2',data=e2_data)
 	f.close()
 
 
