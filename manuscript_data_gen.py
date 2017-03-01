@@ -4535,7 +4535,7 @@ A function to do logistic regression analysis on the indirect units, to see
 how many of them are predictuve of E1 vs E2 choice.
 """
 def log_regress_units():
-	unit_type = 'Str_units' ##the type of units to run regression on
+	unit_type = 'PLC_units' ##the type of units to run regression on
 	animal_list = None
 	session_range = None
 	window = [2000,0]
@@ -4546,8 +4546,8 @@ def log_regress_units():
 	##first, we need to get two arrays: X; the data matrix of spike data
 	##in dimensions trials x units x bins, and then y; the binary matrix
 	## of target 1 and target 2 values.
-	source_file = r"J:\Ryan\processed_data\V1_BMI_final\raw_data\R7_thru_V13_all_data.hdf5"
-	save_file = r"J:\Ryan\V1_BMI\NatureNeuro\rebuttal\DMS_log_regression.hdf5"
+	source_file = r"L:\Ryan\processed_data\V1_BMI_final\raw_data\R7_thru_V13_all_data.hdf5"
+	save_file = r"L:\Ryan\V1_BMI\NatureNeuro\rebuttal\data\PLC_log_regression.hdf5"
 	f = h5py.File(source_file,'r')
 	##make some arrays to store
 	if animal_list is None:
@@ -5738,9 +5738,59 @@ def get_mouse_ensemble_data():
 				a_group.create_dataset(session+'_e2',data=e2_data)
 	f.close()
 
-
-
-
+def save_V1_PLC_ff_cohgram_data():	
+	f = h5py.File("/home/lab/Documents/data/t1_triggered.hdf5",'r')
+	sessions = f.keys()
+	V1_data = []
+	PLC_data = []
+	session_names = []
+	for s in sessions:
+		try:
+			v1 = None
+			dms = None
+			name = None
+			v1 = np.asarray(f[s]['V1_lfp'][:,2000:,:])
+			dms = np.asarray(f[s]['Str_lfp'][:,2000:,:])
+			name = s
+		except KeyError:
+			pass
+		if (v1 != None and dms != None):
+			if (v1.shape[0] > 2 and dms.shape[0] == v1.shape[0]): ##need at least 2 trials
+				V1_data.append(v1)
+				DMS_data.append(dms)
+				session_names.append(s)
+	f.close()
+	##let's put all this on disc since it's gonna be a lot of data...
+	g = h5py.File("/home/lab/Documents/data/paired_v1_dms_lfp_t1.hdf5",'w-')
+	for i, name in enumerate(session_names):
+		gp=g.create_group(name)
+		gp.create_dataset("v1", data=V1_data[i])
+		gp.create_dataset("dms",data=DMS_data[i])
+	g.close()
+	DMS_data = None; V1_data = None
+	g = h5py.File("/home/lab/Documents/data/paired_v1_dms_lfp_t1.hdf5",'r')
+	results_file = h5py.File("/home/lab/Documents/data/v1_dms_cohgrams_t12.hdf5",'w-')
+	##shape is trials x time x channels
+	##let's just do a pairwise comparison of EVERYTHING
+	##do this one sesssion at a time to not overload the memory
+	for session in session_names:
+		group = g[session]
+		v1_data = np.asarray(group['v1'])
+		dms_data = np.asarray(group['dms'])
+		data = []
+		for v in range(v1_data.shape[2]):
+			for d in range(dms_data.shape[2]):
+				lfp_1 = v1_data[:,:,v].T
+				lfp_2 = dms_data[:,:,d].T
+				data.append([lfp_1,lfp_2])
+		pool = mp.Pool(processes=mp.cpu_count())
+		async_result = pool.map_async(ss.mp_cohgrams,data)
+		pool.close()
+		pool.join()
+		cohgrams = async_result.get()
+		results_file.create_dataset(session,data = np.asarray(cohgrams))
+	g.close()
+	results_file.close()
 
 
 """
