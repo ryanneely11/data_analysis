@@ -4546,8 +4546,8 @@ def log_regress_units():
 	##first, we need to get two arrays: X; the data matrix of spike data
 	##in dimensions trials x units x bins, and then y; the binary matrix
 	## of target 1 and target 2 values.
-	source_file = r"L:\Ryan\processed_data\V1_BMI_final\raw_data\R7_thru_V13_all_data.hdf5"
-	save_file = r"L:\Ryan\V1_BMI\NatureNeuro\rebuttal\data\PLC_log_regression.hdf5"
+	source_file = r"J:\Ryan\processed_data\V1_BMI_final\raw_data\R7_thru_V13_all_data.hdf5"
+	save_file = r"J:\Ryan\V1_BMI\NatureNeuro\rebuttal\data\PLC_log_regression.hdf5"
 	f = h5py.File(source_file,'r')
 	##make some arrays to store
 	if animal_list is None:
