@@ -5738,60 +5738,82 @@ def get_mouse_ensemble_data():
 				a_group.create_dataset(session+'_e2',data=e2_data)
 	f.close()
 
-def save_V1_PLC_ff_cohgram_data():	
-	f = h5py.File("/home/lab/Documents/data/t1_triggered.hdf5",'r')
-	sessions = f.keys()
-	V1_data = []
-	PLC_data = []
-	session_names = []
-	for s in sessions:
-		try:
-			v1 = None
-			dms = None
-			name = None
-			v1 = np.asarray(f[s]['V1_lfp'][:,2000:,:])
-			dms = np.asarray(f[s]['Str_lfp'][:,2000:,:])
-			name = s
-		except KeyError:
-			pass
-		if (v1 != None and dms != None):
-			if (v1.shape[0] > 2 and dms.shape[0] == v1.shape[0]): ##need at least 2 trials
-				V1_data.append(v1)
-				DMS_data.append(dms)
-				session_names.append(s)
-	f.close()
-	##let's put all this on disc since it's gonna be a lot of data...
-	g = h5py.File("/home/lab/Documents/data/paired_v1_dms_lfp_t1.hdf5",'w-')
-	for i, name in enumerate(session_names):
-		gp=g.create_group(name)
-		gp.create_dataset("v1", data=V1_data[i])
-		gp.create_dataset("dms",data=DMS_data[i])
-	g.close()
-	DMS_data = None; V1_data = None
-	g = h5py.File("/home/lab/Documents/data/paired_v1_dms_lfp_t1.hdf5",'r')
-	results_file = h5py.File("/home/lab/Documents/data/v1_dms_cohgrams_t12.hdf5",'w-')
-	##shape is trials x time x channels
-	##let's just do a pairwise comparison of EVERYTHING
-	##do this one sesssion at a time to not overload the memory
-	for session in session_names:
-		group = g[session]
-		v1_data = np.asarray(group['v1'])
-		dms_data = np.asarray(group['dms'])
-		data = []
-		for v in range(v1_data.shape[2]):
-			for d in range(dms_data.shape[2]):
-				lfp_1 = v1_data[:,:,v].T
-				lfp_2 = dms_data[:,:,d].T
-				data.append([lfp_1,lfp_2])
-		pool = mp.Pool(processes=mp.cpu_count())
-		async_result = pool.map_async(ss.mp_cohgrams,data)
-		pool.close()
-		pool.join()
-		cohgrams = async_result.get()
-		results_file.create_dataset(session,data = np.asarray(cohgrams))
-	g.close()
-	results_file.close()
-
+def save_ff_cohgram_data():
+	##define some gobal parameters
+	sig1 = 'PLC_lfp'
+	sig2 = 'V1_lfp'
+	sig_type = 'lfp'
+	target = 't1'
+	animal_list = None
+	window = [6000,6000]
+	session_range = np.arange(4,12)	
+	root_dir = r"K:\Ryan\V1_BMI"
+	save_file = r"J:\Ryan\V1_BMI\NatureNeuro\rebuttal\data\PLC_V1_ffc.hdf5"
+	if animal_list is None:
+		animal_list = ru.animals.keys()
+	for animal in animal_list:
+		if session_range is None:
+			session_list = ru.animals[animal][1].keys()
+		else: 
+			session_list = [x for x in ru.animals[animal][1].keys() if int(x[-6:-4]) in session_range]
+		for session in session_list:
+			##this should be the path to the plexon file
+			plxfile = os.path.join(root_dir,animal,session)
+			##try to get the list of names for the signals and the targets
+			try:
+				sig_list1 = ru.animals[animal][1][session][sig_type][sig1]
+			except KeyError:
+				sig_list1 = []
+			try:
+				sig_list2 = ru.animals[animal][1][session][sig_type][sig2]
+			except KeyError:
+				sig_list2 = []
+			try:
+				event = ru.animals[animal][1][session]['events'][target][0]
+			except KeyError:
+				event = 0
+			##if we do have everything we need, continue
+			if (len(sig_list1)>0 and len(sig_list2)>0 and event != 0):
+				print "working on "+animal+" "+session
+				##open the raw plexon data file
+				raw_data = plxread.import_file(plxfile,AD_channels=range(1,97),save_wf=False,
+					import_unsorted=False,verbose=False)
+				##this will be our list of lfp pairs to send for parallel coherence calculations
+				trial_data = []
+				target_ts = raw_data[event]*1000.0
+				##now process each signal for this session to get the time-locked traces for each trial:
+				for i in range(sig_list1):
+					signame1 = sig_list1[i]
+					tempdata1 = raw_data[signame1]
+					sigts1 = raw_data[signame1+"_ts"]
+					#convert the ad ts to samples, and integers for indexing
+					sigts1 = np.ceil((sigts2*1000)).astype(int)
+					sigdata1 = np.zeros(sigts1.shape)
+					sigdata1[sigts1] = tempdata1
+					traces1 = get_data_window_lfp(sigdata1,target_ts,window[0],window[1])
+					for j in sig_list2:
+						signame2 = sig_list2[j]
+						tempdata2 = raw_data[signame2]
+						sigts2 = raw_data[signame2+"_ts"]
+						#convert the ad ts to samples, and integers for indexing
+						sigts2 = np.ceil((sigts2*1000)).astype(int)
+						sigdata2 = np.zeros(sigts2.shape)
+						sigdata2[sigts2] = tempdata2
+						traces2 = get_data_window_lfp(sigdata2,target_ts,window[0],window[1])
+						trial_data.append([traces1,traces2])
+				pool = mp.Pool(processes=mp.cpu_count())
+				async_result = pool.map_async(ss.mp_cohgrams,trial_data)
+				pool.close()
+				pool.join()
+				cohgrams = async_result.get()
+				f_out = h5py.File(save_file,'a')
+				try:
+					a_group = f_out[animal]
+				except KeyError:
+					a_group = f_out.create_group(animal)
+				a_group.create_dataset(session, data=np.asarray(cohgrams))
+				f_out.close()
+	print Done!
 
 """
 Another helper function to bin spike matrices.
@@ -5805,8 +5827,6 @@ def bin_matrix(X,bin_size):
 		for t in range(X.shape[0]):
 			binned_data[t,u,:] = bin_spikes(X[t,u,:],bin_size)
 	return binned_data
-
-
 
 
 """
