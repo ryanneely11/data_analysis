@@ -14,6 +14,7 @@ import collections
 import sys
 import log_regression as lr
 import lin_regression as linr
+import spectrograms as specs
 import RatUnits4 as ru
 try:
 	import plxread
@@ -5485,9 +5486,9 @@ def get_time_locked_lfp():
 	unit_type = 'V1_lfp' ##the type of units to run regression on
 	root_dir = "/Volumes/Untitled/Ryan/V1_BMI"
 	animal_list = ['m11','m13','m15','m17']
-	session_list = ['BMI_D04','BMI_D05','BMI_D06','BMI_D07']
-	window = [3000,3000]
-	save_file = "/Volumes/Untitled/Ryan/V1_BMI/NatureNeuro/rebuttal/data/jaws_lfp_early.hdf5"
+	session_list = ['BMI_D09','BMI_D10','BMI_D11','BMI_D12']
+	window = [2000,1000]
+	save_file = "/Volumes/Untitled/Ryan/V1_BMI/NatureNeuro/rebuttal/data/jaws_lfp_late.hdf5"
 	f_out = h5py.File(save_file,'a')
 	f_out.close()
 	for animal in animal_list:
@@ -5502,7 +5503,7 @@ def get_time_locked_lfp():
 				print "Working on "+animal+" "+session
 				filepath = os.path.join(root_dir,animal,session)+".plx" ##the file path to the volitional part
 				##start with the non-manipulation file
-				data = plxread.import_file(filepath,AD_channels=range(1,200),save_wf=False,
+				data = plxread.import_file(filepath,AD_channels=range(1,150),save_wf=False,
 					import_unsorted=False,verbose=False)
 				##we are going to need the T1 and T2 timestamps fo each file
 				t1_id = ru.animals[animal][1][session+".plx"]['events']['t1'][0] ##the event name in the plexon file
@@ -5514,9 +5515,14 @@ def get_time_locked_lfp():
 					f_out = h5py.File(save_file,'a')
 					f_out[animal].create_dataset(session,data=traces)
 					f_out.close()
+	try:
+		with h5py.File(save_file,'a') as f:
+			f.__delitem__('m11/BMI_D09')
+	except KeyError:
+		pass
 	print 'done!'
 
-def get_mouse_lfp_spec():
+def get_mouse_lfp_specgram():
 	datafile = "/Volumes/Untitled/Ryan/V1_BMI/NatureNeuro/rebuttal/data/jaws_lfp_early.hdf5"
 	save_file = "/Volumes/Untitled/Ryan/V1_BMI/NatureNeuro/rebuttal/data/jaws_specgrams_early.hdf5"
 	f = h5py.File(datafile,'r')
@@ -5528,7 +5534,7 @@ def get_mouse_lfp_spec():
 		sessions = f[animal].keys()
 		for session in sessions:
 			data = np.asarray(f[animal][session])
-			S, t, fr, Serr = ss.lfpSpecGram(data,[0.3,0.01],Fs=1000.0,fpass=[0,100],err=None,
+			S, t, fr, Serr = specs.lfpSpecGram(data,[0.2,0.01],Fs=1000.0,fpass=[0,150],err=None,
 				sigType='lfp',norm=True)
 			session_data.append(S)
 			all_sessions.append(S)
@@ -5539,7 +5545,31 @@ def get_mouse_lfp_spec():
 	f_out.close()
 	print 'done'
 
-def plot_mouse_lfp_spec():
+def get_mouse_lfp_spectrum():
+	datafile = "/Volumes/Untitled/Ryan/V1_BMI/NatureNeuro/rebuttal/data/jaws_lfp_late.hdf5"
+	save_file = "/Volumes/Untitled/Ryan/V1_BMI/NatureNeuro/rebuttal/data/jaws_spectrums_late.hdf5"
+	f = h5py.File(datafile,'r')
+	f_out = h5py.File(save_file,'w')
+	idx = np.arange(0,2000)
+	animals = f.keys()
+	all_sessions = []
+	for animal in animals:
+		session_data = []
+		sessions = f[animal].keys()
+		for session in sessions:
+			data = np.asarray(f[animal][session])[idx]
+			S, fr, Serr = specs.mtspectrum(data,Fs=1000.0,fpass=[0,150],err=None,
+				sigType='lfp')
+			session_data.append(S)
+			all_sessions.append(S)
+		session_data = np.asarray(session_data)
+		f_out.create_dataset(animal,data=session_data)
+	f_out.create_dataset('all_sessions',data=np.asarray(all_sessions))
+	f.close()
+	f_out.close()
+	print 'done'
+
+def plot_mouse_lfp_specgram():
 	f_early = "/Volumes/Untitled/Ryan/V1_BMI/NatureNeuro/rebuttal/data/jaws_specgrams_early.hdf5"
 	f_late = "/Volumes/Untitled/Ryan/V1_BMI/NatureNeuro/rebuttal/data/jaws_specgrams_late.hdf5"
 	f = h5py.File(f_early,'r')
@@ -5547,29 +5577,30 @@ def plot_mouse_lfp_spec():
 	vmax = 1.2
 	fig, (ax1,ax2) = plt.subplots(2)
 	data_all = []
-	for animal in f.keys():
+	animals = ['m11','m13','m15','m17']
+	for animal in animals:
 		data_all.append(np.asarray(f[animal]).mean(axis=0))
 	data_all = np.asarray(data_all)
-	cax1 = ax1.imshow(data_all.mean(axis=0).T,aspect='auto',origin='lower',extent=(-2.2,3.8,0,100),
+	cax1 = ax1.imshow(data_all.mean(axis=0).T,aspect='auto',origin='lower',extent=(-2,1,0,150),
 		vmin=vmin,vmax=vmax)
 	ax1.set_title("Late learning w/stim (days 4-6)",fontsize=16,weight='bold')
 	ax1.set_ylabel("Frequency, Hz",fontsize=16)
-	ax1.set_xlim(-1,1)
+	# ax1.set_xlim(-1,1)
 	ax1.set_xticks([])
 	f.close()
 	f = h5py.File(f_late,'r')
 	data_all = []
-	for animal in f.keys():
+	for animal in animals:
 		data_all.append(np.asarray(f[animal]).mean(axis=0))
 	data_all = np.asarray(data_all)
-	cax2 = ax2.imshow(data_all.mean(axis=0).T,aspect='auto',origin='lower',extent=(-2.2,3.8,0,100),
+	cax2 = ax2.imshow(data_all.mean(axis=0).T,aspect='auto',origin='lower',extent=(-2,1,0,150),
 		vmin=vmin,vmax=vmax)
 	cbaxes = fig.add_axes([0.85, 0.08, 0.08, 0.85]) 
 	cb = plt.colorbar(cax2, cax=cbaxes, label = 'Normalized power') 
 	ax2.set_title("Late learning, no stim (days 9-11)",fontsize=16,weight='bold')
 	ax2.set_xlabel("Time to target",fontsize=16)
 	ax2.set_ylabel("Frequency, Hz",fontsize=16)
-	ax2.set_xlim(-1,1)
+	# ax2.set_xlim(-1,1)
 	for tick in ax2.xaxis.get_major_ticks():
 		tick.label1.set_fontsize(16)
 	for tick in ax2.yaxis.get_major_ticks():
@@ -5580,7 +5611,7 @@ def plot_mouse_lfp_spec():
 	f = h5py.File(f_early,'r')
 	plt.figure()
 	data_all = np.asarray(f['all_sessions'])
-	plt.imshow(data_all.mean(axis=0).T,aspect='auto',origin='lower',extent=(-3,3,0,100),
+	plt.imshow(data_all.mean(axis=0).T,aspect='auto',origin='lower',extent=(-2,1,0,150),
 		vmin=vmin,vmax=vmax)
 	plt.colorbar()
 	plt.title("Early specgram by session",fontsize=14)
@@ -5590,7 +5621,7 @@ def plot_mouse_lfp_spec():
 	f = h5py.File(f_late,'r')
 	plt.figure()
 	data_all = np.asarray(f['all_sessions'])
-	plt.imshow(data_all.mean(axis=0).T,aspect='auto',origin='lower',extent=(-3,3,0,100),
+	plt.imshow(data_all.mean(axis=0).T,aspect='auto',origin='lower',extent=(-2,1,0,150),
 		vmin=vmin,vmax=vmax)
 	plt.colorbar()
 	plt.title("Late specgram by session",fontsize=14)
@@ -5598,6 +5629,69 @@ def plot_mouse_lfp_spec():
 	plt.ylabel("Frequency, Hz",fontsize=14)
 	f.close()
 
+def plot_mouse_lfp_spectrum():
+	f_early = "/Volumes/Untitled/Ryan/V1_BMI/NatureNeuro/rebuttal/data/jaws_spectrums_early.hdf5"
+	f_late = "/Volumes/Untitled/Ryan/V1_BMI/NatureNeuro/rebuttal/data/jaws_spectrums_late.hdf5"
+	f = h5py.File(f_early,'r')
+	fig, ax1 = plt.subplots(1)
+	data_all = []
+	animals = ['m11','m13','m15','m17']
+	for animal in animals:
+		data_all.append(np.asarray(f[animal]).mean(axis=0))
+	data_all = np.asarray(data_all)
+	data_mean = data_all.mean(axis=0)
+	x = np.linspace(0,150,data_mean.shape[0])
+	data_sem = stats.sem(data_all,axis=0)
+	ax1.plot(x,data_mean,color='r',linewidth=2,label='training with Jaws')
+	ax1.fill_between(x,data_mean-data_sem,data_mean+data_sem,color='r',alpha=0.5)
+	f.close()
+	f = h5py.File(f_late,'r')
+	data_all = []
+	for animal in animals:
+		data_all.append(np.asarray(f[animal]).mean(axis=0))
+	data_all = np.asarray(data_all)
+	data_mean = data_all.mean(axis=0)
+	data_sem = stats.sem(data_all,axis=0)
+	ax1.plot(x,data_mean,color='k',linewidth=2,label='training without Jaws')
+	ax1.fill_between(x,data_mean-data_sem,data_mean+data_sem,color='k',alpha=0.5)
+	ax1.set_yscale( "log" ) 
+	ax1.set_title("Late learning, no stim (days 9-11)",fontsize=16,weight='bold')
+	ax1.set_xlabel("Frequency, Hz",fontsize=16)
+	ax1.set_ylabel("Power",fontsize=16)
+	# ax2.set_xlim(-1,1)
+	for tick in ax1.xaxis.get_major_ticks():
+		tick.label1.set_fontsize(16)
+	for tick in ax1.yaxis.get_major_ticks():
+		tick.label.set_fontsize(16)
+	ax1.legend()
+	f.close()
+	#plt.tight_layout()
+	##do the same but average sessions
+	f = h5py.File(f_early,'r')
+	fig, ax1 = plt.subplots(1)
+	data_all = np.asarray(f['all_sessions'])
+	data_mean = data_all.mean(axis=0)
+	data_sem = stats.sem(data_all,axis=0)
+	ax1.plot(x,data_mean,color='r',linewidth=2,label='training with Jaws')
+	ax1.fill_between(x,data_mean-data_sem,data_mean+data_sem,color='r',alpha=0.5) 
+	f.close()
+	f = h5py.File(f_late,'r')
+	data_all = np.asarray(f['all_sessions'])
+	data_mean = data_all.mean(axis=0)
+	data_sem = stats.sem(data_all,axis=0)
+	ax1.plot(x,data_mean,color='k',linewidth=2,label='training without Jaws')
+	ax1.fill_between(x,data_mean-data_sem,data_mean+data_sem,color='k',alpha=0.5) 
+	ax1.set_yscale( "log" )
+	ax1.set_title("Late learning, no stim (days 9-11)",fontsize=16,weight='bold')
+	ax1.set_xlabel("Frequency, Hz",fontsize=16)
+	ax1.set_ylabel("Power",fontsize=16)
+	# ax2.set_xlim(-1,1)
+	for tick in ax1.xaxis.get_major_ticks():
+		tick.label1.set_fontsize(16)
+	for tick in ax1.yaxis.get_major_ticks():
+		tick.label.set_fontsize(16)
+	ax1.legend()
+	f.close()
 
 def get_mouse_ensemble_data():
 	unit_type = 'e1_units' ##the type of units to run analysis on

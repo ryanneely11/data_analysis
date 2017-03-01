@@ -2,11 +2,12 @@
 ##code for calculating time varying spectrums using the 
 ##muti-taper mwthod
 
-import numpy as numpy
+import numpy as np
 from progressbar import *
 import matplotlib as mp
 import scipy as sp
 import spectrum as spec
+
 
 def lfpSpecGram(data, window=[0.5,0.05], Fs = 1000.0, fpass = [0,100], err = None, 
 	sigType = 'lfp', norm = True):
