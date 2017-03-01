@@ -4924,7 +4924,7 @@ def plot_lin_regression():
 A function to plot the results from the LR function (individual units)
 """
 def plot_log_regression():
-	datafile = r"K:\Ryan\V1_BMI\NatureNeuro\rebuttal\indirect_log_regression.hdf5"
+	datafile = r"L:\Ryan\V1_BMI\NatureNeuro\rebuttal\data\PLC_log_regression.hdf5"
 	f = h5py.File(datafile,'r')
 	animal_list = f.keys()
 	##store the means of all the animals
@@ -5813,7 +5813,7 @@ def save_ff_cohgram_data():
 					a_group = f_out.create_group(animal)
 				a_group.create_dataset(session, data=np.asarray(cohgrams))
 				f_out.close()
-	print Done!
+	print "Done!"
 
 """
 Another helper function to bin spike matrices.
