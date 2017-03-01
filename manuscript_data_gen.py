@@ -5744,10 +5744,10 @@ def save_ff_cohgram_data():
 	sig2 = 'V1_lfp'
 	sig_type = 'lfp'
 	target = 't1'
-	animal_list = None
+	animal_list = ["R11","R13"]
 	window = [6000,6000]
 	session_range = np.arange(4,12)	
-	root_dir = r"K:\Ryan\V1_BMI"
+	root_dir = r"J:\Ryan\V1_BMI"
 	save_file = r"J:\Ryan\V1_BMI\NatureNeuro\rebuttal\data\PLC_V1_ffc.hdf5"
 	if animal_list is None:
 		animal_list = ru.animals.keys()
@@ -5782,22 +5782,22 @@ def save_ff_cohgram_data():
 				trial_data = []
 				target_ts = raw_data[event]*1000.0
 				##now process each signal for this session to get the time-locked traces for each trial:
-				for i in range(sig_list1):
+				for i in range(len(sig_list1)):
 					signame1 = sig_list1[i]
 					tempdata1 = raw_data[signame1]
 					sigts1 = raw_data[signame1+"_ts"]
 					#convert the ad ts to samples, and integers for indexing
-					sigts1 = np.ceil((sigts2*1000)).astype(int)
-					sigdata1 = np.zeros(sigts1.shape)
+					sigts1 = np.ceil((sigts1*1000)).astype(int)
+					sigdata1 = np.zeros(sigts1.shape[0]+1000)
 					sigdata1[sigts1] = tempdata1
 					traces1 = get_data_window_lfp(sigdata1,target_ts,window[0],window[1])
-					for j in sig_list2:
+					for j in range(len(sig_list2)):
 						signame2 = sig_list2[j]
 						tempdata2 = raw_data[signame2]
 						sigts2 = raw_data[signame2+"_ts"]
 						#convert the ad ts to samples, and integers for indexing
 						sigts2 = np.ceil((sigts2*1000)).astype(int)
-						sigdata2 = np.zeros(sigts2.shape)
+						sigdata2 = np.zeros(sigts2.shape[0]+1000)
 						sigdata2[sigts2] = tempdata2
 						traces2 = get_data_window_lfp(sigdata2,target_ts,window[0],window[1])
 						trial_data.append([traces1,traces2])
