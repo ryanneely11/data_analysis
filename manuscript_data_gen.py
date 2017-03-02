@@ -16,6 +16,7 @@ import log_regression as lr
 import lin_regression as linr
 import spectrograms as specs
 import RatUnits4 as ru
+import itertools
 try:
 	import plxread
 except ImportError:
@@ -5693,62 +5694,17 @@ def plot_mouse_lfp_spectrum():
 	ax1.legend()
 	f.close()
 
-def get_mouse_ensemble_data():
-	unit_type = 'e1_units' ##the type of units to run analysis on
-	root_dir = "/Volumes/Untitled/Ryan/V1_BMI"
-	animal_list = ['m11','m13','m15','m17']
-	session_list = ['BMI_D09','BMI_D10','BMI_D11']
-	window = [3000,3000]
-	save_file = "/Volumes/Untitled/Ryan/V1_BMI/NatureNeuro/rebuttal/data/jaws_lfp_late.hdf5"
-	f_out = h5py.File(save_file,'w-')
-	for animal in animal_list:
-		a_group = f_out.create_group(animal)
-		for session in session_list:
-			try:
-				dataset = a_group[session+"_e1"]
-			except KeyError:	
-				print "Working on "+animal+" "+session
-				filepath = os.path.join(root_dir,animal,session)+".plx" ##the file path to the volitional part
-				##start with the non-manipulation file
-				data = plxread.import_file(filepath,AD_channels=range(1,200),save_wf=False,
-					import_unsorted=False,verbose=False)
-				##we are going to need the T1 and units from each file
-				t1_id = ru.animals[animal][1][session+".plx"]['events']['t1'][0] ##the event name in the plexon file
-				e1_ids = ru.animals[animal][1][session+'.plx']['units']['e1_units']
-				e2_ids = ru.animals[animal][1][session+'.plx']['units']['e2_units']
-				lfp_id = ru.animals[animal][1][session+'.plx']['lfp'][0]
-				duration = int(np.ceil((data[lfp_id+'_ts'].max()*1000)/100)*100)+1
-				t1 = data[t1_id]*1000.0
-				e1_data = []
-				for i in range(len(e1_ids)):
-					spiketrain = data[e1_ids[i]]*1000.0
-					##convert to binary array
-					spiketrain = np.histogram(spiketrain,bins=duration,range=(0,duration))
-					spiketrain = spiketrain[0].astype(bool).astype(int)
-					e1_data.append(spiketrain)
-				e1_data = np.asarray(e1_data)
-				a_group.create_dataset(session+'_e1',data=e1_data)
-				for i in range(len(e2_ids)):
-					spiketrain = data[e2_ids[i]]*1000.0
-					##convert to binary array
-					spiketrain = np.histogram(spiketrain,bins=duration,range=(0,duration))
-					spiketrain = spiketrain[0].astype(bool).astype(int)
-					e2_data.append(spiketrain)
-				e2_data = np.asarray(e2_data)
-				a_group.create_dataset(session+'_e2',data=e2_data)
-	f.close()
-
 def save_ff_cohgram_data():
 	##define some gobal parameters
 	sig1 = 'PLC_lfp'
-	sig2 = 'V1_lfp'
+	sig2 = 'Str_lfp'
 	sig_type = 'lfp'
 	target = 't1'
 	animal_list = ["R11","R13"]
 	window = [6000,6000]
 	session_range = np.arange(4,12)	
 	root_dir = r"J:\Ryan\V1_BMI"
-	save_file = r"J:\Ryan\V1_BMI\NatureNeuro\rebuttal\data\PLC_V1_ffc.hdf5"
+	save_file = r"J:\Ryan\V1_BMI\NatureNeuro\rebuttal\data\PLC_DS_ffc.hdf5"
 	if animal_list is None:
 		animal_list = ru.animals.keys()
 	for animal in animal_list:
@@ -5814,6 +5770,268 @@ def save_ff_cohgram_data():
 				a_group.create_dataset(session, data=np.asarray(cohgrams))
 				f_out.close()
 	print "Done!"
+
+def get_ensemble_correlations_mouse():
+	##define some gobal parameters
+	animal_list = ["m11","m13","m15","m17"]
+	window = [120000,30000]
+	tau = 20
+	dt = 1
+	session_range = None
+	sig_type = "units"
+	root_dir = r"L:\data"
+	save_file = r"L:\data\NatureNeuro\rebuttal\data\mouse_correlations.hdf5"
+	if animal_list is None:
+		animal_list = ru.animals.keys()
+	for animal in animal_list:
+		if session_range is None:
+			session_list = ru.animals[animal][1].keys()
+		else: 
+			session_list = [x for x in ru.animals[animal][1].keys() if int(x[-6:-4]) in session_range]
+		for session in session_list:
+			##this should be the path to the plexon file
+			plxfile = os.path.join(root_dir,animal,session)
+			##try to get the list of names for the signals and the targets
+			try:
+				e1_list = ru.animals[animal][1][session][sig_type]["e1_units"]
+			except KeyError:
+				e1_list = []
+			try:
+				e2_list = ru.animals[animal][1][session][sig_type]["e2_units"]
+			except KeyError:
+				e2_list = []
+			try:
+				ind_list = ru.animals[animal][1][session][sig_type]["V1_units"]
+			except KeyError:
+				ind_list = []
+			##if we do have everything we need, continue
+			if (len(e1_list)>0 and len(e2_list)>0 and len(ind_list)>0):
+				print "working on "+animal+" "+session
+				##open the raw plexon data file
+				raw_data = plxread.import_file(plxfile,AD_channels=range(100,200),save_wf=False,
+					import_unsorted=False,verbose=False)
+				##this will be our list of correlation timecourses
+				e1_data = []
+				e2_data = []
+				ind_data = []
+				##get the info about the duration of this session
+				lfp_id = ru.animals[animal][1][session]['lfp']['V1_lfp'][0]
+				duration = int((np.ceil(raw_data[lfp_id+'_ts'].max()*1000)/100)*100)+1
+				##now process each set of units for this session
+				##starting with E1 units:
+				##a list of tuples containing all the pairwise combinations of e1 units
+				##(necessary because some sessions have more than 2 ensemble units)
+				unit_combinations = list(itertools.combinations(e1_list,2))
+				for c in unit_combinations:
+					##extract and process the data from the datafile
+					unit1 = raw_data[c[0]]*1000.0
+					unit1 = np.histogram(unit1,bins=duration,range=(0,duration))
+					unit1 = unit1[0].astype(bool).astype(int)
+					####
+					unit2 = raw_data[c[1]]*1000.0
+					unit2 = np.histogram(unit2,bins=duration,range=(0,duration))
+					unit2 = unit2[0].astype(bool).astype(int)
+					##now do a windowed correlation analysis
+					result = ss.window_corr(unit1,unit2,window,tau,dt)
+					e1_data.append(result)
+				##repeat for e2 units
+				unit_combinations = list(itertools.combinations(e2_list,2))
+				for c in unit_combinations:
+					##extract and process the data from the datafile
+					unit1 = raw_data[c[0]]*1000.0
+					unit1 = np.histogram(unit1,bins=duration,range=(0,duration))
+					unit1 = unit1[0].astype(bool).astype(int)
+					####
+					unit2 = raw_data[c[1]]*1000.0
+					unit2 = np.histogram(unit2,bins=duration,range=(0,duration))
+					unit2 = unit2[0].astype(bool).astype(int)
+					##now do a windowed correlation analysis
+					result = ss.window_corr(unit1,unit2,window,tau,dt)
+					e2_data.append(result)
+				##repeat for indirect units
+				unit_combinations = list(itertools.combinations(ind_list,2))
+				for c in unit_combinations:
+					##extract and process the data from the datafile
+					unit1 = raw_data[c[0]]*1000.0
+					unit1 = np.histogram(unit1,bins=duration,range=(0,duration))
+					unit1 = unit1[0].astype(bool).astype(int)
+					####
+					unit2 = raw_data[c[1]]*1000.0
+					unit2 = np.histogram(unit2,bins=duration,range=(0,duration))
+					unit2 = unit2[0].astype(bool).astype(int)
+					##now do a windowed correlation analysis
+					result = ss.window_corr(unit1,unit2,window,tau,dt)
+					ind_data.append(result)
+				f_out = h5py.File(save_file,'a')
+				try:
+					a_group = f_out[animal]
+				except KeyError:
+					a_group = f_out.create_group(animal)
+				s_group = a_group.create_group(session)
+				s_group.create_dataset("E1",data = np.asarray(e1_data))
+				s_group.create_dataset("E2",data = np.asarray(e2_data))
+				s_group.create_dataset("indirect",data = np.asarray(ind_data))
+				f_out.close()
+	print "Done!"
+
+
+def plot_mouse_correlations():
+	##here we want to do 2 types of plots. 
+	#1) mean corr across sessions
+	#2) corr within sessions for jaws and non-jaws days
+	##star by opening the data file 
+	source_file = r"L:\data\NatureNeuro\rebuttal\data\mouse_correlations.hdf5"
+	f = h5py.File(source_file,'r')
+	##create some lists to store the different types of data
+	all_e1 = []
+	all_e2 = []
+	all_indirect = []
+	animal_e1 = []
+	animal_e2 = []
+	animal_indirect = []
+	across_sessions_e1 = []
+	across_sessions_e2 = []
+	across_sessions_indirect = []
+	for animal in f.keys():
+		e1_means = []
+		e2_means = []
+		indirect_means = []
+		e1_sessions = []
+		e2_sessions = []
+		indirect_sessions = []
+		sessions = f[animal].keys()
+		for session in sessions:
+			e1_data = np.asarray(f[animal][session]['E1']).squeeze()
+			e2_data = np.asarray(f[animal][session]['E2']).squeeze()
+			indirect_data = np.asarray(f[animal][session]['indirect']).squeeze()
+			##get the mean over the whole session
+			e1_means.append(e1_data.mean())
+			e2_means.append(e2_data.mean())
+			indirect_means.append(indirect_data.mean())
+			##get the mean across the session
+			if len(e1_data.shape) > 1:
+				e1_sessions.append(e1_data.mean(axis=0))
+				all_e1.append(e1_data.mean(axis=0))
+			else:
+				e1_sessions.append(e1_data)
+				all_e1.append(e1_data)
+				##
+			if len(e2_data.shape) > 1:
+				e2_sessions.append(e2_data.mean(axis=0))
+				all_e2.append(e2_data.mean(axis=0))
+			else:
+				e2_sessions.append(e2_data)
+				all_e2.append(e2_data)
+				##
+			if len(indirect_data.shape) > 1:
+				indirect_sessions.append(indirect_data.mean(axis=0))
+				all_indirect.append(indirect_data.mean(axis=0))
+			else:
+				indirect_sessions.append(indirect_data)
+				all_indirect.append(indirect_data)
+		##add this data to the master lists
+		across_sessions_e1.append(np.asarray(e1_means))
+		across_sessions_e2.append(np.asarray(e2_means))
+		across_sessions_indirect.append(np.asarray(indirect_means))
+		animal_e1.append(np.asarray(e1_sessions).mean(axis=0))
+		animal_e2.append(np.asarray(e2_sessions).mean(axis=0))
+		animal_indirect.append(np.asarray(indirect_sessions).mean(axis=0))
+	f.close()
+	##now we need to equalize the lengths of our arrays
+	all_e1 = np.asarray(equalize_arrs(all_e1))
+	all_e2 = np.asarray(equalize_arrs(all_e2))
+	all_indirect = np.asarray(equalize_arrs(all_indirect))
+	animal_e1 = np.asarray(equalize_arrs(animal_e1))
+	animal_e2 = np.asarray(equalize_arrs(animal_e2))
+	animal_indirect = np.asarray(equalize_arrs(animal_indirect))
+	across_sessions_e1 = np.asarray(equalize_arrs(across_sessions_e1))
+	across_sessions_e2 = np.asarray(equalize_arrs(across_sessions_e2))
+	across_sessions_indirect = np.asarray(equalize_arrs(across_sessions_indirect))
+	###finally, we can plot these things
+	session_data = [all_e1,all_e2,all_indirect]
+	animal_data = [animal_e1,animal_e2,animal_indirect]
+	across_data = [across_sessions_e1,across_sessions_e2,across_sessions_indirect]
+	colors = ['g','b','k']
+	labels = ['E1','E2','Indirect']
+	##start with the within session data
+	x = np.linspace(0,60,all_e1.shape[1])
+	fig,ax = plt.subplots(1)
+	for i, dataset in enumerate(session_data):
+		mean = np.nanmean(dataset,axis=0)
+		sem = np.nanstd(dataset,axis=0)/np.sqrt(dataset.shape[0])
+		ax.plot(x,mean,linewidth=2,color=colors[i],label=labels[i])
+		ax.fill_between(x,mean-sem,mean+sem,color=colors[i],alpha=0.5)
+	ax.set_xlabel("Time in session, mins",fontsize=16)
+	ax.set_ylabel("Correlation coefficient",fontsize=16)
+	for tick in ax.xaxis.get_major_ticks():
+		tick.label1.set_fontsize(16)
+	for tick in ax.yaxis.get_major_ticks():
+		tick.label.set_fontsize(16)
+	ax.legend()
+	fig.suptitle("Correlations by session")
+	##now look at it by animal
+	x = np.linspace(0,60,animal_e1.shape[1])
+	fig,ax = plt.subplots(1)
+	for i, dataset in enumerate(animal_data):
+		mean = np.nanmean(dataset,axis=0)
+		sem = np.nanstd(dataset,axis=0)/np.sqrt(dataset.shape[0])
+		ax.plot(x,mean,linewidth=2,color=colors[i],label=labels[i])
+		ax.fill_between(x,mean-sem,mean+sem,color=colors[i],alpha=0.5)
+	ax.set_xlabel("Time in session, mins",fontsize=16)
+	ax.set_ylabel("Correlation coefficient",fontsize=16)
+	for tick in ax.xaxis.get_major_ticks():
+		tick.label1.set_fontsize(16)
+	for tick in ax.yaxis.get_major_ticks():
+		tick.label.set_fontsize(16)
+	ax.legend()
+	fig.suptitle("Correlations by animal")
+	##now do the across session plot
+	fig,ax = plt.subplots(1)
+	for i, dataset in enumerate(across_data):
+		mean = np.nanmean(across_data,axis=0)
+		sem = np.nanstd(across_data,axis=0)/np.sqrt(across_data.shape[0])
+		ax.plot(x,mean,linewidth=2,color=colors[i],label=labels[i])
+		ax.fill_between(x,mean-sem,mean+sem,color=colors[i],alpha=0.5)
+	ax.set_xlabel("Traning day",fontsize=16)
+	ax.set_ylabel("Mean correlation coefficient",fontsize=16)
+	for tick in ax.xaxis.get_major_ticks():
+		tick.label1.set_fontsize(16)
+	for tick in ax.yaxis.get_major_ticks():
+		tick.label.set_fontsize(16)
+	ax.legend()
+
+def plot_cohgram_data():
+	source_file = r"D:\Ryan\V1_BMI\NatureNeuro\rebuttal\data\PLC_V1_ffc.hdf5"
+	f = h5py.File(source_file,'r')
+	by_animal = []
+	by_session = []
+	for animal in f.keys():
+		all_sessions = []
+		sessions = f[animal].keys()
+		for session in sessions:
+			data = np.asarray(f[animal][session])
+			all_sessions.append(data.mean(axis=0))
+			by_session.append(data.mean(axis=0))
+		by_animal.append(np.asarray(all_sessions).mean(axis=0))
+	f.close()
+	##now plot
+	by_session = np.asarray(by_session)
+	by_animal = np.asarray(by_animal)
+	fig,ax = plt.subplots(1)
+	cax = ax.imshow(by_session.mean(axis=0).T,aspect='auto',origin='lower',extent=(-6,6,0,100))
+	cb = plt.colorbar(cax,label='coherence')
+	ax.set_xlabel("Time to target",fontsize=16)
+	ax.set_ylabel("Frequency, Hz",fontsize=16)
+	ax.set_title("Coherence by session",fontsize=16)
+	##now plot the coherence by animal
+	fig,ax = plt.subplots(1)
+	cax = ax.imshow(by_animal.mean(axis=0).T,aspect='auto',origin='lower',extent=(-6,6,0,100))
+	cb = plt.colorbar(cax,label='coherence')
+	ax.set_xlabel("Time to target",fontsize=16)
+	ax.set_ylabel("Frequency, Hz",fontsize=16)
+	ax.set_title("Coherence by animal",fontsize=16)
+
+
 
 """
 Another helper function to bin spike matrices.

@@ -74,7 +74,7 @@ animals = {
 
    "BMI_D06.plx":
       {'units':{
-      'e1_units':[ 'sig002a','sig015a'],
+      'e1_units':['sig002a','sig015a'],
       'e2_units':['sig012a''sig011a'], 
       'V1_units': ['sig009a', 'sig010a', 'sig004a', 'sig016a', 'sig006a', 'sig014a', 'sig007a', 'sig013a', 'sig005a', 'sig001a', 'sig003a']},
        'lfp':{
