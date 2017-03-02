@@ -4620,8 +4620,8 @@ A function to do logistic regression analysis on the indirect units, as a group,
 how many of them are predictuve of E1 vs E2 choice.
 """
 def log_regress_grouped_units():
-	unit_type = 'Str_units' ##the type of units to run regression on
-	animal_list = None
+	unit_type = 'PLC_units' ##the type of units to run regression on
+	animal_list = ['R11','R13']
 	session_range = None
 	window = [2000,0]
 	##make some dictionaries to store the results
@@ -4630,8 +4630,8 @@ def log_regress_grouped_units():
 	##first, we need to get two arrays: X; the data matrix of spike data
 	##in dimensions trials x units x bins, and then y; the binary matrix
 	## of target 1 and target 2 values.
-	source_file = r"J:\Ryan\processed_data\V1_BMI_final\raw_data\R7_thru_V13_all_data.hdf5"
-	save_file = r"J:\Ryan\V1_BMI\NatureNeuro\rebuttal\grouped_DMS_log_regression.hdf5"
+	source_file = r"C:\Users\Ryan\Documents\data\R7_thru_V13_all_data.hdf5"
+	save_file = r"L:\data\NatureNeuro\rebuttal\data\grouped_PLC_regression.hdf5"
 	f = h5py.File(source_file,'r')
 	##make some arrays to store
 	if animal_list is None:
@@ -4655,7 +4655,7 @@ def log_regress_grouped_units():
 				n_t2 = float(f[animal][session]['event_arrays']['t2'].size)
 			except KeyError:
 				n_t2 = 0
-			if (n_t1 >= 20) and (n_t2 >= 20):
+			if (n_t1 >= 5) and (n_t2 >= 5):
 				##now make sure that this file contains at least one unit of the type that we want to analyze
 				try:
 					unit_list = [x for x in f[animal][session][unit_type].keys() if not x.endswith("_wf")]
@@ -4708,7 +4708,7 @@ def log_regress_grouped_units():
 
 ##function to plot the results from the above function
 def plot_log_groups():
-	datafile = "/Volumes/Untitled/Ryan/V1_BMI/NatureNeuro/rebuttal/data/grouped_DMS_log_regression.hdf5"
+	datafile = r"L:\data\NatureNeuro\rebuttal\data\grouped_PLC_regression.hdf5"
 	f = h5py.File(datafile,'r')
 	animal_list = f.keys()
 	##store the means of all the animals
@@ -4770,8 +4770,8 @@ def plot_log_groups():
 
 
 def linear_regression_direct_indirect():
-	unit_type = 'V1_units' ##the type of units to predict e1 and e2 unit activity on
-	animal_list = None
+	unit_type = 'PLC_units' ##the type of units to predict e1 and e2 unit activity on
+	animal_list = ['R11','R13']
 	session_range = None
 	window = [1000,0]
 	##make some dictionaries to store the results
@@ -4780,8 +4780,8 @@ def linear_regression_direct_indirect():
 	##first, we need to get two arrays: X; the data matrix of spike data
 	##in dimensions trials x units x bins, and then y; the binary matrix
 	## of target 1 and target 2 values.
-	source_file = r"J:\Ryan\processed_data\V1_BMI_final\raw_data\R7_thru_V13_all_data.hdf5"
-	save_file = r"J:\Ryan\V1_BMI\NatureNeuro\rebuttal\direct_indirect_regression.hdf5"
+	source_file = r"C:\Users\Ryan\Documents\data\R7_thru_V13_all_data.hdf5"
+	save_file = r"L:\data\NatureNeuro\rebuttal\data\direct_PLC_regression.hdf5"
 	f = h5py.File(source_file,'r')
 	##make some arrays to store
 	if animal_list is None:
@@ -4858,7 +4858,7 @@ def linear_regression_direct_indirect():
 
 ##function to plot the results from the above function
 def plot_lin_regression():
-	datafile = "/Volumes/Untitled/Ryan/V1_BMI/NatureNeuro/rebuttal/data/direct_indirect_regression.hdf5"
+	datafile = r"L:\data\NatureNeuro\rebuttal\data\direct_PLC_regression.hdf5"
 	f = h5py.File(datafile,'r')
 	animal_list = f.keys()
 	##store the means of all the animals
