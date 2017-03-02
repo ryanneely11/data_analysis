@@ -5715,62 +5715,69 @@ def save_ff_cohgram_data():
 		else: 
 			session_list = [x for x in ru.animals[animal][1].keys() if int(x[-6:-4]) in session_range]
 		for session in session_list:
-			##this should be the path to the plexon file
-			plxfile = os.path.join(root_dir,animal,session)
-			##try to get the list of names for the signals and the targets
+			##check to see if we have already computed this data
+			f_out = h5py.File(save_file,'r')
 			try:
-				sig_list1 = ru.animals[animal][1][session][sig_type][sig1]
-			except KeyError:
-				sig_list1 = []
-			try:
-				sig_list2 = ru.animals[animal][1][session][sig_type][sig2]
-			except KeyError:
-				sig_list2 = []
-			try:
-				event = ru.animals[animal][1][session]['events'][target][0]
-			except KeyError:
-				event = 0
-			##if we do have everything we need, continue
-			if (len(sig_list1)>0 and len(sig_list2)>0 and event != 0):
-				print "working on "+animal+" "+session
-				##open the raw plexon data file
-				raw_data = plxread.import_file(plxfile,AD_channels=range(1,97),save_wf=False,
-					import_unsorted=False,verbose=False)
-				##this will be our list of lfp pairs to send for parallel coherence calculations
-				trial_data = []
-				target_ts = raw_data[event]*1000.0
-				##now process each signal for this session to get the time-locked traces for each trial:
-				for i in range(len(sig_list1)):
-					signame1 = sig_list1[i]
-					tempdata1 = raw_data[signame1]
-					sigts1 = raw_data[signame1+"_ts"]
-					#convert the ad ts to samples, and integers for indexing
-					sigts1 = np.ceil((sigts1*1000)).astype(int)
-					sigdata1 = np.zeros(sigts1.shape[0]+1000)
-					sigdata1[sigts1] = tempdata1
-					traces1 = get_data_window_lfp(sigdata1,target_ts,window[0],window[1])
-					for j in range(len(sig_list2)):
-						signame2 = sig_list2[j]
-						tempdata2 = raw_data[signame2]
-						sigts2 = raw_data[signame2+"_ts"]
-						#convert the ad ts to samples, and integers for indexing
-						sigts2 = np.ceil((sigts2*1000)).astype(int)
-						sigdata2 = np.zeros(sigts2.shape[0]+1000)
-						sigdata2[sigts2] = tempdata2
-						traces2 = get_data_window_lfp(sigdata2,target_ts,window[0],window[1])
-						trial_data.append([traces1,traces2])
-				pool = mp.Pool(processes=mp.cpu_count())
-				async_result = pool.map_async(ss.mp_cohgrams,trial_data)
-				pool.close()
-				pool.join()
-				cohgrams = async_result.get()
-				f_out = h5py.File(save_file,'a')
-				try:
-					a_group = f_out[animal]
-				except KeyError:
-					a_group = f_out.create_group(animal)
-				a_group.create_dataset(session, data=np.asarray(cohgrams))
+				session_exists = f_out[animal][session]
 				f_out.close()
+			except KeyError: ##go ahead and get the data
+				f_out.close()
+				##this should be the path to the plexon file
+				plxfile = os.path.join(root_dir,animal,session)
+				##try to get the list of names for the signals and the targets
+				try:
+					sig_list1 = ru.animals[animal][1][session][sig_type][sig1]
+				except KeyError:
+					sig_list1 = []
+				try:
+					sig_list2 = ru.animals[animal][1][session][sig_type][sig2]
+				except KeyError:
+					sig_list2 = []
+				try:
+					event = ru.animals[animal][1][session]['events'][target][0]
+				except KeyError:
+					event = 0
+				##if we do have everything we need, continue
+				if (len(sig_list1)>0 and len(sig_list2)>0 and event != 0):
+					print "working on "+animal+" "+session
+					##open the raw plexon data file
+					raw_data = plxread.import_file(plxfile,AD_channels=range(1,97),save_wf=False,
+						import_unsorted=False,verbose=False)
+					##this will be our list of lfp pairs to send for parallel coherence calculations
+					trial_data = []
+					target_ts = raw_data[event]*1000.0
+					##now process each signal for this session to get the time-locked traces for each trial:
+					for i in range(len(sig_list1)):
+						signame1 = sig_list1[i]
+						tempdata1 = raw_data[signame1]
+						sigts1 = raw_data[signame1+"_ts"]
+						#convert the ad ts to samples, and integers for indexing
+						sigts1 = np.ceil((sigts1*1000)).astype(int)
+						sigdata1 = np.zeros(sigts1.shape[0]+1000)
+						sigdata1[sigts1] = tempdata1
+						traces1 = get_data_window_lfp(sigdata1,target_ts,window[0],window[1])
+						for j in range(len(sig_list2)):
+							signame2 = sig_list2[j]
+							tempdata2 = raw_data[signame2]
+							sigts2 = raw_data[signame2+"_ts"]
+							#convert the ad ts to samples, and integers for indexing
+							sigts2 = np.ceil((sigts2*1000)).astype(int)
+							sigdata2 = np.zeros(sigts2.shape[0]+1000)
+							sigdata2[sigts2] = tempdata2
+							traces2 = get_data_window_lfp(sigdata2,target_ts,window[0],window[1])
+							trial_data.append([traces1,traces2])
+					pool = mp.Pool(processes=mp.cpu_count())
+					async_result = pool.map_async(ss.mp_cohgrams,trial_data)
+					pool.close()
+					pool.join()
+					cohgrams = async_result.get()
+					f_out = h5py.File(save_file,'a')
+					try:
+						a_group = f_out[animal]
+					except KeyError:
+						a_group = f_out.create_group(animal)
+					a_group.create_dataset(session, data=np.asarray(cohgrams))
+					f_out.close()
 	print "Done!"
 
 def save_sf_cohgram_data():
