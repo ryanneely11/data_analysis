@@ -133,7 +133,7 @@ def thin_spikes(data1, data2, sigma):
 			elif higher_fr[bin] == 2 and np.random.random() < prob_removal[bin] and data2[:,trial].sum() > 1.0:
 				data2[bin][trial] = 0.0
 
-def spike_field_cohgram(spikes, lfp, movingwin=[0.75,0.05], Fs = 1000.0, fpass = [0, 100], err = None, save_data = False):
+def spike_field_cohgram(spikes, lfp, movingwin=[0.3,0.01], Fs = 1000.0, fpass = [0, 100], err = None, save_data = False):
 	"""
 	Calculate the coherence values over time by using a sliding window. Inputs are
 	an array of binary spike trains in the format samples x trials, an array
@@ -231,7 +231,7 @@ def mp_cohgrams_sf(args):
 	return C
 
 
-def field_field_cohgram(lfp1, lfp2, movingwin = [0.75,0.05], Fs = 1000.0, fpass = [0, 100], err = None, save_data = False):
+def field_field_cohgram(lfp1, lfp2, movingwin = [0.3,0.01], Fs = 1000.0, fpass = [0, 100], err = None, save_data = False):
 	"""
 	Calculate the coherence values over time by using a sliding window. Inputs are
 	an array of lfp traces in the format samples x trials, an array

@@ -5702,7 +5702,7 @@ def save_ff_cohgram_data():
 	target = 't1'
 	animal_list = ["R11","R13"]
 	window = [6000,6000]
-	session_range = np.arange(4,12)	
+	session_range = None	
 	root_dir = r"J:\Ryan\V1_BMI"
 	save_file = r"J:\Ryan\V1_BMI\NatureNeuro\rebuttal\data\PLC_DS_ffc.hdf5"
 	if animal_list is None:
@@ -6001,13 +6001,17 @@ def plot_mouse_correlations():
 	ax.legend()
 
 def plot_cohgram_data():
-	source_file = r"D:\Ryan\V1_BMI\NatureNeuro\rebuttal\data\PLC_V1_ffc.hdf5"
+	source_file = r"D:\Ryan\V1_BMI\NatureNeuro\rebuttal\data\PLC_DS_ffc.hdf5"
 	f = h5py.File(source_file,'r')
+	session_range = np.arange(0,6)
 	by_animal = []
 	by_session = []
 	for animal in f.keys():
 		all_sessions = []
-		sessions = f[animal].keys()
+		if session_range == None:
+			sessions = f[animal].keys()
+		else:
+			sessions = [x for x in f[animal].keys() if int(x[-6:-4]) in session_range]
 		for session in sessions:
 			data = np.asarray(f[animal][session])
 			all_sessions.append(data.mean(axis=0))
