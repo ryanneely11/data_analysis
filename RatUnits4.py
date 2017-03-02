@@ -187,15 +187,15 @@ animals = {
        'events':{'t1':['Event001'], 't2':['Event007'], 'miss':['Event005']},
        'control_cells':'V1'},
 
-   "BMI_D05.plx":
-      {'units':{
-      'e1_units':['sig008a', 'sig007a'],
-      'e2_units':['sig009b', 'sig009a', 'sig010a'], 
-      'V1_units': ['sig004a', 'sig012a', 'sig006a', 'sig002a', 'sig014a', 'sig013a', 'sig005a', 'sig011a', 'sig015a', 'sig003a']},
-       'lfp':{
-       'V1_lfp':['AD129']},
-       'events':{'t1':['Event001'], 't2':['Event007'], 'miss':['Event005']},
-       'control_cells':'V1'},
+   # "BMI_D05.plx":
+   #    {'units':{
+   #    'e1_units':['sig008a', 'sig007a'],
+   #    'e2_units':['sig009b', 'sig009a', 'sig010a'], 
+   #    'V1_units': ['sig004a', 'sig012a', 'sig006a', 'sig002a', 'sig014a', 'sig013a', 'sig005a', 'sig011a', 'sig015a', 'sig003a']},
+   #     'lfp':{
+   #     'V1_lfp':['AD129']},
+   #     'events':{'t1':['Event001'], 't2':['Event007'], 'miss':['Event005']},
+   #     'control_cells':'V1'},
 
    "BMI_D06.plx":
       {'units':{
@@ -219,7 +219,7 @@ animals = {
 
    "BMI_D08.plx":
       {'units':{
-      'e1_units':['sig007a''sig006a'],
+      'e1_units':['sig007a','sig006a'],
       'e2_units':['sig009b', 'sig009a'], 
       'V1_units': ['sig010a', 'sig004a', 'sig012a', 'sig002a', 'sig014a', 'sig008a', 'sig013a', 'sig005a', 'sig011a', 'sig015a', 'sig003a']},
        'lfp':{

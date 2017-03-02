@@ -4770,10 +4770,10 @@ def plot_log_groups():
 
 
 def linear_regression_direct_indirect():
-	unit_type = 'PLC_units' ##the type of units to predict e1 and e2 unit activity on
-	animal_list = ['R11','R13']
+	unit_type = 'Str_units' ##the type of units to predict e1 and e2 unit activity on
+	animal_list = None
 	session_range = None
-	window = [1000,0]
+	window = [2000,0]
 	##make some dictionaries to store the results
 	results = {}
 	##we should be able to run regression for each session as a whole.
@@ -4781,7 +4781,7 @@ def linear_regression_direct_indirect():
 	##in dimensions trials x units x bins, and then y; the binary matrix
 	## of target 1 and target 2 values.
 	source_file = r"C:\Users\Ryan\Documents\data\R7_thru_V13_all_data.hdf5"
-	save_file = r"L:\data\NatureNeuro\rebuttal\data\direct_PLC_regression.hdf5"
+	save_file = r"D:\Ryan\V1_BMI\NatureNeuro\rebuttal\data\DMS_direct_regression.hdf5"
 	f = h5py.File(source_file,'r')
 	##make some arrays to store
 	if animal_list is None:
@@ -4805,13 +4805,14 @@ def linear_regression_direct_indirect():
 				n_t2 = float(f[animal][session]['event_arrays']['t2'].size)
 			except KeyError:
 				n_t2 = 0
-			if (n_t1 >= 0) and (n_t2 >= 0):
+			if (n_t1 >= 10):
 				##now make sure that this file contains at least one unit of the type that we want to analyze
 				try:
 					unit_list = [x for x in f[animal][session][unit_type].keys() if not x.endswith("_wf")]
 				except KeyError:
 					unit_list = []
 				if len(unit_list) > 0:
+					print "Working on "+animal+" "+session
 					##get the list of e1 and e2 units
 					e1_list = [x for x in f[animal][session]['e1_units'].keys() if not x.endswith("_wf")]
 					e2_list = [x for x in f[animal][session]['e1_units'].keys() if not x.endswith("_wf")]
@@ -4837,8 +4838,8 @@ def linear_regression_direct_indirect():
 					indirect_spikes = indirect_spikes.T
 					##now we want to run this through a linear regression
 					##first get the variance explained
-					ve = linr.run_cv(indirect_spikes,direct_spikes)
-					p = linr.permutation_test(indirect_spikes,direct_spikes)
+					ve = linr.run_cv(direct_spikes,indirect_spikes)
+					p = linr.permutation_test(direct_spikes,indirect_spikes)
 					##now add to the results
 					var_explained.append(ve)
 					sig.append(p)
@@ -4858,7 +4859,7 @@ def linear_regression_direct_indirect():
 
 ##function to plot the results from the above function
 def plot_lin_regression():
-	datafile = r"L:\data\NatureNeuro\rebuttal\data\direct_PLC_regression.hdf5"
+	datafile = r"D:\Ryan\V1_BMI\NatureNeuro\rebuttal\data\DMS_direct_regression.hdf5"
 	f = h5py.File(datafile,'r')
 	animal_list = f.keys()
 	##store the means of all the animals
@@ -4872,10 +4873,10 @@ def plot_lin_regression():
 		totals.append(total_units)
 		sig_vals.append(sig)
 		var_explained.append(var)
-	totals = equalize_arrs(totals)
-	sig_vals = equalize_arrs(sig_vals)
-	var_explained = equalize_arrs(var_explained)
-	x_axis = np.arange(1,totals.shape[1]+1)
+	totals = equalize_arrs(totals)[:,0:13]
+	sig_vals = equalize_arrs(sig_vals)[:,0:13]
+	var_explained = equalize_arrs(var_explained)[:,0:13]
+	x_axis = np.arange(1,14)
 	##count the number of animals for each session with significant predictability
 	##first, the total number of animals that we have data for for this day
 	total_animals = np.zeros(totals.shape[1])
@@ -4895,9 +4896,9 @@ def plot_lin_regression():
 	ax2.set_ylabel("Number\n of units",fontsize=14)
 	ax3.set_ylabel("Percent\n significant",fontsize=14)
 	ax3.set_xlabel("Training day",fontsize=14)
-	ax1.set_title("Variance of direct units explained by indirect units",fontsize=14)
-	ax2.set_title ("Total number of indirect units",fontsize=14)
-	ax3.set_title("Percent of animals with significant E1/E2 prediction by indirect units",fontsize=14)
+	ax1.set_title("Variance of direct units explained by DMS units",fontsize=14)
+	ax2.set_title ("Total number of DMS units",fontsize=14)
+	ax3.set_title("Percent of animals with significant E1/E2 prediction by DMS units",fontsize=14)
 	ax1.errorbar(x_axis,mean_var,yerr=serr_var,color='k',linewidth=2)
 	ax2.errorbar(x_axis,mean_total,yerr=serr_total,color='k',linewidth=2)
 	ax3.plot(x_axis,sig_perc,color='k',linewidth=2)
@@ -4916,9 +4917,10 @@ def plot_lin_regression():
 	for i in range(totals.shape[0]):
 		ax1.plot(x_axis,var_explained[i,:],alpha=0.5,color='k')
 		ax2.plot(x_axis,totals[i,:],alpha=0.5,color='k')
-	ax1.set_xlim(0,12)
-	ax2.set_xlim(0,12)
-	ax3.set_xlim(0,12)
+	# ax1.set_xlim(0,12)
+	ax1.set_ylim(-1,0.4)
+	# ax2.set_xlim(0,12)
+	# ax3.set_xlim(0,12)
 	f.close()
 
 """
@@ -5771,6 +5773,108 @@ def save_ff_cohgram_data():
 				f_out.close()
 	print "Done!"
 
+def save_sf_cohgram_data():
+	##define some gobal parameters
+	##MAKE SURE TO ADJUST LFP RANGES WHEN SWITCHING BETWEEN MOUSE AND RAT
+	sig1 = 'e1_units'
+	sig2 = 'V1_lfp'
+	sig_type1 = 'units'
+	sig_type2 = 'lfp'
+	target = 't1'
+	animal_list = ["m11","m13",'m15','m17']
+	window = [6000,6000]
+	session_range = np.arange(4,15)	
+	root_dir = r"D:\Ryan\V1_BMI"
+	save_file = r"D:\Ryan\V1_BMI\NatureNeuro\rebuttal\data\mouse_e1_V1_sfc.hdf5"
+	if animal_list is None:
+		animal_list = ru.animals.keys()
+	for animal in animal_list:
+		if session_range is None:
+			session_list = ru.animals[animal][1].keys()
+		else: 
+			session_list = [x for x in ru.animals[animal][1].keys() if int(x[-6:-4]) in session_range]
+		for session in session_list:
+			##check to see if we have already computed this data
+			f_out = h5py.File(save_file,'r')
+			try:
+				session_exists = f_out[animal][session]
+				f_out.close()
+			except KeyError: ##go ahead and get the data
+				f_out.close()
+				##this should be the path to the plexon file
+				plxfile = os.path.join(root_dir,animal,session)
+				##try to get the list of names for the signals and the targets
+				try:
+					sig_list1 = ru.animals[animal][1][session][sig_type1][sig1]
+				except KeyError:
+					sig_list1 = []
+				try:
+					sig_list2 = ru.animals[animal][1][session][sig_type2][sig2]
+				except KeyError:
+					sig_list2 = []
+				try:
+					event = ru.animals[animal][1][session]['events'][target][0]
+				except KeyError:
+					event = 0
+				##if we do have everything we need, continue
+				if (len(sig_list1)>0 and len(sig_list2)>0 and event != 0):
+					print "working on "+animal+" "+session
+					##open the raw plexon data file
+					raw_data = plxread.import_file(plxfile,AD_channels=range(100,200),save_wf=False,
+						import_unsorted=False,verbose=False)
+					##this will be our list of lfp pairs to send for parallel coherence calculations
+					trial_data = []
+					target_ts = raw_data[event]*1000.0
+					##get the info about the duration of this session
+					lfp_id = ru.animals[animal][1][session]['lfp']['V1_lfp'][0]
+					duration = int((np.ceil(raw_data[lfp_id+'_ts'].max()*1000)/100)*100)+1
+					##now process each signal for this session to get the time-locked traces for each trial:
+					for i in range(len(sig_list1)):
+						signame1 = sig_list1[i]
+						tempdata1 = raw_data[signame1]
+						if sig_type1 == 'lfp':
+							sigts1 = raw_data[signame1+"_ts"]
+							#convert the ad ts to samples, and integers for indexing
+							sigts1 = np.ceil((sigts1*1000)).astype(int)
+							sigdata1 = np.zeros(sigts1.shape[0]+1000)
+							sigdata1[sigts1] = tempdata1
+						elif sig_type1 == 'units':
+							sigdata1 = tempdata1*1000.0
+							sigdata1 = np.histogram(sigdata1,bins=duration,range=(0,duration))
+							sigdata1 = sigdata1[0].astype(bool).astype(int)
+						traces1 = get_data_window_lfp(sigdata1,target_ts,window[0],window[1])
+						for j in range(len(sig_list2)):
+							signame2 = sig_list2[j]
+							tempdata2 = raw_data[signame2]
+							if sig_type2 == 'lfp':
+								sigts2 = raw_data[signame2+"_ts"]
+								#convert the ad ts to samples, and integers for indexing
+								sigts2 = np.ceil((sigts2*1000)).astype(int)
+								sigdata2 = np.zeros(sigts2.shape[0]+1000)
+								sigdata2[sigts2] = tempdata2
+							elif sig_type2 == 'units':
+								sigdata2 = tempdata2*1000.0
+								sigdata2 = np.histogram(sigdata2,bins=duration,range=(0,duration))
+								sigdata2 = sigdata2[0].astype(bool).astype(int)
+							traces2 = get_data_window_lfp(sigdata2,target_ts,window[0],window[1])
+							if sig_type1 == 'units':
+								trial_data.append([traces1,traces2])
+							elif sig_type2 == 'units':
+								trial_data.append([traces2,traces1])
+					pool = mp.Pool(processes=mp.cpu_count())
+					async_result = pool.map_async(SFC.mp_sfc,trial_data)
+					pool.close()
+					pool.join()
+					cohgrams = async_result.get()
+					f_out = h5py.File(save_file,'a')
+					try:
+						a_group = f_out[animal]
+					except KeyError:
+						a_group = f_out.create_group(animal)
+					a_group.create_dataset(session, data=np.asarray(cohgrams))
+					f_out.close()
+	print "Done!"
+
 def get_ensemble_correlations_mouse():
 	##define some gobal parameters
 	animal_list = ["m11","m13","m15","m17"]
@@ -5880,7 +5984,7 @@ def plot_mouse_correlations():
 	#1) mean corr across sessions
 	#2) corr within sessions for jaws and non-jaws days
 	##star by opening the data file 
-	source_file = r"L:\data\NatureNeuro\rebuttal\data\mouse_correlations.hdf5"
+	source_file = r"D:\Ryan\V1_BMI\NatureNeuro\rebuttal\data\mouse_correlations.hdf5"
 	f = h5py.File(source_file,'r')
 	##create some lists to store the different types of data
 	all_e1 = []
@@ -5933,9 +6037,9 @@ def plot_mouse_correlations():
 		across_sessions_e1.append(np.asarray(e1_means))
 		across_sessions_e2.append(np.asarray(e2_means))
 		across_sessions_indirect.append(np.asarray(indirect_means))
-		animal_e1.append(np.asarray(e1_sessions).mean(axis=0))
-		animal_e2.append(np.asarray(e2_sessions).mean(axis=0))
-		animal_indirect.append(np.asarray(indirect_sessions).mean(axis=0))
+		animal_e1.append(np.asarray(equalize_arrs(e1_sessions)).mean(axis=0))
+		animal_e2.append(np.asarray(equalize_arrs(e2_sessions)).mean(axis=0))
+		animal_indirect.append(np.asarray(equalize_arrs(indirect_sessions)).mean(axis=0))
 	f.close()
 	##now we need to equalize the lengths of our arrays
 	all_e1 = np.asarray(equalize_arrs(all_e1))
@@ -5988,8 +6092,9 @@ def plot_mouse_correlations():
 	##now do the across session plot
 	fig,ax = plt.subplots(1)
 	for i, dataset in enumerate(across_data):
-		mean = np.nanmean(across_data,axis=0)
-		sem = np.nanstd(across_data,axis=0)/np.sqrt(across_data.shape[0])
+		x = np.arange(1,dataset.shape[1]+1)
+		mean = np.nanmean(dataset,axis=0)
+		sem = np.nanstd(dataset,axis=0)/np.sqrt(dataset.shape[0])
 		ax.plot(x,mean,linewidth=2,color=colors[i],label=labels[i])
 		ax.fill_between(x,mean-sem,mean+sem,color=colors[i],alpha=0.5)
 	ax.set_xlabel("Traning day",fontsize=16)
@@ -5999,41 +6104,78 @@ def plot_mouse_correlations():
 	for tick in ax.yaxis.get_major_ticks():
 		tick.label.set_fontsize(16)
 	ax.legend()
+	ax.set_title("Correlations across training",fontsize=16)
+	ax.plot(np.arange(1,8),np.ones(7)*-0.045,linewidth=4,color='r')
+	ax.text(3,-0.04,"Jaws",fontsize=14)
+	ax.set_xlim(0,13)
 
 def plot_cohgram_data():
-	source_file = r"D:\Ryan\V1_BMI\NatureNeuro\rebuttal\data\PLC_DS_ffc.hdf5"
+	source_file = r"D:\Ryan\V1_BMI\NatureNeuro\rebuttal\data\mouse_e1_V1_sfc.hdf5"
 	f = h5py.File(source_file,'r')
-	session_range = np.arange(0,6)
-	by_animal = []
-	by_session = []
+	early_range = np.arange(0,7)
+	late_range = np.arange(8,12)
+	vmin=0.04
+	vmax=0.145
+	by_animal_early = []
+	by_animal_late = []
+	by_session_early = []
+	by_session_late = []
 	for animal in f.keys():
 		all_sessions = []
-		if session_range == None:
+		if early_range == None:
 			sessions = f[animal].keys()
 		else:
-			sessions = [x for x in f[animal].keys() if int(x[-6:-4]) in session_range]
+			sessions = [x for x in f[animal].keys() if int(x[-6:-4]) in early_range]
 		for session in sessions:
 			data = np.asarray(f[animal][session])
 			all_sessions.append(data.mean(axis=0))
-			by_session.append(data.mean(axis=0))
-		by_animal.append(np.asarray(all_sessions).mean(axis=0))
+			by_session_early.append(data.mean(axis=0))
+		by_animal_early.append(np.asarray(all_sessions).mean(axis=0))
+	for animal in f.keys():
+		all_sessions = []
+		if late_range == None:
+			sessions = f[animal].keys()
+		else:
+			sessions = [x for x in f[animal].keys() if int(x[-6:-4]) in late_range]
+		for session in sessions:
+			data = np.asarray(f[animal][session])
+			all_sessions.append(data.mean(axis=0))
+			by_session_late.append(data.mean(axis=0))
+		by_animal_late.append(np.asarray(all_sessions).mean(axis=0))
 	f.close()
 	##now plot
-	by_session = np.asarray(by_session)
-	by_animal = np.asarray(by_animal)
-	fig,ax = plt.subplots(1)
-	cax = ax.imshow(by_session.mean(axis=0).T,aspect='auto',origin='lower',extent=(-6,6,0,100))
-	cb = plt.colorbar(cax,label='coherence')
-	ax.set_xlabel("Time to target",fontsize=16)
-	ax.set_ylabel("Frequency, Hz",fontsize=16)
-	ax.set_title("Coherence by session",fontsize=16)
-	##now plot the coherence by animal
-	fig,ax = plt.subplots(1)
-	cax = ax.imshow(by_animal.mean(axis=0).T,aspect='auto',origin='lower',extent=(-6,6,0,100))
-	cb = plt.colorbar(cax,label='coherence')
-	ax.set_xlabel("Time to target",fontsize=16)
-	ax.set_ylabel("Frequency, Hz",fontsize=16)
-	ax.set_title("Coherence by animal",fontsize=16)
+	by_session_early = np.asarray(by_session_early)
+	by_session_late = np.asarray(by_session_late)
+	by_animal_early = np.asarray(by_animal_early)
+	by_animal_late = np.asarray(by_animal_late)
+	fig = plt.figure()
+	ax1 = fig.add_subplot(121)
+	ax2 = fig.add_subplot(122)
+	cax1 = ax1.imshow(by_animal_early.mean(axis=0).T,aspect='auto',
+		origin='lower',extent=(-6,6,0,100),vmin=vmin,vmax=vmax)
+	ax1.axvline(x=0,color='white',linestyle='dashed',linewidth=2)
+	# cb = plt.colorbar(cax,label='coherence')
+	ax1.set_xlabel("Time to rewarded target",fontsize=16)
+	ax1.set_ylabel("Frequency, Hz",fontsize=16)
+	ax1.set_title("Early training sessions",fontsize=16)
+	for tick in ax1.xaxis.get_major_ticks():
+		tick.label1.set_fontsize(16)
+	for tick in ax1.yaxis.get_major_ticks():
+		tick.label.set_fontsize(16)
+	##for the late session data
+	cax2 = ax2.imshow(by_animal_late.mean(axis=0).T,aspect='auto',
+		origin='lower',extent=(-6,6,0,100),vmin=vmin,vmax=vmax)
+	ax2.axvline(x=0,color='white',linestyle='dashed',linewidth=2)
+	cbaxes = fig.add_axes([0.85, 0.08, 0.08, 0.85]) 
+	cb = plt.colorbar(cax2,cax=cbaxes)
+	cb.set_label(label='coherence',fontsize=16)
+	ax2.set_xlabel("Time to rewarded target",fontsize=16)
+	# ax2.set_ylabel("Frequency, Hz",fontsize=16)
+	ax2.set_yticks([])
+	for tick in ax2.xaxis.get_major_ticks():
+		tick.label1.set_fontsize(16)
+	ax2.set_title("Late training sessions",fontsize=16)
+	fig.suptitle("PrL-V1 field-field coherence",fontsize=16,weight='bold')
 
 
 
