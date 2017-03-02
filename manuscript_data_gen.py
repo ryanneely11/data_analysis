@@ -5703,8 +5703,8 @@ def save_ff_cohgram_data():
 	animal_list = ["R11","R13"]
 	window = [6000,6000]
 	session_range = None	
-	root_dir = r"J:\Ryan\V1_BMI"
-	save_file = r"J:\Ryan\V1_BMI\NatureNeuro\rebuttal\data\PLC_DS_ffc.hdf5"
+	root_dir = r"F:\data"
+	save_file = r"F:\data\NatureNeuro\rebuttal\data\PLC_DS_ffc2.hdf5"
 	if animal_list is None:
 		animal_list = ru.animals.keys()
 	for animal in animal_list:
