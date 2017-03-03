@@ -5699,14 +5699,14 @@ def plot_mouse_lfp_spectrum():
 def save_ff_cohgram_data():
 	##define some gobal parameters
 	sig1 = 'PLC_lfp'
-	sig2 = 'Str_lfp'
+	sig2 = 'V1_lfp'
 	sig_type = 'lfp'
 	target = 't1'
 	animal_list = ["R11","R13"]
 	window = [6000,6000]
 	session_range = None	
-	root_dir = r"F:\data"
-	save_file = r"F:\data\NatureNeuro\rebuttal\data\PLC_DS_ffc2.hdf5"
+	root_dir = r"D:\Ryan\V1_BMI"
+	save_file = r"D:\Ryan\V1_BMI\NatureNeuro\rebuttal\data\PLC_DS_ffc2.hdf5"
 	if animal_list is None:
 		animal_list = ru.animals.keys()
 	for animal in animal_list:
@@ -5783,16 +5783,16 @@ def save_ff_cohgram_data():
 def save_sf_cohgram_data():
 	##define some gobal parameters
 	##MAKE SURE TO ADJUST LFP RANGES WHEN SWITCHING BETWEEN MOUSE AND RAT
-	sig1 = 'e1_units'
+	sig1 = 'PLC_units'
 	sig2 = 'V1_lfp'
 	sig_type1 = 'units'
 	sig_type2 = 'lfp'
 	target = 't1'
-	animal_list = ["m11","m13",'m15','m17']
+	animal_list = ["R13","R11"]
 	window = [6000,6000]
-	session_range = np.arange(4,15)	
-	root_dir = r"D:\Ryan\V1_BMI"
-	save_file = r"D:\Ryan\V1_BMI\NatureNeuro\rebuttal\data\mouse_e1_V1_sfc.hdf5"
+	session_range = np.arange(0,14)	
+	root_dir = r"F:\data"
+	save_file = r"F:\data\NatureNeuro\rebuttal\data\PLC_V1_sfc.hdf5"
 	if animal_list is None:
 		animal_list = ru.animals.keys()
 	for animal in animal_list:
@@ -5827,7 +5827,7 @@ def save_sf_cohgram_data():
 				if (len(sig_list1)>0 and len(sig_list2)>0 and event != 0):
 					print "working on "+animal+" "+session
 					##open the raw plexon data file
-					raw_data = plxread.import_file(plxfile,AD_channels=range(100,200),save_wf=False,
+					raw_data = plxread.import_file(plxfile,AD_channels=range(1,97),save_wf=False,
 						import_unsorted=False,verbose=False)
 					##this will be our list of lfp pairs to send for parallel coherence calculations
 					trial_data = []
