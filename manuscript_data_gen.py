@@ -5802,7 +5802,7 @@ def save_sf_cohgram_data():
 			session_list = [x for x in ru.animals[animal][1].keys() if int(x[-6:-4]) in session_range]
 		for session in session_list:
 			##check to see if we have already computed this data
-			f_out = h5py.File(save_file,'r')
+			f_out = h5py.File(save_file,'a')
 			try:
 				session_exists = f_out[animal][session]
 				f_out.close()
