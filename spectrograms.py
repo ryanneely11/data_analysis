@@ -10,7 +10,7 @@ import spectrum as spec
 
 
 def lfpSpecGram(data, window=[0.5,0.05], Fs = 1000.0, fpass = [0,100], err = None, 
-	sigType = 'lfp', norm = True):
+	sigType = 'lfp', norm = True, trialave = True):
 	"""
 	Basically just a moving window average of the spectrum. 
 	Input data is an array; samples x trials
@@ -34,29 +34,50 @@ def lfpSpecGram(data, window=[0.5,0.05], Fs = 1000.0, fpass = [0,100], err = Non
 	Nf=f.shape[0]
 	winstart = np.arange(0,N-Nwin,Nstep) ##array of all the window starting values
 	nw = winstart.shape[0] ##number of total windows
-
-	S = np.zeros([nw, Nf]) ##output array of size num total windows x num freqs
-	Serr = np.zeros((2,nw,Nf))
-
-	pbar = ProgressBar(maxval = nw).start()
-	p = 0
-	for n in range(nw):
-		indx = np.arange(winstart[n],winstart[n]+Nwin) ##index values to take from data based on current window
-		datawin = data[indx, :] ##current data window for all segments
-		##compute each spectrogram, for the window, then average them all together
-		s, f, serr = mtspectrum(datawin, Fs = Fs, fpass = fpass, trialave = True, err = err, sigType = sigType)
-		S[n,:] = np.squeeze(s) ##add the spectrum of this window to the total array
-		Serr[0,n,:] = np.squeeze(serr[0,:])
-		Serr[1,n,:] = np.squeeze(serr[1,:])
-		pbar.update(p+1)
-		p+=1
-	pbar.finish()
-	S = np.squeeze(S); Serr = Serr.squeeze()
-	winmid=winstart+round(Nwin/2)
-	t=winmid/Fs
-	if norm:
-		for i in range(S.shape[1]):
-			S[:,i] = S[:,i]/S[:,i].mean()
+	if trialave:
+		S = np.zeros([nw, Nf]) ##output array of size num total windows x num freqs
+		Serr = np.zeros((2,nw,Nf))
+		pbar = ProgressBar(maxval = nw).start()
+		p = 0
+		for n in range(nw):
+			indx = np.arange(winstart[n],winstart[n]+Nwin) ##index values to take from data based on current window
+			datawin = data[indx, :] ##current data window for all segments
+			##compute each spectrogram, for the window, then average them all together
+			s, f, serr = mtspectrum(datawin, Fs = Fs, fpass = fpass, trialave = trialave, err = err, sigType = sigType)
+			S[n,:] = np.squeeze(s) ##add the spectrum of this window to the total array
+			Serr[0,n,:] = np.squeeze(serr[0,:])
+			Serr[1,n,:] = np.squeeze(serr[1,:])
+			pbar.update(p+1)
+			p+=1
+		pbar.finish()
+		S = np.squeeze(S); Serr = Serr.squeeze()
+		winmid=winstart+round(Nwin/2)
+		t=winmid/Fs
+		if norm:
+			for i in range(S.shape[1]):
+				S[:,i] = S[:,i]/S[:,i].mean()
+	else:
+		S = np.zeros([nw, Nf, num_traces]) ##output array of size num total windows x num freqs
+		Serr = np.zeros((2,nw,Nf,num_traces))
+		pbar = ProgressBar(maxval = nw).start()
+		p = 0
+		for n in range(nw):
+			indx = np.arange(winstart[n],winstart[n]+Nwin) ##index values to take from data based on current window
+			datawin = data[indx, :] ##current data window for all segments
+			##compute each spectrogram, for the window, then average them all together
+			s, f, serr = mtspectrum(datawin, Fs = Fs, fpass = fpass, trialave = trialave, err = err, sigType = sigType)
+			S[n,:,:] = np.squeeze(s) ##add the spectrum of this window to the total array
+			Serr[0,n,:] = np.squeeze(serr[0,:])
+			Serr[1,n,:] = np.squeeze(serr[1,:])
+			pbar.update(p+1)
+			p+=1
+		pbar.finish()
+		S = np.squeeze(S); Serr = Serr.squeeze()
+		winmid=winstart+round(Nwin/2)
+		t=winmid/Fs
+		if norm:
+			for i in range(S.shape[1]):
+				S[:,i,:] = S[:,i,:]/S[:,i,:].mean()
 	return S, t, f, Serr
 
 

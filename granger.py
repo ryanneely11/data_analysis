@@ -58,28 +58,30 @@ def get_dataset(animal,session,sig_type='lfp',target='t1',window=[3000,1000]):
 def analyze(data,chan_names):
 	TR = 1000.0 ##sample rate
 	f_ub = 100 ##upper freq bound
-	f_lb = 40 ##lower freq bound
+	f_lb = 0 ##lower freq bound
 	##compute the result for each trial
 	coh = []
 	g1 = []
 	g2 = []
 	for trial in range(data.shape[0]):
-		time_series = ts.TimeSeries(data[trial,:,:], sampling_interval=TR)
-		G = nta.GrangerAnalyzer(time_series, order=1)
+		trialdata = data[trial,:,:]
+		time_series = ts.TimeSeries(trialdata, sampling_rate=TR)
+		G = nta.GrangerAnalyzer(input=time_series,order=2)
 		C1 = nta.CoherenceAnalyzer(time_series)
 		C2 = nta.CorrelationAnalyzer(time_series)
 		freq_idx_G = np.where((G.frequencies > f_lb) * (G.frequencies < f_ub))[0]
 		freq_idx_C = np.where((C1.frequencies > f_lb) * (C1.frequencies < f_ub))[0]
-		coh.append(np.mean(C1.coherence[:, :, freq_idx_C], -1))  # Averaging on the last dimension
-		g1.append(np.mean(G.causality_xy[:, :, freq_idx_G], -1))
-		g2.append(np.mean(G.causality_xy[:, :, freq_idx_G] - G.causality_yx[:, :, freq_idx_G], -1))
+		coh.append(np.nanmean(C1.coherence[:, :, freq_idx_C], -1))  # Averaging on the last dimension
+		g1.append(np.nanmean(G.causality_xy[:, :, freq_idx_G], -1))
+		g2.append(np.nanmean(G.causality_xy[:, :, freq_idx_G] - G.causality_yx[:, :, freq_idx_G], -1))
 	##now average across trials
-	coh = np.asarray(coh).mean(axis=0)
-	g1 = np.asarray(g1).mean(axis=0)
-	g2 = np.asarray(g2).mean(axis=0)
-	fig01 = drawmatrix_channels(coh, chan_names, size=[10., 10.], color_anchor=0,title='Coherence')
-	fig02 = drawmatrix_channels(C2.corrcoef, chan_names, size=[10., 10.], color_anchor=0,title="Correlations")
-	fig03 = drawmatrix_channels(g1, chan_names, size=[10., 10.], color_anchor=0,title="G2")
+	coh = np.nanmean(np.asarray(coh),axis=0)
+	g1 = np.nanmean(np.asarray(g1),axis=0)
+	g2 = np.nanmean(np.asarray(g2),axis=0)
+	fig01 = drawmatrix_channels(coh, chan_names, size=[10., 10.], title='Coherence')
+	fig02 = drawmatrix_channels(C2.corrcoef, chan_names, size=[10., 10.], title="Correlations")
+	fig03 = drawmatrix_channels(g1.T, chan_names, size=[10., 10.],title="Forward causality")
+	fig04 = drawmatrix_channels(g2.T, chan_names, size=[10., 10.], title="Reverse causality")
 
 ##a helper function to load A/D data and correct for any gaps in 
 ##the recording
