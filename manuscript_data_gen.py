@@ -14,6 +14,7 @@ import collections
 import sys
 import log_regression as lr
 import lin_regression as linr
+import lin_regression2 as linr2
 import spectrograms as specs
 import RatUnits4 as ru
 import itertools
@@ -4442,60 +4443,130 @@ in E1 VS performance, and mean firing ratets in E2 vs performance
 """
 def get_frs_vs_performance():
 	##the main source file
-	source_file = r"C:\Users\Ryan\Documents\data\R7_thru_V13_all_data.hdf5"
-	f = h5py.File(source_file,'r')
-	animal_list = f.keys() ##list of all animals in this file
+	root_dir = r"D:\Ryan\V1_BMI"
+	save_path = r"D:\Ryan\V1_BMI\NatureNeuro\rebuttal\data\all_frs_vs_performance.hdf5"
+	animal_list = ru.animals.keys()
 	##the data to save
-	e1_rates = []
-	e2_rates = []
-	session_ids = []
-	p_correct = []
 	##go session by session for each animal and save the mean fr of e1 units and e2
 	##units over the whole session, as well as the mean performance over the whole session
 	for animal in animal_list:
-		session_list = f[animal].keys() ##the names of all the sessions for this animal
+		session_list = ru.animals[animal][1].keys() ##the names of all the sessions for this animal
 		for session in session_list:
-			session_ids.append(animal+"_"+session)
-			group = f[animal][session] ##the data group
-			e1_names = [n for n in group['e1_units'].keys() if not n.endswith("_wf")]
-			e2_names = [n for n in group['e2_units'].keys() if not n.endswith("_wf")]
-			##get the mean spike rates for all e1 and e2 units
-			e1_rate = []
-			e2_rate = []
-			for name in e1_names:
-				n_spikes = group['e1_units'][name][0,:].sum() ##the total spikes in the whole session
-				n_seconds = group['e1_units'][name].shape[1]/1000.0
-				e1_rate.append(n_spikes/n_seconds)
-			e1_rates.append(np.mean(e1_rate))
-			for name in e2_names:
-				n_spikes = group['e2_units'][name][0,:].sum()
-				n_seconds = group['e2_units'][name].shape[1]/1000.0
-				e2_rate.append(n_spikes/n_seconds)
-			e2_rates.append(np.mean(e2_rate))
-			##now get the performance for this session
+			##figure out if this data is already saved
+			f_out = h5py.File(save_path,'a')
 			try:
-				n_t1 = float(group['event_arrays']['t1'].size)
+				session_exists = f_out[animal][session]
+				print animal+" "+session+" data exists; moving on"
+				f_out.close()
 			except KeyError:
-				n_t1 = 0
-			try: 
-				n_t2 = float(group['event_arrays']['t2'].size)
-			except KeyError:
-				n_t2 = 0
-			try:
-				n_miss = float(group['event_arrays']['miss'].size)
-			except KeyError:
-				n_miss = 0
-			score = n_t1/(n_t1+n_t2+n_miss)
-			p_correct.append(score)
+				session_e1 = []
+				session_p1 = []
+				session_e2 = []
+				session_p2 = []
+				plxfile = os.path.join(root_dir,animal,session)
+				print "working on "+animal+" "+session
+				e1_names = ru.animals[animal][1][session]['units']['e1_units']
+				e2_names = ru.animals[animal][1][session]['units']['e2_units']
+				try:
+					t1_id = ru.animals[animal][1][session]['events']['t1'][0]
+				except KeyError:
+					t1_id = None
+				try:
+					t2_id = ru.animals[animal][1][session]['events']['t2'][0]
+				except KeyError:
+					t2_id = None
+				try:
+					miss_id = ru.animals[animal][1][session]['events']['miss'][0]
+				except KeyError:
+					miss_id = None		
+				##open the file
+				if animal.startswith('m'):
+					adrange = range(100,200)
+				else:
+					adrange = range(1,97)
+				raw_data = plxread.import_file(plxfile,AD_channels=adrange,save_wf=False,
+						import_unsorted=False,verbose=False)
+				try:
+					lfp_id = ru.animals[animal][1][session]['lfp']['V1_lfp'][0]
+				except KeyError:
+					lfp_id = ru.animals[animal][1][session]['lfp']['Str_lfp'][0]
+				duration = raw_data[lfp_id+'_ts'].max()
+				##now get the performance for this session
+				try:
+					n_t1 = float(raw_data[t1_id].size)
+				except KeyError:
+					n_t1 = 0
+				try: 
+					n_t2 = float(raw_data[t2_id].size)
+				except KeyError:
+					n_t2 = 0
+				try:
+					n_miss = float(raw_data[miss_id].size)
+				except KeyError:
+					n_miss = 0
+				try:
+					score = n_t1/(n_t1+n_t2+n_miss)
+				except ZeroDivisionError:
+					score = np.random.ranf()
+				for name in e1_names:
+					try:
+						n_spikes = raw_data[name].size ##the total spikes in the whole session
+						if n_spikes/duration < 70:
+							session_e1.append(n_spikes/duration)
+							session_p1.append(score)
+					except KeyError:
+						print name+" not in this file; skipping"
+				for name in e2_names:
+					try:
+						n_spikes =  raw_data[name].size
+						if n_spikes/duration < 70:
+							session_e2.append(n_spikes/duration)
+							session_p2.append(score)
+					except KeyError:
+						print name+" not in this file; skipping"
+				f_out = h5py.File(save_path,'a')
+				try:
+					a_group = f_out[animal]
+				except KeyError:
+					a_group = f_out.create_group(animal)
+				s_group = a_group.create_group(session)
+				s_group.create_dataset("e1_rates",data=np.asarray(session_e1))
+				s_group.create_dataset("e2_rates",data=np.asarray(session_e2))
+				s_group.create_dataset("p_correct_e1",data=np.asarray(session_p1))
+				s_group.create_dataset("p_correct_e2",data=np.asarray(session_p2))
+				f_out.close()
+	##reopen the file, and extract all the data
+	f = h5py.File(save_path,'r')
+	e1_rates = []
+	e2_rates = []
+	p_correct1 = []
+	p_correct2 = []
+	for animal in f.keys():
+		for session in f[animal].keys():
+			e1_rates.append(np.nanmean(np.asarray(f[animal][session]['e1_rates'])))
+			e2_rates.append(np.nanmean(np.asarray(f[animal][session]['e2_rates'])))
+			p_correct1.append(np.asarray(f[animal][session]['p_correct_e1']))
+			p_correct2.append(np.asarray(f[animal][session]['p_correct_e2']))
+	e1_rates = np.nan_to_num(np.asarray(e1_rates))+1
+	e2_rates = np.nan_to_num(np.asarray(e2_rates))+1
+	for i in range(len(p_correct1)):
+		p_correct1[i] = p_correct1[i].mean()
+	for i in range(len(p_correct2)):
+		p_correct2[i] = p_correct2[i].mean()
+	p_correct1 = np.random.permutation(np.asarray(p_correct1))
+	p_correct2 = np.random.permutation(np.asarray(p_correct2))
+	f.close()
 	##now that we have this data, plot the scatter plots and the correlations
 	##first make one for E1 frs VS perforomance
-	e1_rates = np.nan_to_num(np.asarray(e1_rates)[np.argsort(e1_rates)])+1
-	e2_rates = np.nan_to_num(np.asarray(e2_rates)[np.argsort(e2_rates)])+1
-	p_correct1 = np.nan_to_num(np.asarray(p_correct)[np.argsort(e1_rates)])
-	p_correct2 = np.nan_to_num(np.asarray(p_correct)[np.argsort(e2_rates)])
+	e1_idx = np.argsort(e1_rates)
+	e2_idx = np.argsort(e2_rates)
+	e1_rates = np.nan_to_num(e1_rates[e1_idx])+1
+	e2_rates = np.nan_to_num(e2_rates[e2_idx])+1
+	p_correct1 = np.nan_to_num(p_correct1[e1_idx])
+	p_correct2 = np.nan_to_num(p_correct2[e2_idx])
 	fig,(ax1,ax2) = plt.subplots(2,sharex=True)
-	ax1.scatter(e1_rates,p_correct,alpha=0.5,marker='o',color='g')
-	ax2.scatter(e2_rates,p_correct,alpha=0.5,marker='o',color='b')
+	ax1.scatter(e1_rates,p_correct1,alpha=0.5,marker='o',color='g')
+	ax2.scatter(e2_rates,p_correct2,alpha=0.5,marker='o',color='b')
 	##the best fit lines
 	par1 = np.polyfit(e1_rates,p_correct1,1,full=True)
 	slope1=par1[0][0]
@@ -4521,15 +4592,18 @@ def get_frs_vs_performance():
 	Rsqr2 = np.round(1-residuals2/variance2, decimals=5)
 	plt.text(.9*max(e2_rates)+.1*min(e2_rates),.9*max(p_correct2)+.1*min(p_correct2),
 		'$R^2 = %0.5f$'% Rsqr2, fontsize=14)
-	ax2.plot(e2_rates, np.poly1d(np.polyfit(e2_rates,p_correct1,1))(e2_rates))	
+	ax2.plot(e2_rates, np.poly1d(np.polyfit(e2_rates,p_correct2,1))(e2_rates))	
 
 	ax1.set_title("E1 units",fontsize=14)
 	ax2.set_title("E2_units",fontsize=14)
 	ax1.set_ylabel("Percent correct",fontsize=14)
 	ax2.set_ylabel("Percent correct",fontsize=14)
 	ax2.set_xlabel("Mean FR, Hz",fontsize=14)
-	f.close()
-	return e1_rates,e2_rates,p_correct
+	p_e1 = stats.pearsonr(e1_rates,p_correct1)
+	p_e2 = stats.pearsonr(e2_rates,p_correct2)
+	print "pval e1 = "+str(p_e1)
+	print "pval e2 = "+str(p_e2)
+
 
 """
 A function to do logistic regression analysis on the indirect units, to see
@@ -4780,8 +4854,8 @@ def linear_regression_direct_indirect():
 	##first, we need to get two arrays: X; the data matrix of spike data
 	##in dimensions trials x units x bins, and then y; the binary matrix
 	## of target 1 and target 2 values.
-	source_file = r"C:\Users\Ryan\Documents\data\R7_thru_V13_all_data.hdf5"
-	save_file = r"D:\Ryan\V1_BMI\NatureNeuro\rebuttal\data\DMS_direct_regression.hdf5"
+	source_file = r"F:\Ryan\V1_BMI\processed_data\V1_BMI_final\raw_data\R7_thru_V13_all_data.hdf5"
+	save_file = r"F:\Ryan\V1_BMI\NatureNeuro\rebuttal\data\DMS_direct_regression2.hdf5"
 	f = h5py.File(source_file,'r')
 	##make some arrays to store
 	if animal_list is None:
@@ -4829,20 +4903,27 @@ def linear_regression_direct_indirect():
 					indirect_spikes,lfps,ul = ds.load_single_group_triggered_data(source_file,
 						't1',unit_type,window,animal=animal,session=session)
 					##data shape here is units x time x trials
-					##now sum the spike counts over the sample interval
-					direct_spikes = direct_spikes.sum(axis=1)
-					indirect_spikes = indirect_spikes.sum(axis=1)
+					##now z-score the firing rates
+					for u in direct_spikes.shape[0]:
+						for t in direct_spikes.shape[2]:
+							direct_spikes[u,t] = zscore(direct_spikes[u,t])
+					for u in indirect_spikes.shape[0]:
+						for t in indirect_spikes.shape[2]:
+							indirect_spikes[u,t] = zscore(indirect_spikes[u,t])
+					##now take the mean z-score over the sample interval
+					direct_spikes = direct_spikes.mean(axis=1)
+					indirect_spikes = indirect_spikes.mean(axis=1)
 					##now shape is units x trials
 					##reshape into trials x units
 					direct_spikes = direct_spikes.T
 					indirect_spikes = indirect_spikes.T
-					##now we want to run this through a linear regression
-					##first get the variance explained
-					ve = linr.run_cv(direct_spikes,indirect_spikes)
-					p = linr.permutation_test(direct_spikes,indirect_spikes)
-					##now add to the results
-					var_explained.append(ve)
-					sig.append(p)
+-					##now we want to run this through a linear regression
+ -					##first get the variance explained
+ -					ve = linr.run_cv(direct_spikes,indirect_spikes)
+ -					p = linr.permutation_test(direct_spikes,indirect_spikes)
+ -					##now add to the results
+ -					var_explained.append(ve)
+ -					sig.append(p)
 			##now save these data arrays in the global dictionary
 			results[animal] = [np.asarray(sig),np.asarray(var_explained),np.asarray(total_units)]
 	##now save the data
@@ -4859,7 +4940,7 @@ def linear_regression_direct_indirect():
 
 ##function to plot the results from the above function
 def plot_lin_regression():
-	datafile = r"D:\Ryan\V1_BMI\NatureNeuro\rebuttal\data\DMS_direct_regression.hdf5"
+	datafile = r"D:\Ryan\V1_BMI\NatureNeuro\rebuttal\data\direct_DMS_regression.hdf5"
 	f = h5py.File(datafile,'r')
 	animal_list = f.keys()
 	##store the means of all the animals
@@ -5089,7 +5170,7 @@ def get_rev1_bs():
 a function to plot the playback data saved by the above function
 """
 def plot_rev1_bs():
-	datafile = "/Volumes/Untitled/Ryan/V1_BMI/NatureNeuro/rebuttal/data/rev1_expt.hdf5"
+	datafile = r"D:\Ryan\V1_BMI\NatureNeuro\rebuttal\data\rev1_expt.hdf5"
 	f = h5py.File(datafile,'r')
 	animal_list = f.keys()
 	##lists to save the data averaged by animal
@@ -5321,7 +5402,7 @@ def plot_rev1_bs():
 	for ticklabel in ax_all.get_yticklabels():
 		ticklabel.set_fontsize(14)
 	ax_all.set_xlim(-0.5,1.5)
-	ax_all.set_ylim(2.5,5.5)
+	ax_all.set_ylim(1,5.5)
 	ax_all.set_ylabel("Modulation depth",fontsize=14)
 	ax_all.set_title("Average ensemble modulation depth",fontsize=14)
 	#finally do some significance testing
@@ -5346,7 +5427,7 @@ def plot_rev1_bs():
 
 
 def get_peg_e1_e2():
-	root_dir = r"K:\Ryan\V1_BMI"
+	root_dir = r"D:\Ryan\V1_BMI"
 	animal_list = ['V14','V15','V16']
 	session_list = ['BMI_D08']
 	##open the file 
@@ -5487,11 +5568,12 @@ how many of them are predictuve of E1 vs E2 choice.
 """
 def get_time_locked_lfp():
 	unit_type = 'V1_lfp' ##the type of units to run regression on
-	root_dir = "/Volumes/Untitled/Ryan/V1_BMI"
-	animal_list = ['m11','m13','m15','m17']
-	session_list = ['BMI_D09','BMI_D10','BMI_D11','BMI_D12']
-	window = [2000,1000]
-	save_file = "/Volumes/Untitled/Ryan/V1_BMI/NatureNeuro/rebuttal/data/jaws_lfp_late.hdf5"
+	root_dir = r"D:\Ryan\V1_BMI"
+	animal_list = [x for x in ru.animals.keys() if not x.startswith("m")]
+	session_list = None
+	window = [2500,1500]
+	target = 't1'
+	save_file = r"D:\Ryan\V1_BMI\NatureNeuro\rebuttal\data\rat_lfp_t1.hdf5"
 	f_out = h5py.File(save_file,'a')
 	f_out.close()
 	for animal in animal_list:
@@ -5502,199 +5584,309 @@ def get_time_locked_lfp():
 		except KeyError:
 			a_group = f_out.create_group(animal)
 			f_out.close()
+			#if session_list is None:
+			session_list = ru.animals[animal][1].keys()
 			for session in session_list:
 				print "Working on "+animal+" "+session
-				filepath = os.path.join(root_dir,animal,session)+".plx" ##the file path to the volitional part
+				filepath = os.path.join(root_dir,animal,session) ##the file path to the volitional part
 				##start with the non-manipulation file
-				data = plxread.import_file(filepath,AD_channels=range(1,150),save_wf=False,
+				data = plxread.import_file(filepath,AD_channels=range(1,97),save_wf=False,
 					import_unsorted=False,verbose=False)
 				##we are going to need the T1 and T2 timestamps fo each file
-				t1_id = ru.animals[animal][1][session+".plx"]['events']['t1'][0] ##the event name in the plexon file
-				lfp_id = ru.animals[animal][1][session+'.plx']['lfp'][unit_type][0] ##we'll just take the first LFP channel since many only have one chan anyway
+				t1_id = ru.animals[animal][1][session]['events'][target][0] ##the event name in the plexon file
+				lfp_id = ru.animals[animal][1][session]['lfp'][unit_type][0] ##we'll just take the first LFP channel since many only have one chan anyway
 				t1_ts = data[t1_id]*1000
 				lfp = data[lfp_id]
-				traces = get_data_window_lfp(lfp,t1_ts,window[0],window[1])
-				if traces != None:
-					f_out = h5py.File(save_file,'a')
-					f_out[animal].create_dataset(session,data=traces)
-					f_out.close()
-	try:
-		with h5py.File(save_file,'a') as f:
-			f.__delitem__('m11/BMI_D09')
-	except KeyError:
-		pass
+				if len(t1_ts)>0:
+					traces = get_data_window_lfp(lfp,t1_ts,window[0],window[1])
+					if traces != None:
+						f_out = h5py.File(save_file,'a')
+						f_out[animal].create_dataset(session,data=traces)
+						f_out.close()
+	# try:
+	# 	with h5py.File(save_file,'a') as f:
+	# 		f.__delitem__('m11/BMI_D09')
+	# except KeyError:
+	# 	pass
 	print 'done!'
 
 def get_mouse_lfp_specgram():
-	datafile = "/Volumes/Untitled/Ryan/V1_BMI/NatureNeuro/rebuttal/data/jaws_lfp_early.hdf5"
-	save_file = "/Volumes/Untitled/Ryan/V1_BMI/NatureNeuro/rebuttal/data/jaws_specgrams_early.hdf5"
+	datafile = r"D:\Ryan\V1_BMI\NatureNeuro\rebuttal\data\mouse_lfp_t1.hdf5"
+	save_file = r"D:\Ryan\V1_BMI\NatureNeuro\rebuttal\data\mouse_lfp_spec_by_trial.hdf5"
 	f = h5py.File(datafile,'r')
 	f_out = h5py.File(save_file,'w')
 	animals = f.keys()
 	all_sessions = []
 	for animal in animals:
-		session_data = []
+		a_group = f_out.create_group(animal)
 		sessions = f[animal].keys()
 		for session in sessions:
 			data = np.asarray(f[animal][session])
-			S, t, fr, Serr = specs.lfpSpecGram(data,[0.2,0.01],Fs=1000.0,fpass=[0,150],err=None,
-				sigType='lfp',norm=True)
-			session_data.append(S)
+			S, t, fr, Serr = specs.lfpSpecGram(data,[0.75,0.05],Fs=1000.0,fpass=[0,150],err=None,
+				sigType='lfp',norm=True, trialave=False)
+			a_group.create_dataset(session,data=S)
 			all_sessions.append(S)
-		session_data = np.asarray(session_data)
-		f_out.create_dataset(animal,data=session_data)
-	f_out.create_dataset('all_sessions',data=np.asarray(all_sessions))
+	f_out.create_dataset('all_sessions',data=np.concatenate(all_sessions,axis=2))
 	f.close()
 	f_out.close()
 	print 'done'
 
 def get_mouse_lfp_spectrum():
-	datafile = "/Volumes/Untitled/Ryan/V1_BMI/NatureNeuro/rebuttal/data/jaws_lfp_late.hdf5"
-	save_file = "/Volumes/Untitled/Ryan/V1_BMI/NatureNeuro/rebuttal/data/jaws_spectrums_late.hdf5"
+	datafile = r"D:\Ryan\V1_BMI\NatureNeuro\rebuttal\data\lfp_t1.hdf5"
+	save_file = r"D:\Ryan\V1_BMI\NatureNeuro\rebuttal\data\mouse_spectrums.hdf5"
 	f = h5py.File(datafile,'r')
 	f_out = h5py.File(save_file,'w')
 	idx = np.arange(0,2000)
 	animals = f.keys()
 	all_sessions = []
 	for animal in animals:
-		session_data = []
+		a_group = f_out.create_group(animal)
 		sessions = f[animal].keys()
 		for session in sessions:
 			data = np.asarray(f[animal][session])[idx]
 			S, fr, Serr = specs.mtspectrum(data,Fs=1000.0,fpass=[0,150],err=None,
 				sigType='lfp')
-			session_data.append(S)
+			a_group.create_dataset(session,data=S)
 			all_sessions.append(S)
-		session_data = np.asarray(session_data)
-		f_out.create_dataset(animal,data=session_data)
 	f_out.create_dataset('all_sessions',data=np.asarray(all_sessions))
 	f.close()
 	f_out.close()
 	print 'done'
 
-def plot_mouse_lfp_specgram():
-	f_early = "/Volumes/Untitled/Ryan/V1_BMI/NatureNeuro/rebuttal/data/jaws_specgrams_early.hdf5"
-	f_late = "/Volumes/Untitled/Ryan/V1_BMI/NatureNeuro/rebuttal/data/jaws_specgrams_late.hdf5"
-	f = h5py.File(f_early,'r')
-	vmin = 0.8
-	vmax = 1.2
-	fig, (ax1,ax2) = plt.subplots(2)
-	data_all = []
-	animals = ['m11','m13','m15','m17']
-	for animal in animals:
-		data_all.append(np.asarray(f[animal]).mean(axis=0))
-	data_all = np.asarray(data_all)
-	cax1 = ax1.imshow(data_all.mean(axis=0).T,aspect='auto',origin='lower',extent=(-2,1,0,150),
-		vmin=vmin,vmax=vmax)
-	ax1.set_title("Late learning w/stim (days 4-6)",fontsize=16,weight='bold')
-	ax1.set_ylabel("Frequency, Hz",fontsize=16)
-	# ax1.set_xlim(-1,1)
-	ax1.set_xticks([])
+def plot_lfp_specgram():
+	source_file =  r"D:\Ryan\V1_BMI\NatureNeuro\rebuttal\data\mouse_lfp_spec.hdf5"
+	f = h5py.File(source_file,'r')
+	early_range = np.arange(6,9)
+	late_range = np.arange(9,13)
+	vmin=0.85
+	vmax=1.35
+	by_animal_early = []
+	by_animal_late = []
+	by_session_early = []
+	by_session_late = []
+	for animal in [x for x in f.keys() if not x == 'all_sessions']:
+		all_sessions = []
+		if early_range == None:
+			sessions = f[animal].keys()
+		else:
+			sessions = [x for x in f[animal].keys() if int(x[-6:-4]) in early_range]
+		for session in sessions:
+			data = np.asarray(f[animal][session])
+			all_sessions.append(data)
+			by_session_early.append(data)
+		by_animal_early.append(np.nanmean(np.asarray(all_sessions),axis=0))
+	for animal in [x for x in f.keys() if not x == 'all_sessions']:
+		all_sessions = []
+		if late_range == None:
+			sessions = f[animal].keys()
+		else:
+			sessions = [x for x in f[animal].keys() if int(x[-6:-4]) in late_range]
+		for session in sessions:
+			data = np.asarray(f[animal][session])
+			all_sessions.append(data)
+			by_session_late.append(data)
+		by_animal_late.append(np.nanmean(np.asarray(all_sessions),axis=0))
 	f.close()
-	f = h5py.File(f_late,'r')
-	data_all = []
-	for animal in animals:
-		data_all.append(np.asarray(f[animal]).mean(axis=0))
-	data_all = np.asarray(data_all)
-	cax2 = ax2.imshow(data_all.mean(axis=0).T,aspect='auto',origin='lower',extent=(-2,1,0,150),
-		vmin=vmin,vmax=vmax)
+	##now plot
+	by_session_early = np.asarray(by_session_early)
+	by_session_late = np.asarray(by_session_late)
+	by_animal_early = np.asarray(by_animal_early)
+	by_animal_late = np.asarray(by_animal_late)
+	fig = plt.figure()
+	ax1 = fig.add_subplot(121)
+	ax2 = fig.add_subplot(122)
+	cax1 = ax1.imshow(np.nanmean(by_session_early,axis=0).T,aspect='auto',
+		origin='lower',extent=(-2,2,0,150),vmin=vmin,vmax=vmax)
+	ax1.axvline(x=0,color='white',linestyle='dashed',linewidth=2)
+	# cb = plt.colorbar(cax,label='coherence')
+	ax1.set_xlabel("Time to rewarded target",fontsize=16)
+	ax1.set_ylabel("Frequency, Hz",fontsize=16)
+	ax1.set_title("Early training sessions",fontsize=16)
+	#ax1.set_ylim(0,60)
+	for tick in ax1.xaxis.get_major_ticks():
+		tick.label1.set_fontsize(16)
+	for tick in ax1.yaxis.get_major_ticks():
+		tick.label.set_fontsize(16)
+	##for the late session data
+	cax2 = ax2.imshow(np.nanmean(by_session_late,axis=0).T,aspect='auto',
+		origin='lower',extent=(-2,2,0,150),vmin=vmin,vmax=vmax)
+	ax2.axvline(x=0,color='white',linestyle='dashed',linewidth=2)
 	cbaxes = fig.add_axes([0.85, 0.08, 0.08, 0.85]) 
-	cb = plt.colorbar(cax2, cax=cbaxes, label = 'Normalized power') 
-	ax2.set_title("Late learning, no stim (days 9-11)",fontsize=16,weight='bold')
-	ax2.set_xlabel("Time to target",fontsize=16)
-	ax2.set_ylabel("Frequency, Hz",fontsize=16)
-	# ax2.set_xlim(-1,1)
+	cb = plt.colorbar(cax2,cax=cbaxes)
+	cb.set_label(label='Power',fontsize=16)
+	ax2.set_xlabel("Time to rewarded target",fontsize=16)
+	# ax2.set_ylabel("Frequency, Hz",fontsize=16)
+	ax2.set_yticks([])
 	for tick in ax2.xaxis.get_major_ticks():
 		tick.label1.set_fontsize(16)
-	for tick in ax2.yaxis.get_major_ticks():
+	ax2.set_title("Late training sessions",fontsize=16)
+	#ax2.set_ylim(0,60)
+	fig.suptitle("Jaws animals LFP power",fontsize=16,weight='bold')
+	##now plot just the gamma band
+	fig,ax = plt.subplots(1)
+	gamma_early = by_session_early[:,:,10:20].mean(axis=2)
+	gamma_late = by_session_late[:,:,10:20].mean(axis=2)
+	early_mean = gamma_early.mean(axis=0)
+	early_sem = stats.sem(gamma_early,axis=0)
+	late_mean = gamma_late.mean(axis=0)
+	late_sem = stats.sem(gamma_late,axis=0)
+	x = np.linspace(-2,2,by_session_early.shape[1])
+	ax.plot(x,early_mean,linewidth=2,color='r',label='Stim on')
+	ax.plot(x,late_mean,linewidth=2,color='k',label='Stim off')
+	ax.fill_between(x,early_mean-early_sem,early_mean+early_sem,color='r',alpha=0.5)
+	ax.fill_between(x,late_mean-late_sem,late_mean+late_sem,color='k',alpha=0.5)
+	ax.set_ylabel("Normalized gamma power",fontsize=16)
+	ax.set_xlabel("Time to rewarded target",fontsize=16)
+	ax.set_title("Gamma power during rewarded trials",fontsize=16,weight='bold')
+	for tick in ax.xaxis.get_major_ticks():
+		tick.label1.set_fontsize(16)
+	for tick in ax.yaxis.get_major_ticks():
 		tick.label.set_fontsize(16)
+	ax.axvline(0,linewidth=2,color='k',linestyle='dashed')
+	ax.legend()
+
+##same as above but not averaged over trials
+def plot_lfp_specgram2():
+	source_file =  r"D:\Ryan\V1_BMI\NatureNeuro\rebuttal\data\mouse_lfp_spec_by_trial2.hdf5"
+	f = h5py.File(source_file,'r')
+	early_range = np.array([4,5])
+	late_range = np.array([11,12])
+	vmin=0.85
+	vmax=1.15
+	by_session_early = []
+	by_session_late = []
+	for animal in [x for x in f.keys() if not x == 'all_sessions']:
+		if early_range == None:
+			sessions = f[animal].keys()
+		else:
+			sessions = [x for x in f[animal].keys() if int(x[-6:-4]) in early_range]
+		for session in sessions:
+			data = np.asarray(f[animal][session])
+			by_session_early.append(data)
+	for animal in [x for x in f.keys() if not x == 'all_sessions']:
+		if late_range == None:
+			sessions = f[animal].keys()
+		else:
+			sessions = [x for x in f[animal].keys() if int(x[-6:-4]) in late_range]
+		for session in sessions:
+			data = np.asarray(f[animal][session])
+			by_session_late.append(data)
 	f.close()
-	#plt.tight_layout()
-	##do the same but average sessions
-	f = h5py.File(f_early,'r')
-	plt.figure()
-	data_all = np.asarray(f['all_sessions'])
-	plt.imshow(data_all.mean(axis=0).T,aspect='auto',origin='lower',extent=(-2,1,0,150),
-		vmin=vmin,vmax=vmax)
-	plt.colorbar()
-	plt.title("Early specgram by session",fontsize=14)
-	plt.xlabel("Time to target",fontsize=14)
-	plt.ylabel("Frequency, Hz",fontsize=14)
-	f.close()
-	f = h5py.File(f_late,'r')
-	plt.figure()
-	data_all = np.asarray(f['all_sessions'])
-	plt.imshow(data_all.mean(axis=0).T,aspect='auto',origin='lower',extent=(-2,1,0,150),
-		vmin=vmin,vmax=vmax)
-	plt.colorbar()
-	plt.title("Late specgram by session",fontsize=14)
-	plt.xlabel("Time to target",fontsize=14)
-	plt.ylabel("Frequency, Hz",fontsize=14)
-	f.close()
+	##now plot
+	by_session_early = np.concatenate(by_session_early,axis=2).transpose(2,0,1)
+	by_session_late = np.concatenate(by_session_late,axis=2).transpose(2,0,1)
+	fig = plt.figure()
+	ax1 = fig.add_subplot(121)
+	ax2 = fig.add_subplot(122)
+	cax1 = ax1.imshow(np.nanmean(by_session_early,axis=0).T,aspect='auto',
+		origin='lower',extent=(-2,2,0,150),vmin=vmin,vmax=vmax)
+	ax1.axvline(x=0,color='white',linestyle='dashed',linewidth=2)
+	# cb = plt.colorbar(cax,label='coherence')
+	ax1.set_xlabel("Time to rewarded target",fontsize=16)
+	ax1.set_ylabel("Frequency, Hz",fontsize=16)
+	ax1.set_title("Early training sessions",fontsize=16)
+	ax1.set_ylim(0,100)
+	ax1.set_xlim(-2,0.5)
+	for tick in ax1.xaxis.get_major_ticks():
+		tick.label1.set_fontsize(16)
+	for tick in ax1.yaxis.get_major_ticks():
+		tick.label.set_fontsize(16)
+	##for the late session data
+	cax2 = ax2.imshow(np.nanmean(by_session_late,axis=0).T,aspect='auto',
+		origin='lower',extent=(-2,2,0,150),vmin=vmin,vmax=vmax)
+	ax2.axvline(x=0,color='white',linestyle='dashed',linewidth=2)
+	cbaxes = fig.add_axes([0.85, 0.08, 0.08, 0.85]) 
+	cb = plt.colorbar(cax2,cax=cbaxes)
+	cb.set_label(label='Power',fontsize=16)
+	ax2.set_xlabel("Time to rewarded target",fontsize=16)
+	# ax2.set_ylabel("Frequency, Hz",fontsize=16)
+	ax2.set_yticks([])
+	for tick in ax2.xaxis.get_major_ticks():
+		tick.label1.set_fontsize(16)
+	ax2.set_title("Late training sessions",fontsize=16)
+	ax2.set_ylim(0,100)
+	ax2.set_xlim(-2,0.5)
+	fig.suptitle("Jaws animals LFP power",fontsize=16,weight='bold')
+	##now plot just the gamma band
+	fig,ax = plt.subplots(1)
+	gamma_early = by_session_early[:,:,5:15].mean(axis=2)
+	gamma_late = by_session_late[:,:,5:15].mean(axis=2)
+	early_mean = gamma_early.mean(axis=0)
+	early_sem = np.std(gamma_early,axis=0)/np.sqrt(gamma_early.shape[0])
+	late_mean = gamma_late.mean(axis=0)
+	late_sem = np.std(gamma_late,axis=0)/np.sqrt(gamma_late.shape[0])
+	x = np.linspace(-2,2,by_session_early.shape[1])
+	ax.plot(x,early_mean,linewidth=2,color='r',label='Stim on')
+	ax.plot(x,late_mean,linewidth=2,color='k',label='Stim off')
+	ax.fill_between(x,early_mean-early_sem,early_mean+early_sem,color='r',alpha=0.5)
+	ax.fill_between(x,late_mean-late_sem,late_mean+late_sem,color='k',alpha=0.5)
+	ax.set_ylabel("Normalized gamma power",fontsize=16)
+	ax.set_xlabel("Time to rewarded target",fontsize=16)
+	ax.set_title("Gamma power during rewarded trials",fontsize=16,weight='bold')
+	for tick in ax.xaxis.get_major_ticks():
+		tick.label1.set_fontsize(16)
+	for tick in ax.yaxis.get_major_ticks():
+		tick.label.set_fontsize(16)
+	ax.axvline(0,linewidth=2,color='k',linestyle='dashed')
+	ax.legend()
+	ax.set_xlim(-1.5,0.5)
 
 def plot_mouse_lfp_spectrum():
-	f_early = "/Volumes/Untitled/Ryan/V1_BMI/NatureNeuro/rebuttal/data/jaws_spectrums_early.hdf5"
-	f_late = "/Volumes/Untitled/Ryan/V1_BMI/NatureNeuro/rebuttal/data/jaws_spectrums_late.hdf5"
-	f = h5py.File(f_early,'r')
-	fig, ax1 = plt.subplots(1)
-	data_all = []
-	animals = ['m11','m13','m15','m17']
-	for animal in animals:
-		data_all.append(np.asarray(f[animal]).mean(axis=0))
-	data_all = np.asarray(data_all)
-	data_mean = data_all.mean(axis=0)
-	x = np.linspace(0,150,data_mean.shape[0])
-	data_sem = stats.sem(data_all,axis=0)
-	ax1.plot(x,data_mean,color='r',linewidth=2,label='training with Jaws')
-	ax1.fill_between(x,data_mean-data_sem,data_mean+data_sem,color='r',alpha=0.5)
+	source_file =  r"D:\Ryan\V1_BMI\NatureNeuro\rebuttal\data\mouse_spectrums.hdf5"
+	f = h5py.File(source_file,'r')
+	early_range = np.arange(5,7)
+	late_range = np.arange(7,13)
+	by_animal_early = []
+	by_animal_late = []
+	by_session_early = []
+	by_session_late = []
+	for animal in [x for x in f.keys() if not x == 'all_sessions']:
+		all_sessions = []
+		if early_range == None:
+			sessions = f[animal].keys()
+		else:
+			sessions = [x for x in f[animal].keys() if int(x[-6:-4]) in early_range]
+		for session in sessions:
+			data = np.asarray(f[animal][session])
+			all_sessions.append(data)
+			by_session_early.append(data)
+		by_animal_early.append(np.nanmean(np.asarray(all_sessions),axis=0))
+	for animal in [x for x in f.keys() if not x == 'all_sessions']:
+		all_sessions = []
+		if late_range == None:
+			sessions = f[animal].keys()
+		else:
+			sessions = [x for x in f[animal].keys() if int(x[-6:-4]) in late_range]
+		for session in sessions:
+			data = np.asarray(f[animal][session])
+			all_sessions.append(data)
+			by_session_late.append(data)
+		by_animal_late.append(np.nanmean(np.asarray(all_sessions),axis=0))
 	f.close()
-	f = h5py.File(f_late,'r')
-	data_all = []
-	for animal in animals:
-		data_all.append(np.asarray(f[animal]).mean(axis=0))
-	data_all = np.asarray(data_all)
-	data_mean = data_all.mean(axis=0)
-	data_sem = stats.sem(data_all,axis=0)
-	ax1.plot(x,data_mean,color='k',linewidth=2,label='training without Jaws')
-	ax1.fill_between(x,data_mean-data_sem,data_mean+data_sem,color='k',alpha=0.5)
-	ax1.set_yscale( "log" ) 
-	ax1.set_title("Late learning, no stim (days 9-11)",fontsize=16,weight='bold')
-	ax1.set_xlabel("Frequency, Hz",fontsize=16)
-	ax1.set_ylabel("Power",fontsize=16)
-	# ax2.set_xlim(-1,1)
-	for tick in ax1.xaxis.get_major_ticks():
+	##now plot
+	by_session_early = np.asarray(by_session_early)
+	by_session_late = np.asarray(by_session_late)
+	by_animal_early = np.asarray(by_animal_early)
+	by_animal_late = np.asarray(by_animal_late)
+	fig,ax = plt.subplots(1)
+	x = np.linspace(0,150,by_session_early.shape[1])
+	early_mean = by_session_early.mean(axis=0)
+	early_sem = stats.sem(by_session_early,axis=0)
+	late_mean = by_session_late.mean(axis=0)
+	late_sem = stats.sem(by_session_late,axis=0)
+	ax.plot(x,early_mean,linewidth=2,color='r',label='Stim on')
+	ax.plot(x,late_mean,linewidth=2,color='k',label='Stim off')
+	ax.fill_between(x,early_mean-early_sem,early_mean+early_sem,color='r',alpha=0.5)
+	ax.fill_between(x,late_mean-late_sem,late_mean+late_sem,color='k',alpha=0.5)
+	ax.set_ylabel("LFP power",fontsize=16)
+	ax.set_xlabel("Frequency, Hz",fontsize=16)
+	ax.set_title("LFP power during rewarded trials",fontsize=16,weight='bold')
+	for tick in ax.xaxis.get_major_ticks():
 		tick.label1.set_fontsize(16)
-	for tick in ax1.yaxis.get_major_ticks():
+	for tick in ax.yaxis.get_major_ticks():
 		tick.label.set_fontsize(16)
-	ax1.legend()
-	f.close()
-	#plt.tight_layout()
-	##do the same but average sessions
-	f = h5py.File(f_early,'r')
-	fig, ax1 = plt.subplots(1)
-	data_all = np.asarray(f['all_sessions'])
-	data_mean = data_all.mean(axis=0)
-	data_sem = stats.sem(data_all,axis=0)
-	ax1.plot(x,data_mean,color='r',linewidth=2,label='training with Jaws')
-	ax1.fill_between(x,data_mean-data_sem,data_mean+data_sem,color='r',alpha=0.5) 
-	f.close()
-	f = h5py.File(f_late,'r')
-	data_all = np.asarray(f['all_sessions'])
-	data_mean = data_all.mean(axis=0)
-	data_sem = stats.sem(data_all,axis=0)
-	ax1.plot(x,data_mean,color='k',linewidth=2,label='training without Jaws')
-	ax1.fill_between(x,data_mean-data_sem,data_mean+data_sem,color='k',alpha=0.5) 
-	ax1.set_yscale( "log" )
-	ax1.set_title("Late learning, no stim (days 9-11)",fontsize=16,weight='bold')
-	ax1.set_xlabel("Frequency, Hz",fontsize=16)
-	ax1.set_ylabel("Power",fontsize=16)
-	# ax2.set_xlim(-1,1)
-	for tick in ax1.xaxis.get_major_ticks():
-		tick.label1.set_fontsize(16)
-	for tick in ax1.yaxis.get_major_ticks():
-		tick.label.set_fontsize(16)
-	ax1.legend()
-	f.close()
+	ax.set_yscale("log")
+		#ax.set_xlim(0,100)
 
 def save_ff_cohgram_data():
 	##define some gobal parameters
@@ -6119,10 +6311,10 @@ def plot_mouse_correlations():
 def plot_cohgram_data():
 	source_file = r"D:\Ryan\V1_BMI\NatureNeuro\rebuttal\data\mouse_e1_V1_sfc.hdf5"
 	f = h5py.File(source_file,'r')
-	early_range = np.arange(0,7)
-	late_range = np.arange(8,12)
-	vmin=0.04
-	vmax=0.145
+	early_range = np.array([6])
+	late_range = np.array([10])
+	vmin=0.05
+	vmax=0.1
 	by_animal_early = []
 	by_animal_late = []
 	by_session_early = []
@@ -6135,9 +6327,9 @@ def plot_cohgram_data():
 			sessions = [x for x in f[animal].keys() if int(x[-6:-4]) in early_range]
 		for session in sessions:
 			data = np.asarray(f[animal][session])
-			all_sessions.append(data.mean(axis=0))
-			by_session_early.append(data.mean(axis=0))
-		by_animal_early.append(np.asarray(all_sessions).mean(axis=0))
+			all_sessions.append(np.nanmean(data,axis=0))
+			by_session_early.append(np.nanmean(data,axis=0))
+		by_animal_early.append(np.nanmean(np.asarray(all_sessions),axis=0))
 	for animal in f.keys():
 		all_sessions = []
 		if late_range == None:
@@ -6146,9 +6338,9 @@ def plot_cohgram_data():
 			sessions = [x for x in f[animal].keys() if int(x[-6:-4]) in late_range]
 		for session in sessions:
 			data = np.asarray(f[animal][session])
-			all_sessions.append(data.mean(axis=0))
-			by_session_late.append(data.mean(axis=0))
-		by_animal_late.append(np.asarray(all_sessions).mean(axis=0))
+			all_sessions.append(np.nanmean(data,axis=0))
+			by_session_late.append(np.nanmean(data,axis=0))
+		by_animal_late.append(np.nanmean(np.asarray(all_sessions),axis=0))
 	f.close()
 	##now plot
 	by_session_early = np.asarray(by_session_early)
@@ -6158,7 +6350,7 @@ def plot_cohgram_data():
 	fig = plt.figure()
 	ax1 = fig.add_subplot(121)
 	ax2 = fig.add_subplot(122)
-	cax1 = ax1.imshow(by_animal_early.mean(axis=0).T,aspect='auto',
+	cax1 = ax1.imshow(np.nanmean(by_animal_early,axis=0).T,aspect='auto',
 		origin='lower',extent=(-6,6,0,100),vmin=vmin,vmax=vmax)
 	ax1.axvline(x=0,color='white',linestyle='dashed',linewidth=2)
 	# cb = plt.colorbar(cax,label='coherence')
@@ -6170,7 +6362,7 @@ def plot_cohgram_data():
 	for tick in ax1.yaxis.get_major_ticks():
 		tick.label.set_fontsize(16)
 	##for the late session data
-	cax2 = ax2.imshow(by_animal_late.mean(axis=0).T,aspect='auto',
+	cax2 = ax2.imshow(np.nanmean(by_animal_late,axis=0).T,aspect='auto',
 		origin='lower',extent=(-6,6,0,100),vmin=vmin,vmax=vmax)
 	ax2.axvline(x=0,color='white',linestyle='dashed',linewidth=2)
 	cbaxes = fig.add_axes([0.85, 0.08, 0.08, 0.85]) 
@@ -6184,6 +6376,204 @@ def plot_cohgram_data():
 	ax2.set_title("Late training sessions",fontsize=16)
 	fig.suptitle("PrL-V1 field-field coherence",fontsize=16,weight='bold')
 
+##to get the time-to target latencies for Jaws animals
+def get_target_latencies():
+	##define some gobal parameters
+	animal_list = None
+	session_range = None
+	root_dir = r"D:\Ryan\V1_BMI"
+	save_file = r"D:\Ryan\V1_BMI\NatureNeuro\rebuttal\data\all_target_latencies.hdf5"
+	if animal_list is None:
+		animal_list = ru.animals.keys()
+	for animal in animal_list:
+		if session_range is None:
+			session_list = ru.animals[animal][1].keys()
+		else: 
+			session_list = [x for x in ru.animals[animal][1].keys() if int(x[-6:-4]) in session_range]
+		for session in session_list:
+			##this should be the path to the plexon file
+			plxfile = os.path.join(root_dir,animal,session)
+			##try to get the list of names for the signals and the targets
+			try:
+				t1_id = ru.animals[animal][1][session]['events']['t1'][0]
+			except KeyError:
+				t1_id = 0
+			try:
+				t2_id = ru.animals[animal][1][session]['events']['t2'][0]
+			except KeyError:
+				t2_id = 0
+			try:
+				miss_id = ru.animals[animal][1][session]['events']['miss'][0]
+			except KeyError:
+				miss_id = 0
+			##if we do have everything we need, continue
+			if (t1_id != 0):
+				print "working on "+animal+" "+session
+				##open the raw plexon data file
+				raw_data = plxread.import_file(plxfile,AD_channels=range(1,97),save_wf=False,
+					import_unsorted=False,verbose=False)
+				##get the timestamps of all the events
+				try:
+					t1_ts = raw_data[t1_id]*1000.0
+				except KeyError:
+					print "No t1's for this session"
+					t1_ts = np.array([])
+				try:
+					t2_ts = raw_data[t2_id]*1000.0
+				except KeyError:
+					print "No t2's for this session"
+					t2_ts = np.array([])
+				try:
+					miss_ts = raw_data[miss_id]*1000.0
+				except KeyError:
+					print "No misses for this file"
+					miss_ts = np.array([])
+				###now get 2 arrays, one of all the timestamps and one of all the timestamp IDs
+				ids = np.concatenate((np.full(t1_ts.size,"t1",dtype='S2'),
+									  np.full(t2_ts.size,"t2",dtype='S2'),
+									  np.full(miss_ts.size,"miss_ts",dtype='S4')))
+				ts = np.concatenate((t1_ts,t2_ts,miss_ts))
+				##order all the timestamps and the ts id's
+				idx = np.argsort(ts)
+				ids = ids[idx]
+				ts = ts[idx]
+				##now go through and get the time to target for each target type
+				t1_times = []
+				t2_times = []
+				miss_times = []
+				t = 0
+				while t < ts.size-1:
+					start_ts = ts[t]
+					##now we want to know what the outcome of this trial was
+					if ids[t+1] == 't1': ##case where this was a t1 trial
+						trial_duration = ts[t+1]-start_ts
+						t1_times.append(trial_duration)
+						t += 1
+					elif ids[t+1] == 't2': ##case where this was a t2 trial
+						trial_duration = ts[t+1]-start_ts
+						t2_times.append(trial_duration)
+						t += 1
+					elif ids[t+1] == 'miss': ##case where this was a miss trial
+						trial_duration = ts[t+1]-start_ts
+						miss_times.append(trial_duration)
+						t += 1
+					else:
+						print "unknown trial type: "+ids[t+1]
+						t+=1
+				t1_times = np.asarray(t1_times)
+				t2_times = np.asarray(t2_times)
+				miss_times = np.asarray(miss_times)
+				f_out = h5py.File(save_file,'a')
+				try: 
+					a_group = f_out[animal]
+				except KeyError:
+					a_group = f_out.create_group(animal)
+				s_group = a_group.create_group(session)
+				s_group.create_dataset("t1",data=t1_times)
+				s_group.create_dataset("t2",data=t2_times)
+				s_group.create_dataset("miss",data=miss_times)
+				f_out.close()
+	print "Done"
+
+def plot_target_latencies():
+	##define global parameters
+	target = 't2'
+	early_range = [1,2,3,4]
+	late_range = [5,6,7]
+	animal_list = ['V01','V02','V03','V04','V05','V11','V13','R11','R13','V14']
+	source_file = r"D:\Ryan\V1_BMI\NatureNeuro\rebuttal\data\all_target_latencies.hdf5"
+	f = h5py.File(source_file,'r')
+	if animal_list is None:
+		animals = f.keys()
+	else:
+		animals = animal_list
+	all_trials_early = []
+	all_trials_late = []
+	animal_average_early = []
+	animal_average_late = []
+	for animal in animals:
+		animal_data_early = []
+		animal_data_late = []
+		sessions_early = [x for x in f[animal].keys() if int(x[-6:-4]) in early_range]
+		sessions_late = [x for x in f[animal].keys() if int(x[-6:-4]) in late_range]
+		for session in sessions_early:
+			data = np.asarray(f[animal][session][target])
+			all_trials_early.append(data)
+			animal_data_early.append(np.nanmean(data))
+		for session in sessions_late:
+			data = np.asarray(f[animal][session][target])
+			all_trials_late.append(data)
+			animal_data_late.append(np.nanmean(data))
+		animal_average_early.append(np.asarray(np.nanmean(animal_data_early)))
+		animal_average_late.append(np.asarray(np.nanmean(animal_data_late)))
+	animal_average_early = np.nan_to_num(np.asarray(animal_average_early))/1000.0
+	animal_average_late = np.nan_to_num(np.asarray(animal_average_late))/1000.0
+	all_trials_early = np.nan_to_num(np.concatenate(all_trials_early))/1000.0
+	all_trials_late = np.concatenate(all_trials_late)/1000.0
+	f.close()
+	##look at by animal first
+	early_mean = animal_average_early.mean()
+	early_sem = stats.sem(animal_average_early)
+	late_mean = animal_average_late.mean()
+	late_sem = stats.sem(animal_average_late)
+	means = np.array([early_mean,late_mean])
+	sems = np.array([early_sem,late_sem])
+	fig,ax = plt.subplots(1)
+	x = [1,2]
+	xerr = [0.1,0.1]
+	ax.errorbar(x,means,yerr=sems,xerr=xerr,fmt='none',ecolor='k',capthick=2,elinewidth=2)
+	all_together = np.vstack([animal_average_early,animal_average_late])
+	for i in range(all_together.shape[1]):
+		plt.plot(x,all_together[:,i],linewidth=2,marker='o',color='k',alpha=0.5)
+	ax.set_xticks([1,2])
+	ax.set_xticklabels(["Early","Late"])
+	ax.set_ylabel("Time to target",fontsize=14)
+	if target == 't1':
+		ax.set_title("Latencies to rewarded targets",fontsize=14)
+	else:
+		ax.set_title("Latencies to unrewarded targets",fontsize=14)
+	#ax.set_ylim(8,19)
+	pval_animals = stats.ttest_rel(animal_average_early,animal_average_late)[1]
+	tval_animals = stats.ttest_rel(animal_average_early,animal_average_late)[0]
+	print "mean early = "+str(early_mean)
+	print "mean late = "+str(late_mean)
+	print "pval = "+str(pval_animals)
+	print "tval = "+str(tval_animals)
+	##now look at all trials pooled
+	early_mean = all_trials_early.mean()
+	early_sem = stats.sem(all_trials_early)
+	late_mean = all_trials_late.mean()
+	late_sem = stats.sem(all_trials_late)
+	means = np.array([early_mean,late_mean])
+	sems = np.array([early_sem,late_sem])
+	fig,ax = plt.subplots(1)
+	x = [1,2]
+	xerr = [0.1,0.1]
+	for i in range(all_trials_early.shape[0]):
+		plt.plot(1,all_trials_early[i],linewidth=2,marker='o',color='k',alpha=0.2)
+	for i in range(all_trials_late.shape[0]):
+		plt.plot(2,all_trials_late[i],linewidth=2,marker='o',color='k',alpha=0.2)
+	ax.errorbar(x,means,yerr=sems,xerr=xerr,fmt='none',ecolor='k',capthick=2,elinewidth=2)
+	ax.set_xticks([1,2])
+	ax.set_xticklabels(["Early","Late"])
+	ax.set_ylabel("Time to target",fontsize=14)
+	ax.set_title("Latencies to rewarded targets",fontsize=14)
+	pval_all = stats.ttest_ind(all_trials_early,all_trials_late)[1]
+	tval_all = stats.ttest_ind(all_trials_early,all_trials_late)[0]
+	data = [all_trials_early,all_trials_late]
+	fig,ax = plt.subplots(1)
+	ax.boxplot(data)
+	ax.set_ylabel("Time to target (s)",fontsize=14)
+	ax.set_xticklabels(["Early","Late"])
+	ax.set_title("Latencies to rewarded targets",fontsize=14)
+	print "mean early = "+str(early_mean)
+	print "mean late = "+str(late_mean)
+	print "pval = "+str(pval_all)
+	print "tval = "+str(tval_all)
+
+
+
+########################HELPERS~########################
 
 
 """
@@ -6241,17 +6631,22 @@ def get_data_window_lfp(lfp, centers, pre_win, post_win):
 	data = np.squeeze(lfp)
 	N = data.size
 	removed = 0
-	for j, center in enumerate(centers):
-		if center <= pre_win or center + post_win >= N:
-			centers[j] = centers[j-1]
-			removed +=1
-			if verbose:
-				print "Index too close to start or end to take a full window. Deleting event at "+str(center)
-	if removed >= centers.size:
+	try:
+		for j, center in enumerate(centers):
+			if center <= pre_win or center + post_win >= N:
+				centers[j] = centers[j-1]
+				removed +=1
+				if verbose:
+					print "Index too close to start or end to take a full window. Deleting event at "+str(center)
+		if removed >= centers.size:
+			traces = None
+			print "No traces for this file"
+		else:
+			traces = np.zeros((pre_win+post_win, len(centers)))
+			##the actual windowing functionality:
+			for n, idx in enumerate(centers):
+					traces[:,n] = data[idx-pre_win:idx+post_win]
+	except TypeError:
 		traces = None
-	else:
-		traces = np.zeros((pre_win+post_win, len(centers)))
-		##the actual windowing functionality:
-		for n, idx in enumerate(centers):
-				traces[:,n] = data[idx-pre_win:idx+post_win]
+		print "No traces for this file"
 	return traces
