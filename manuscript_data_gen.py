@@ -14,7 +14,7 @@ import collections
 import sys
 import log_regression as lr
 import lin_regression as linr
-import lin_regression2 as linr2
+# import lin_regression2 as linr2
 import spectrograms as specs
 import RatUnits4 as ru
 import itertools
@@ -4847,15 +4847,15 @@ def linear_regression_direct_indirect():
 	unit_type = 'Str_units' ##the type of units to predict e1 and e2 unit activity on
 	animal_list = None
 	session_range = None
-	window = [2000,0]
+	window = [100,0]
 	##make some dictionaries to store the results
 	results = {}
 	##we should be able to run regression for each session as a whole.
 	##first, we need to get two arrays: X; the data matrix of spike data
 	##in dimensions trials x units x bins, and then y; the binary matrix
 	## of target 1 and target 2 values.
-	source_file = r"F:\Ryan\V1_BMI\processed_data\V1_BMI_final\raw_data\R7_thru_V13_all_data.hdf5"
-	save_file = r"F:\Ryan\V1_BMI\NatureNeuro\rebuttal\data\DMS_direct_regression2.hdf5"
+	source_file = r"F:\data\processed\R7_thru_V13_all_data.hdf5"
+	save_file = r"F:\data\NatureNeuro\rebuttal\data\direct_DMS_regression_100ms.hdf5"
 	f = h5py.File(source_file,'r')
 	##make some arrays to store
 	if animal_list is None:
@@ -4904,15 +4904,15 @@ def linear_regression_direct_indirect():
 						't1',unit_type,window,animal=animal,session=session)
 					##data shape here is units x time x trials
 					##now z-score the firing rates
-					for u in direct_spikes.shape[0]:
-						for t in direct_spikes.shape[2]:
-							direct_spikes[u,t] = zscore(direct_spikes[u,t])
-					for u in indirect_spikes.shape[0]:
-						for t in indirect_spikes.shape[2]:
-							indirect_spikes[u,t] = zscore(indirect_spikes[u,t])
+					# for u in range(direct_spikes.shape[0]):
+					# 	for t in range(direct_spikes.shape[2]):
+					# 		direct_spikes[u,t] = zscore(direct_spikes[u,t])
+					# for u in range(indirect_spikes.shape[0]):
+					# 	for t in range(indirect_spikes.shape[2]):
+					# 		indirect_spikes[u,t] = zscore(indirect_spikes[u,t])
 					##now take the mean z-score over the sample interval
-					direct_spikes = direct_spikes.mean(axis=1)
-					indirect_spikes = indirect_spikes.mean(axis=1)
+					direct_spikes = np.sum(direct_spikes,axis=1)
+					indirect_spikes = np.sum(indirect_spikes,axis=1)
 					##now shape is units x trials
 					##reshape into trials x units
 					direct_spikes = direct_spikes.T
@@ -4940,7 +4940,7 @@ def linear_regression_direct_indirect():
 
 ##function to plot the results from the above function
 def plot_lin_regression():
-	datafile = r"D:\Ryan\V1_BMI\NatureNeuro\rebuttal\data\direct_DMS_regression.hdf5"
+	datafile = r"F:\data\NatureNeuro\rebuttal\data\direct_DMS_regression_100ms.hdf5"
 	f = h5py.File(datafile,'r')
 	animal_list = f.keys()
 	##store the means of all the animals
