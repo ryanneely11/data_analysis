@@ -4847,14 +4847,14 @@ def linear_regression_direct_indirect():
 	unit_type = 'Str_units' ##the type of units to predict e1 and e2 unit activity on
 	animal_list = None
 	session_range = None
-	window = [1500,0]
+	window = [2000,0]
 	##make some dictionaries to store the results
 	results = {}
 	##we should be able to run regression for each session as a whole.
 	##first, we need to get two arrays: X; the data matrix of spike data
 	##in dimensions trials x units x bins, and then y; the binary matrix
 	## of target 1 and target 2 values.
-	source_file = r"C:\Users\Ryan\Documents\data\R7_thru_V13_all_data.hdf5"
+	source_file = r"D:\Ryan\V1_BMI\processed_data\V1_BMI_final\raw_data\R7_thru_V13_all_data.hdf5"
 	save_file = r"D:\Ryan\V1_BMI\NatureNeuro\rebuttal\data\DMS_direct_regression2.hdf5"
 	f = h5py.File(source_file,'r')
 	##make some arrays to store
@@ -4908,18 +4908,15 @@ def linear_regression_direct_indirect():
 					indirect_spikes = indirect_spikes.sum(axis=1)
 					##now shape is units x trials
 					##reshape into trials x units
-					direct_spikes = direct_spikes.T
-					indirect_spikes = indirect_spikes.T
-					##now we want to run this through a linear regression for each unit
-					r2s = []
-					pvals = []
-					for direct_unit in range(direct_spikes.shape[1]):
-						regresult = linr2.lin_regression(direct_spikes[:,direct_unit],indirect_spikes)
-						##now add to the results
-						r2s.append(regresult.rsquared)
-						pvals.append(regresult.f_pvalue)
-					var_explained.append(np.asarray(r2s).mean())
-					sig.append(np.asarray(r2s).mean())
+					direct_spikes = zscore(direct_spikes.T)
+					indirect_spikes = zscore(indirect_spikes.T)
+-					##now we want to run this through a linear regression
+ -					##first get the variance explained
+ -					ve = linr.run_cv(direct_spikes,indirect_spikes)
+ -					p = linr.permutation_test(direct_spikes,indirect_spikes)
+ -					##now add to the results
+ -					var_explained.append(ve)
+ -					sig.append(p)
 			##now save these data arrays in the global dictionary
 			results[animal] = [np.asarray(sig),np.asarray(var_explained),np.asarray(total_units)]
 	##now save the data
@@ -4936,7 +4933,7 @@ def linear_regression_direct_indirect():
 
 ##function to plot the results from the above function
 def plot_lin_regression():
-	datafile = r"D:\Ryan\V1_BMI\NatureNeuro\rebuttal\data\DMS_direct_regression2.hdf5"
+	datafile = r"D:\Ryan\V1_BMI\NatureNeuro\rebuttal\data\direct_DMS_regression.hdf5"
 	f = h5py.File(datafile,'r')
 	animal_list = f.keys()
 	##store the means of all the animals
