@@ -4854,8 +4854,8 @@ def linear_regression_direct_indirect():
 	##first, we need to get two arrays: X; the data matrix of spike data
 	##in dimensions trials x units x bins, and then y; the binary matrix
 	## of target 1 and target 2 values.
-	source_file = r"D:\Ryan\V1_BMI\processed_data\V1_BMI_final\raw_data\R7_thru_V13_all_data.hdf5"
-	save_file = r"D:\Ryan\V1_BMI\NatureNeuro\rebuttal\data\DMS_direct_regression2.hdf5"
+	source_file = r"F:\Ryan\V1_BMI\processed_data\V1_BMI_final\raw_data\R7_thru_V13_all_data.hdf5"
+	save_file = r"F:\Ryan\V1_BMI\NatureNeuro\rebuttal\data\DMS_direct_regression2.hdf5"
 	f = h5py.File(source_file,'r')
 	##make some arrays to store
 	if animal_list is None:
@@ -4903,13 +4903,20 @@ def linear_regression_direct_indirect():
 					indirect_spikes,lfps,ul = ds.load_single_group_triggered_data(source_file,
 						't1',unit_type,window,animal=animal,session=session)
 					##data shape here is units x time x trials
-					##now sum the spike counts over the sample interval
-					direct_spikes = direct_spikes.sum(axis=1)
-					indirect_spikes = indirect_spikes.sum(axis=1)
+					##now z-score the firing rates
+					for u in direct_spikes.shape[0]:
+						for t in direct_spikes.shape[2]:
+							direct_spikes[u,t] = zscore(direct_spikes[u,t])
+					for u in indirect_spikes.shape[0]:
+						for t in indirect_spikes.shape[2]:
+							indirect_spikes[u,t] = zscore(indirect_spikes[u,t])
+					##now take the mean z-score over the sample interval
+					direct_spikes = direct_spikes.mean(axis=1)
+					indirect_spikes = indirect_spikes.mean(axis=1)
 					##now shape is units x trials
 					##reshape into trials x units
-					direct_spikes = zscore(direct_spikes.T)
-					indirect_spikes = zscore(indirect_spikes.T)
+					direct_spikes = direct_spikes.T
+					indirect_spikes = indirect_spikes.T
 -					##now we want to run this through a linear regression
  -					##first get the variance explained
  -					ve = linr.run_cv(direct_spikes,indirect_spikes)
