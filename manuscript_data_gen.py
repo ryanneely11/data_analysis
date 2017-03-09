@@ -4917,13 +4917,13 @@ def linear_regression_direct_indirect():
 					##reshape into trials x units
 					direct_spikes = direct_spikes.T
 					indirect_spikes = indirect_spikes.T
--					##now we want to run this through a linear regression
- -					##first get the variance explained
- -					ve = linr.run_cv(direct_spikes,indirect_spikes)
- -					p = linr.permutation_test(direct_spikes,indirect_spikes)
- -					##now add to the results
- -					var_explained.append(ve)
- -					sig.append(p)
+					##now we want to run this through a linear regression
+					##first get the variance explained
+					ve = linr.run_cv(direct_spikes,indirect_spikes)
+					p = linr.permutation_test(direct_spikes,indirect_spikes)
+					##now add to the results
+					var_explained.append(ve)
+					sig.append(p)
 			##now save these data arrays in the global dictionary
 			results[animal] = [np.asarray(sig),np.asarray(var_explained),np.asarray(total_units)]
 	##now save the data
@@ -6477,7 +6477,7 @@ def get_target_latencies():
 
 def plot_target_latencies():
 	##define global parameters
-	target = 't2'
+	target = 't1'
 	early_range = [1,2,3,4]
 	late_range = [5,6,7]
 	animal_list = ['V01','V02','V03','V04','V05','V11','V13','R11','R13','V14']
