@@ -4940,7 +4940,7 @@ def linear_regression_direct_indirect():
 
 ##function to plot the results from the above function
 def plot_lin_regression():
-	datafile = r"F:\data\NatureNeuro\rebuttal\data\direct_DMS_regression_100ms.hdf5"
+	datafile = r"D:\Ryan\V1_BMI\NatureNeuro\rebuttal\data\direct_DMS_regression_500ms.hdf5"
 	f = h5py.File(datafile,'r')
 	animal_list = f.keys()
 	##store the means of all the animals
@@ -6571,6 +6571,32 @@ def plot_target_latencies():
 	print "pval = "+str(pval_all)
 	print "tval = "+str(tval_all)
 
+def plot_dms_locked():
+	f = h5py.File(r"D:\Ryan\V1_BMI\processed_data\V1_BMI_final\raw_data\dms_spikes_smoothed.hdf5")
+	vmin=-2
+	vmax=15
+	early_data = np.asarray(f['early'])
+	late_data = np.asarray(f['late'])
+	for i in range(early_data.shape[1]):
+		early_data[:,i] = zscore(early_data[:,i])
+	for i in range(late_data.shape[1]):
+		late_data[:,i] = zscore(late_data[:,i])
+	##let's sort by the late session peaks
+	late_peaks = np.argmax(abs(late_data),axis=0)
+	late_idx = np.argsort(late_peaks)
+	early_peaks = np.argmax(abs(early_data),axis=0)
+	early_idx = np.argsort(early_peaks)
+	late_data = late_data[:,late_idx]
+	early_data = early_data[:,early_idx]
+	plt.imshow(late_data.T,aspect='auto',vmin=vmin,vmax=vmax,interpolation='none')
+	plt.title("late")
+	plt.colorbar()
+	plt.figure()
+	plt.imshow(early_data.T,aspect='auto',vmin=vmin,vmax=vmax,interpolation='none')
+	plt.title("early")
+	plt.colorbar()
+	f.close()
+	##each session contains an array, which is 
 
 
 ########################HELPERS~########################
