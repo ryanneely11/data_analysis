@@ -5007,7 +5007,7 @@ def plot_lin_regression():
 A function to plot the results from the LR function (individual units)
 """
 def plot_log_regression():
-	datafile = r"L:\Ryan\V1_BMI\NatureNeuro\rebuttal\data\PLC_log_regression.hdf5"
+	datafile = r"F:\NatureNeuro\rebuttal\data\indirect_log_regression_500ms.hdf5"
 	f = h5py.File(datafile,'r')
 	animal_list = f.keys()
 	##store the means of all the animals
