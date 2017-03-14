@@ -4620,8 +4620,8 @@ def log_regress_units():
 	##first, we need to get two arrays: X; the data matrix of spike data
 	##in dimensions trials x units x bins, and then y; the binary matrix
 	## of target 1 and target 2 values.
-	source_file = r"J:\Ryan\processed_data\V1_BMI_final\raw_data\R7_thru_V13_all_data.hdf5"
-	save_file = r"J:\Ryan\V1_BMI\NatureNeuro\rebuttal\data\PLC_log_regression.hdf5"
+	source_file = r"F:\data\processed\R7_thru_V13_all_data.hdf5"
+	save_file = r"F:\NatureNeuro\rebuttal\data\indirect_log_regression_500ms.hdf5"
 	f = h5py.File(source_file,'r')
 	##make some arrays to store
 	if animal_list is None:
@@ -4694,17 +4694,17 @@ how many of them are predictuve of E1 vs E2 choice.
 """
 def log_regress_grouped_units():
 	unit_type = 'PLC_units' ##the type of units to run regression on
-	animal_list = ['R11','R13']
+	animal_list = None
 	session_range = None
-	window = [2000,0]
+	window = [400,100]
 	##make some dictionaries to store the results
 	results = {}
 	##we should be able to run regression for each session as a whole.
 	##first, we need to get two arrays: X; the data matrix of spike data
 	##in dimensions trials x units x bins, and then y; the binary matrix
 	## of target 1 and target 2 values.
-	source_file = r"C:\Users\Ryan\Documents\data\R7_thru_V13_all_data.hdf5"
-	save_file = r"L:\data\NatureNeuro\rebuttal\data\grouped_PLC_regression.hdf5"
+	source_file = r"F:\data\processed\R7_thru_V13_all_data.hdf5"
+	save_file = r"F:\NatureNeuro\rebuttal\data\indirect_grouped_regression_500ms.hdf5"
 	f = h5py.File(source_file,'r')
 	##make some arrays to store
 	if animal_list is None:
