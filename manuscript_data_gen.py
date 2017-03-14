@@ -4610,11 +4610,10 @@ A function to do logistic regression analysis on the indirect units, to see
 how many of them are predictuve of E1 vs E2 choice.
 """
 def log_regress_units():
-	unit_type = 'PLC_units' ##the type of units to run regression on
+	unit_type = 'V1_units' ##the type of units to run regression on
 	animal_list = None
 	session_range = None
-	window = [2000,0]
-	bin_size = 200
+	window = [400,100]
 	##make some dictionaries to store the results
 	results = {}
 	##we should be able to run regression for each session as a whole.
