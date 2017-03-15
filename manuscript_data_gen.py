@@ -4652,7 +4652,7 @@ def log_regress_units():
 					n_t2 = float(f[animal][session]['event_arrays']['t2'].size)
 				except KeyError:
 					n_t2 = 0
-				if (n_t1 >= 12) and (n_t2 >= 12):
+				if (n_t1 >= 15) and (n_t2 >= 15):
 					##now make sure that this file contains at least one unit of the type that we want to analyze
 					try:
 						unit_list = [x for x in f[animal][session][unit_type].keys() if not x.endswith("_wf")]
