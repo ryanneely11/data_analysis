@@ -4611,7 +4611,7 @@ A function to do logistic regression analysis on the indirect units, to see
 how many of them are predictuve of E1 vs E2 choice.
 """
 def log_regress_units():
-	unit_type = 'V1_units' ##the type of units to run regression on
+	unit_type = 'Str_units' ##the type of units to run regression on
 	animal_list = None
 	session_range = None
 	window = [400,0]
@@ -4622,8 +4622,8 @@ def log_regress_units():
 	##first, we need to get two arrays: X; the data matrix of spike data
 	##in dimensions trials x units x bins, and then y; the binary matrix
 	## of target 1 and target 2 values.
-	source_file =r"F:\data\processed\R7_thru_V13_all_data.hdf5"
-	save_file = r"F:\NatureNeuro\rebuttal\data\indirect_log_regression_400ms_binned.hdf5"
+	source_file =r"C:\Users\Ryan\Documents\data\R7_thru_V13_all_data.hdf5"
+	save_file = r"D:\Ryan\V1_BMI\NatureNeuro\rebuttal\data\DMS_unit_regression_400ms_binned.hdf5"
 	f = h5py.File(source_file,'r')
 	##make some arrays to store
 	if animal_list is None:
@@ -4704,10 +4704,10 @@ A function to do logistic regression analysis on the indirect units, as a group,
 how many of them are predictuve of E1 vs E2 choice.
 """
 def log_regress_grouped_units():
-	unit_type = 'PLC_units' ##the type of units to run regression on
+	unit_type = 'V1_units' ##the type of units to run regression on
 	animal_list = None
 	session_range = None
-	window = [400,100]
+	window = [400,0]
 	##make some dictionaries to store the results
 	results = {}
 	##we should be able to run regression for each session as a whole.
@@ -4715,7 +4715,7 @@ def log_regress_grouped_units():
 	##in dimensions trials x units x bins, and then y; the binary matrix
 	## of target 1 and target 2 values.
 	source_file = r"F:\data\processed\R7_thru_V13_all_data.hdf5"
-	save_file = r"F:\NatureNeuro\rebuttal\data\indirect_grouped_regression_500ms.hdf5"
+	save_file = r"F:\NatureNeuro\rebuttal\data\indirect_grouped_regression_400ms_2.hdf5"
 	f = h5py.File(source_file,'r')
 	##make some arrays to store
 	if animal_list is None:
@@ -4771,11 +4771,10 @@ def log_regress_grouped_units():
 					y = y[idx]
 					X = X[idx,:]
 					##finally, we can actually do the regression
-					sig = lr.permutation_test((X,y))
-					strength = lr.run_cv(X,y)
+					accuracy, pval = lr2.permutation_test((X,y))
 					##now just add the counts to the animal's array
-					pred_strength.append(strength)
-					pred_sig.append(sig)
+					pred_strength.append(accuracy)
+					pred_sig.append(pval)
 			##now save these data arrays in the global dictionary
 			results[animal] = [np.asarray(pred_sig),np.asarray(pred_strength),np.asarray(total_units)]
 	##now save the data
