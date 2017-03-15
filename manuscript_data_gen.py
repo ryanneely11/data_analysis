@@ -2062,20 +2062,20 @@ def plot_light_data():
 ##specifically retreives data for LATE in sessions
 def get_triggered_spike_rates():
 	try:
-		ds.save_multi_group_triggered_data(r"J:\Ryan\processed_data\V1_BMI_final\raw_data\R7_thru_V13_all_data.hdf5", 
-			r"J:\Ryan\processed_data\V1_BMI_final\raw_data\e1_t1_spikes_late.hdf5", "t1", ["e1_units", "spikes"], [6000,6000],
+		ds.save_multi_group_triggered_data(r"D:\Ryan\processed_data\V1_BMI_final\raw_data\R7_thru_V13_all_data.hdf5", 
+			r"D:\Ryan\processed_data\V1_BMI_final\raw_data\e1_t1_spikes_late.hdf5", "t1", ["e1_units", "spikes"], [6000,6000],
 			chunk = [0,10])
 	except IOError:
 		print "File exists; skipping"
 	try:
-		ds.save_multi_group_triggered_data(r"J:\Ryan\processed_data\V1_BMI_final\raw_data\R7_thru_V13_all_data.hdf5", 
-			r"J:\Ryan\processed_data\V1_BMI_final\raw_data\e2_t1_spikes_late.hdf5", "t1", ["e2_units", "spikes"], [6000,6000],
+		ds.save_multi_group_triggered_data(r"D:\Ryan\processed_data\V1_BMI_final\raw_data\R7_thru_V13_all_data.hdf5", 
+			r"D:\Ryan\processed_data\V1_BMI_final\raw_data\e2_t1_spikes_late.hdf5", "t1", ["e2_units", "spikes"], [6000,6000],
 			chunk = [0,10])
 	except IOError:
 		print "File exists; skipping"
 	try:
-		ds.save_multi_group_triggered_data(r"J:\Ryan\processed_data\V1_BMI_final\raw_data\R7_thru_V13_all_data.hdf5", 
-			r"J:\Ryan\processed_data\V1_BMI_final\raw_data\V1_t1_spikes_late.hdf5", "t1", ["V1_units", "spikes"], [6000,6000],
+		ds.save_multi_group_triggered_data(r"D:\Ryan\processed_data\V1_BMI_final\raw_data\R7_thru_V13_all_data.hdf5", 
+			r"D:\Ryan\processed_data\V1_BMI_final\raw_data\V1_t1_spikes_late.hdf5", "t1", ["V1_units", "spikes"], [6000,6000],
 			chunk = [0,10])
 	except IOError:
 		print "File exists; skipping"
@@ -5561,10 +5561,6 @@ def get_peg_e1_e2():
 	print "E2 tval = "+str(tval_e2)
 	return p_ctrl,p_e1,p_e2
 
-"""
-A function to do logistic regression analysis on the indirect units, as a group, to see
-how many of them are predictuve of E1 vs E2 choice.
-"""
 def get_time_locked_lfp():
 	unit_type = 'V1_lfp' ##the type of units to run regression on
 	root_dir = r"D:\Ryan\V1_BMI"
@@ -6598,6 +6594,511 @@ def plot_dms_locked():
 	##each session contains an array, which is 
 
 
+def get_timelocked_frs():
+	unit_types = ['e1_units','e2_units','V1_units'] ##the type of units to look at on
+	root_dir = r"D:\Ryan\V1_BMI"
+	animal_list = [x for x in ru.animals.keys() if not x.startswith("m")]
+	session_list = None
+	window = [4000,4000]
+	save_file = r"D:\Ryan\V1_BMI\NatureNeuro\rebuttal\data\rat_spikes_t1_t2.hdf5"
+	f_out = h5py.File(save_file,'a')
+	f_out.close()
+	for animal in animal_list:
+		f_out = h5py.File(save_file,'a')
+		try:
+			a_group = f_out[animal]
+			f_out.close()
+		except KeyError:
+			a_group = f_out.create_group(animal)
+			f_out.close()
+			#if session_list is None:
+			session_list = ru.animals[animal][1].keys()
+			for session in session_list:
+				print "Working on "+animal+" "+session
+				filepath = os.path.join(root_dir,animal,session) ##the file path to the session data
+				##open the file
+				data = plxread.import_file(filepath,AD_channels=range(1,97),save_wf=False,
+					import_unsorted=False,verbose=False)
+				##what is the duration of this file
+				duration = None
+				for arr in data.keys():
+					if arr.startswith('AD') and arr.endswith('_ts'):
+						duration = int(np.ceil((data[arr].max()*1000)/100)*100)+1
+						break
+				else: print "No A/D timestamp data found!!!"
+				##we are going to need the T1 and T2 timestamps fo each file
+				try:
+					t1_id = ru.animals[animal][1][session]['events']['t1'][0] ##the event name in the plexon file
+					t1_ts = data[t1_id]*1000.0
+				except KeyError:
+					t1_ts = np.array([])
+				try:
+					t2_id = ru.animals[animal][1][session]['events']['t2'][0] ##the event name in the plexon file
+					t2_ts = data[t2_id]*1000.0
+				except KeyError:
+					t2_ts = np.array([])
+				for unit_type in unit_types:
+					mean_t1 = []
+					mean_t2 = []
+					try:
+						unit_ids = ru.animals[animal][1][session]['units'][unit_type]
+						for unit in unit_ids:
+							##get the timestamps for this unit from the datafile
+							try:
+								unit_ts = data[unit]*1000.0
+								##binary transform
+								spiketrain = np.histogram(unit_ts,bins=duration,range=(0,duration))
+								spiketrain = spiketrain[0].astype(bool).astype(int)
+								##now get the mean response for this unit
+								if len(t1_ts)>0:
+									traces_t1 = get_data_window(spiketrain,t1_ts,
+										window[0],window[1])
+									if traces_t1 is not None:
+										mean_t1.append(traces_t1.mean(axis=1))
+								if len(t2_ts)>0:
+									traces_t2 = get_data_window(spiketrain,t2_ts,
+										window[0],window[1])
+									if traces_t2 is not None:
+										mean_t2.append(traces_t2.mean(axis=1))
+							except KeyError:
+								print "No "+unit+" for "+unit_type+" in "+animal+" "+session
+						mean_t1 = np.asarray(mean_t1)
+						mean_t2 = np.asarray(mean_t2)
+						f_out = h5py.File(save_file,'a')
+						a_group = f_out[animal]
+						try:
+							s_group = a_group[session]
+						except KeyError:
+							s_group = a_group.create_group(session)
+						u_group = s_group.create_group(unit_type)
+						if len(t1_ts)>0:
+							u_group.create_dataset("t1",data=mean_t1)
+						if len(t2_ts)>0:
+							u_group.create_dataset("t2",data=mean_t2)
+						f_out.close()
+					except KeyError:
+						print "No "+unit_type+" for "+animal+" "+session
+	print 'Done'
+
+def plot_timelocked_frs():
+	datafile = r"D:\Ryan\V1_BMI\NatureNeuro\rebuttal\data\rat_spikes_t1_t2.hdf5"
+	animal_list = None
+	early_range = np.arange(0,4)
+	late_range = np.arange(8,11)
+	start = -2.5
+	stop = 2.5
+	abs_z = True
+	f = h5py.File(datafile,'r')
+	if animal_list is None:
+		animal_list = f.keys()
+	##start with the early data
+	e1_t1 = []
+	e1_t2 = []
+	e2_t1 = []
+	e2_t2 = []
+	ind_t1 = []
+	ind_t2 = []
+	for animal in animal_list:
+		session_list = [x for x in f[animal].keys() if int(x[-6:-4]) in early_range]
+		for session in session_list:
+			s_group = f[animal][session]
+			##start with e1 units
+			try:
+				u_group = s_group['e1_units']
+				##start first with t1
+				try:
+					t1_data = np.asarray(u_group['t1']).squeeze()
+					if len(t1_data.shape)>1:
+						##process the data from each unit, which is the mean over all trials
+						for unit in range(t1_data.shape[0]):
+							smoothed = stats.zscore(ss.windowRate(t1_data[unit,:],[100,50]))
+							e1_t1.append(smoothed)
+					elif len(t1_data) == 1:
+						smoothed = stats.zscore(ss.windowRate(t1_data,[100,50]))
+						e1_t1.append(smoothed)
+				except KeyError:
+					print "No T1 for "+animal+" "+session
+				##now do t2
+				try:
+					t2_data = np.asarray(u_group['t2']).squeeze()
+					if len(t2_data.shape)>1:
+						##process the data from each unit, which is the mean over all trials
+						for unit in range(t2_data.shape[0]):
+							smoothed = stats.zscore(ss.windowRate(t2_data[unit,:],[100,50]))
+							e1_t2.append(smoothed)
+					elif len(t2_data) == 1:
+						smoothed = stats.zscore(ss.windowRate(t2_data,[100,50]))
+						e1_t2.append(smoothed)
+				except KeyError:
+					print "No T2 for "+animal+" "+session
+			except KeyError:
+				print "No E1 units for "+animal+" "+session
+			##now do e2 units
+			try:
+				u_group = s_group['e2_units']
+				##start first with t1
+				try:
+					t1_data = np.asarray(u_group['t1']).squeeze()
+					if len(t1_data.shape)>1:
+						##process the data from each unit, which is the mean over all trials
+						for unit in range(t1_data.shape[0]):
+							smoothed = stats.zscore(ss.windowRate(t1_data[unit,:],[100,50]))
+							e2_t1.append(smoothed)
+					elif len(t1_data) == 1:
+						smoothed = stats.zscore(ss.windowRate(t1_data,[100,50]))
+						e2_t1.append(smoothed)
+				except KeyError:
+					print "No T1 for "+animal+" "+session
+				##now do t2
+				try:
+					t2_data = np.asarray(u_group['t2']).squeeze()
+					if len(t2_data.shape)>1:
+						##process the data from each unit, which is the mean over all trials
+						for unit in range(t2_data.shape[0]):
+							smoothed = stats.zscore(ss.windowRate(t2_data[unit,:],[100,50]))
+							e2_t2.append(smoothed)
+					elif len(t2_data) == 1:
+						smoothed = stats.zscore(ss.windowRate(t2_data,[100,50]))
+						e2_t2.append(smoothed)
+				except KeyError:
+					print "No T2 for "+animal+" "+session
+			except KeyError:
+				print "No E2 units for "+animal+" "+session
+			##now do indirect units
+			try:
+				u_group = s_group['V1_units']
+				##start first with t1
+				try:
+					t1_data = np.asarray(u_group['t1']).squeeze()
+					if len(t1_data.shape)>1:
+						##process the data from each unit, which is the mean over all trials
+						for unit in range(t1_data.shape[0]):
+							smoothed = stats.zscore(ss.windowRate(t1_data[unit,:],[100,50]))
+							ind_t1.append(smoothed)
+					elif len(t1_data) == 1:
+						smoothed = stats.zscore(ss.windowRate(t1_data,[100,50]))
+						ind_t1.append(smoothed)
+				except KeyError:
+					print "No T1 for "+animal+" "+session
+				##now do t2
+				try:
+					t2_data = np.asarray(u_group['t2']).squeeze()
+					if len(t2_data.shape)>1:
+						##process the data from each unit, which is the mean over all trials
+						for unit in range(t2_data.shape[0]):
+							smoothed = stats.zscore(ss.windowRate(t2_data[unit,:],[100,50]))
+							ind_t2.append(smoothed)
+					elif len(t2_data) == 1:
+						smoothed = stats.zscore(ss.windowRate(t2_data,[100,50]))
+						ind_t2.append(smoothed)
+				except KeyError:
+					print "No T2 for "+animal+" "+session
+			except KeyError:
+				print "No indirect units for "+animal+" "+session
+	f.close()
+	##now we have all of the early data
+	e1_t1 = np.asarray(e1_t1)
+	e1_t2 = np.asarray(e1_t2)
+	e2_t1 = np.asarray(e2_t1)
+	e2_t2 = np.asarray(e2_t2)
+	ind_t1 = np.asarray(ind_t1)
+	ind_t2 = np.asarray(ind_t2)
+	##take the absolute value, if requested
+	if abs_z:
+		e1_t1 = abs(e1_t1)
+		e1_t2 = abs(e1_t2)
+		e2_t1 = abs(e2_t1)
+		e2_t2 = abs(e2_t2)
+		ind_t1 = abs(ind_t1)
+		ind_t2 = abs(ind_t2)
+	##now plot this data, for both targets
+	fig = plt.figure()
+	ax1 = fig.add_subplot(1,2,1)
+	ax2 = fig.add_subplot(1,2,2,sharey=ax1)
+	x = np.linspace(-4,4,e1_t1.shape[1])
+	##start with t1
+	mean_e1_t1 = np.nanmean(e1_t1,axis=0)
+	sem_e1_t1 = np.nanstd(e1_t1,axis=0)/np.sqrt(e1_t1.shape[0])
+	mean_e2_t1 = np.nanmean(e2_t1,axis=0)
+	sem_e2_t1 = np.nanstd(e2_t1,axis=0)/np.sqrt(e2_t1.shape[0])
+	mean_ind_t1 = np.nanmean(ind_t1,axis=0)
+	sem_ind_t1 = np.nanstd(ind_t1,axis=0)/np.sqrt(ind_t1.shape[0])
+	ax1.plot(x,mean_e1_t1,linewidth=2,color='g',label='E1')
+	ax1.fill_between(x,mean_e1_t1-sem_e1_t1,mean_e1_t1+sem_e1_t1,color='g',alpha=0.5)
+	ax1.plot(x,mean_e2_t1,linewidth=2,color='b',label='E2')
+	ax1.fill_between(x,mean_e2_t1-sem_e2_t1,mean_e2_t1+sem_e2_t1,color='b',alpha=0.5)
+	ax1.plot(x,mean_ind_t1,linewidth=2,color='k',label='indirect')
+	ax1.fill_between(x,mean_ind_t1-sem_ind_t1,mean_ind_t1+sem_ind_t1,color='k',alpha=0.5)
+	ax1.set_title("Rewarded target",fontsize=16)
+	ax1.set_ylabel("Zscore",fontsize=16)
+	ax1.set_xlabel("Time to target (s)",fontsize=16)
+	for tick in ax1.xaxis.get_major_ticks():
+		tick.label1.set_fontsize(16)
+	for tick in ax1.yaxis.get_major_ticks():
+		tick.label.set_fontsize(16)
+	ax1.legend()
+	##repeat for T2
+	mean_e1_t2 = np.nanmean(e1_t2,axis=0)
+	sem_e1_t2 = np.nanstd(e1_t2,axis=0)/np.sqrt(e1_t2.shape[0])
+	mean_e2_t2 = np.nanmean(e2_t2,axis=0)
+	sem_e2_t2 = np.nanstd(e2_t2,axis=0)/np.sqrt(e2_t2.shape[0])
+	mean_ind_t2 = np.nanmean(ind_t2,axis=0)
+	sem_ind_t2 = np.nanstd(ind_t2,axis=0)/np.sqrt(ind_t2.shape[0])
+	ax2.plot(x,mean_e1_t2,linewidth=2,color='g',label='E1')
+	ax2.fill_between(x,mean_e1_t2-sem_e1_t2,mean_e1_t2+sem_e1_t2,color='g',alpha=0.5)
+	ax2.plot(x,mean_e2_t2,linewidth=2,color='b',label='E2')
+	ax2.fill_between(x,mean_e2_t2-sem_e2_t2,mean_e2_t2+sem_e2_t2,color='b',alpha=0.5)
+	ax2.plot(x,mean_ind_t2,linewidth=2,color='k',label='indirect')
+	ax2.fill_between(x,mean_ind_t2-sem_ind_t2,mean_ind_t2+sem_ind_t2,color='k',alpha=0.5)
+	ax2.set_title("Unrewarded target",fontsize=16)
+	ax2.set_ylabel("Zscore",fontsize=16)
+	ax2.set_xlabel("Time to target (s)",fontsize=16)
+	for tick in ax2.xaxis.get_major_ticks():
+		tick.label1.set_fontsize(16)
+	for tick in ax2.yaxis.get_major_ticks():
+		tick.label.set_fontsize(16)
+	if abs_z:
+		fig.suptitle("Abs. zscore, early sessions",fontsize=16)
+	else:
+		fig.suptitle("Zscore, early sessions",fontsize=16)
+	##finally, get some details about modulation depth
+	full_idx = np.linspace(-4,4,e1_t1.shape[1])
+	start_idx = np.where(full_idx<start)[0][-1]
+	stop_idx = np.where(full_idx>stop)[0][0]
+	e1_t1_mod_early = np.nanmax(e1_t1[:,start_idx:stop_idx],axis=1)
+	e1_t2_mod_early = np.nanmax(e1_t2[:,start_idx:stop_idx],axis=1)
+	e2_t1_mod_early = np.nanmax(e2_t1[:,start_idx:stop_idx],axis=1)
+	e2_t2_mod_early = np.nanmax(e2_t2[:,start_idx:stop_idx],axis=1)
+	ind_t1_mod_early = np.nanmax(ind_t1[:,start_idx:stop_idx],axis=1)
+	ind_t2_mod_early = np.nanmax(ind_t2[:,start_idx:stop_idx],axis=1)
+	##########################################
+	###########################################
+	##########################################
+	##########################################
+	##OKAY! Now, repeat for late sessions:
+	f = h5py.File(datafile,'r')	
+	e1_t1 = []
+	e1_t2 = []
+	e2_t1 = []
+	e2_t2 = []
+	ind_t1 = []
+	ind_t2 = []
+	for animal in animal_list:
+		session_list = [x for x in f[animal].keys() if int(x[-6:-4]) in late_range]
+		for session in session_list:
+			s_group = f[animal][session]
+			##start with e1 units
+			try:
+				u_group = s_group['e1_units']
+				##start first with t1
+				try:
+					t1_data = np.asarray(u_group['t1']).squeeze()
+					if len(t1_data.shape)>1:
+						##process the data from each unit, which is the mean over all trials
+						for unit in range(t1_data.shape[0]):
+							smoothed = stats.zscore(ss.windowRate(t1_data[unit,:],[100,50]))
+							e1_t1.append(smoothed)
+					elif len(t1_data) == 1:
+						smoothed = stats.zscore(ss.windowRate(t1_data,[100,50]))
+						e1_t1.append(smoothed)
+				except KeyError:
+					print "No T1 for "+animal+" "+session
+				##now do t2
+				try:
+					t2_data = np.asarray(u_group['t2']).squeeze()
+					if len(t2_data.shape)>1:
+						##process the data from each unit, which is the mean over all trials
+						for unit in range(t2_data.shape[0]):
+							smoothed = stats.zscore(ss.windowRate(t2_data[unit,:],[100,50]))
+							e1_t2.append(smoothed)
+					elif len(t2_data) == 1:
+						smoothed = stats.zscore(ss.windowRate(t2_data,[100,50]))
+						e1_t2.append(smoothed)
+				except KeyError:
+					print "No T2 for "+animal+" "+session
+			except KeyError:
+				print "No E1 units for "+animal+" "+session
+			##now do e2 units
+			try:
+				u_group = s_group['e2_units']
+				##start first with t1
+				try:
+					t1_data = np.asarray(u_group['t1']).squeeze()
+					if len(t1_data.shape)>1:
+						##process the data from each unit, which is the mean over all trials
+						for unit in range(t1_data.shape[0]):
+							smoothed = stats.zscore(ss.windowRate(t1_data[unit,:],[100,50]))
+							e2_t1.append(smoothed)
+					elif len(t1_data) == 1:
+						smoothed = stats.zscore(ss.windowRate(t1_data,[100,50]))
+						e2_t1.append(smoothed)
+				except KeyError:
+					print "No T1 for "+animal+" "+session
+				##now do t2
+				try:
+					t2_data = np.asarray(u_group['t2']).squeeze()
+					if len(t2_data.shape)>1:
+						##process the data from each unit, which is the mean over all trials
+						for unit in range(t2_data.shape[0]):
+							smoothed = stats.zscore(ss.windowRate(t2_data[unit,:],[100,50]))
+							e2_t2.append(smoothed)
+					elif len(t2_data) == 1:
+						smoothed = stats.zscore(ss.windowRate(t2_data,[100,50]))
+						e2_t2.append(smoothed)
+				except KeyError:
+					print "No T2 for "+animal+" "+session
+			except KeyError:
+				print "No E2 units for "+animal+" "+session
+			##now do indirect units
+			try:
+				u_group = s_group['V1_units']
+				##start first with t1
+				try:
+					t1_data = np.asarray(u_group['t1']).squeeze()
+					if len(t1_data.shape)>1:
+						##process the data from each unit, which is the mean over all trials
+						for unit in range(t1_data.shape[0]):
+							smoothed = stats.zscore(ss.windowRate(t1_data[unit,:],[100,50]))
+							ind_t1.append(smoothed)
+					elif len(t1_data) == 1:
+						smoothed = stats.zscore(ss.windowRate(t1_data,[100,50]))
+						ind_t1.append(smoothed)
+				except KeyError:
+					print "No T1 for "+animal+" "+session
+				##now do t2
+				try:
+					t2_data = np.asarray(u_group['t2']).squeeze()
+					if len(t2_data.shape)>1:
+						##process the data from each unit, which is the mean over all trials
+						for unit in range(t2_data.shape[0]):
+							smoothed = stats.zscore(ss.windowRate(t2_data[unit,:],[100,50]))
+							ind_t2.append(smoothed)
+					elif len(t2_data) == 1:
+						smoothed = stats.zscore(ss.windowRate(t2_data,[100,50]))
+						ind_t2.append(smoothed)
+				except KeyError:
+					print "No T2 for "+animal+" "+session
+			except KeyError:
+				print "No indirect units for "+animal+" "+session
+	f.close()
+	##now we have all of the early data
+	e1_t1 = np.asarray(e1_t1)
+	e1_t2 = np.asarray(e1_t2)
+	e2_t1 = np.asarray(e2_t1)
+	e2_t2 = np.asarray(e2_t2)
+	ind_t1 = np.asarray(ind_t1)
+	ind_t2 = np.asarray(ind_t2)
+	##take the absolute value, if requested
+	if abs_z:
+		e1_t1 = abs(e1_t1)
+		e1_t2 = abs(e1_t2)
+		e2_t1 = abs(e2_t1)
+		e2_t2 = abs(e2_t2)
+		ind_t1 = abs(ind_t1)
+		ind_t2 = abs(ind_t2)
+	##now plot this data, for both targets
+	fig = plt.figure()
+	ax1 = fig.add_subplot(1,2,1)
+	ax2 = fig.add_subplot(1,2,2,sharey=ax1)
+	x = np.linspace(-4,4,e1_t1.shape[1])
+	##start with t1
+	mean_e1_t1 = np.nanmean(e1_t1,axis=0)
+	sem_e1_t1 = np.nanstd(e1_t1,axis=0)/np.sqrt(e1_t1.shape[0])
+	mean_e2_t1 = np.nanmean(e2_t1,axis=0)
+	sem_e2_t1 = np.nanstd(e2_t1,axis=0)/np.sqrt(e2_t1.shape[0])
+	mean_ind_t1 = np.nanmean(ind_t1,axis=0)
+	sem_ind_t1 = np.nanstd(ind_t1,axis=0)/np.sqrt(ind_t1.shape[0])
+	ax1.plot(x,mean_e1_t1,linewidth=2,color='g',label='E1')
+	ax1.fill_between(x,mean_e1_t1-sem_e1_t1,mean_e1_t1+sem_e1_t1,color='g',alpha=0.5)
+	ax1.plot(x,mean_e2_t1,linewidth=2,color='b',label='E2')
+	ax1.fill_between(x,mean_e2_t1-sem_e2_t1,mean_e2_t1+sem_e2_t1,color='b',alpha=0.5)
+	ax1.plot(x,mean_ind_t1,linewidth=2,color='k',label='indirect')
+	ax1.fill_between(x,mean_ind_t1-sem_ind_t1,mean_ind_t1+sem_ind_t1,color='k',alpha=0.5)
+	ax1.set_title("Rewarded target",fontsize=16)
+	ax1.set_ylabel("Zscore",fontsize=16)
+	ax1.set_xlabel("Time to target (s)",fontsize=16)
+	for tick in ax1.xaxis.get_major_ticks():
+		tick.label1.set_fontsize(16)
+	for tick in ax1.yaxis.get_major_ticks():
+		tick.label.set_fontsize(16)
+	ax1.legend()
+	##repeat for T2
+	mean_e1_t2 = np.nanmean(e1_t2,axis=0)
+	sem_e1_t2 = np.nanstd(e1_t2,axis=0)/np.sqrt(e1_t2.shape[0])
+	mean_e2_t2 = np.nanmean(e2_t2,axis=0)
+	sem_e2_t2 = np.nanstd(e2_t2,axis=0)/np.sqrt(e2_t2.shape[0])
+	mean_ind_t2 = np.nanmean(ind_t2,axis=0)
+	sem_ind_t2 = np.nanstd(ind_t2,axis=0)/np.sqrt(ind_t2.shape[0])
+	ax2.plot(x,mean_e1_t2,linewidth=2,color='g',label='E1')
+	ax2.fill_between(x,mean_e1_t2-sem_e1_t2,mean_e1_t2+sem_e1_t2,color='g',alpha=0.5)
+	ax2.plot(x,mean_e2_t2,linewidth=2,color='b',label='E2')
+	ax2.fill_between(x,mean_e2_t2-sem_e2_t2,mean_e2_t2+sem_e2_t2,color='b',alpha=0.5)
+	ax2.plot(x,mean_ind_t2,linewidth=2,color='k',label='indirect')
+	ax2.fill_between(x,mean_ind_t2-sem_ind_t2,mean_ind_t2+sem_ind_t2,color='k',alpha=0.5)
+	ax2.set_title("Unrewarded target",fontsize=16)
+	ax2.set_ylabel("Zscore",fontsize=16)
+	ax2.set_xlabel("Time to target (s)",fontsize=16)
+	for tick in ax2.xaxis.get_major_ticks():
+		tick.label1.set_fontsize(16)
+	for tick in ax2.yaxis.get_major_ticks():
+		tick.label.set_fontsize(16)
+	if abs_z:
+		fig.suptitle("Absolute modulations locked to targets",fontsize=16)
+	else:
+		fig.suptitle("Zscore, late sessions",fontsize=16)
+	##finally, get some details about modulation depth
+	e1_t1_mod_late = np.nanmax(e1_t1[:,start_idx:stop_idx],axis=1)
+	e1_t2_mod_late = np.nanmax(e1_t2[:,start_idx:stop_idx],axis=1)
+	e2_t1_mod_late = np.nanmax(e2_t1[:,start_idx:stop_idx],axis=1)
+	e2_t2_mod_late = np.nanmax(e2_t2[:,start_idx:stop_idx],axis=1)
+	ind_t1_mod_late = np.nanmax(ind_t1[:,start_idx:stop_idx],axis=1)
+	ind_t2_mod_late = np.nanmax(ind_t2[:,start_idx:stop_idx],axis=1)
+	##now plot the change in modulation depths
+	fig, ax = plt.subplots(1)
+	dir_mod_early = np.concatenate((e1_t1_mod_early,e2_t1_mod_early))
+	dir_mod_late = np.concatenate((e1_t1_mod_early,e2_t1_mod_late))
+	dir_mean = np.array([np.nanmean(dir_mod_early),np.nanmean(dir_mod_late)])
+	dir_sem = np.array([np.nanstd(dir_mod_early)/np.sqrt(dir_mod_early.shape[0]),
+		np.nanstd(dir_mod_late)/np.sqrt(dir_mod_late.shape[0])])
+	ind_mean = np.array([np.nanmean(ind_t1_mod_early),np.nanmean(ind_t1_mod_late)])
+	ind_sem = np.array([np.nanstd(ind_t1_mod_early)/np.sqrt(ind_t1_mod_early.shape[0]),
+		np.nanstd(ind_t1_mod_late)/np.sqrt(ind_t1_mod_late.shape[0])])
+	x = [1,2]
+	xerr = [0.1,0.1]
+	ax.errorbar(x,dir_mean,yerr=dir_sem,xerr=xerr,ecolor='g',capthick=2,elinewidth=2,
+		linewidth=2,color='g',label='Direct')
+	ax.errorbar(x,ind_mean,yerr=ind_sem,xerr=xerr,ecolor='k',capthick=2,elinewidth=2,
+		linewidth=2,color='k',label='Indirect')
+	ax.set_ylabel("Absolute modulation depth (zscore)",fontsize=16)
+	ax.set_title("Modulation depths of direct VS indirect units",fontsize=16)
+	ax.legend()
+	ax.text(0.5,0.35,"**",fontsize=20,transform=ax.transAxes)
+	ax.set_xticks([1,2])
+	ax.set_xticklabels(["Early","Late"])
+	ax.set_ylim(2,5)
+	for tick in ax.xaxis.get_major_ticks():
+		tick.label1.set_fontsize(16)
+	for tick in ax.yaxis.get_major_ticks():
+		tick.label.set_fontsize(16)
+	###now run some stats on the modulation depths early/late
+	tval_e1_t1,pval_e1_t1 = stats.ttest_ind(e1_t1_mod_early,e1_t1_mod_late,nan_policy='omit')
+	print "t-test e1 t1 = "+str(tval_e1_t1)+", "+str(pval_e1_t1)
+	tval_e1_t2,pval_e1_t2 = stats.ttest_ind(e1_t2_mod_early,e1_t2_mod_late,nan_policy='omit')
+	print "t-test e1 t2 = "+str(tval_e1_t2)+", "+str(pval_e1_t2)
+	tval_e2_t1,pval_e2_t1 = stats.ttest_ind(e2_t1_mod_early,e2_t1_mod_late,nan_policy='omit')
+	print "t-test e2 t1 = "+str(tval_e2_t1)+", "+str(pval_e2_t1)
+	tval_e2_t2,pval_e2_t2 = stats.ttest_ind(e2_t2_mod_early,e2_t2_mod_late,nan_policy='omit')
+	print "t-test e2 t2 = "+str(tval_e2_t2)+", "+str(pval_e2_t2)
+	tval_ind_t1,pval_ind_t1 = stats.ttest_ind(ind_t1_mod_early,ind_t1_mod_late,nan_policy='omit')
+	print "t-test ind t1 = "+str(tval_ind_t1)+", "+str(pval_ind_t1)
+	tval_ind_t2,pval_ind_t2 = stats.ttest_ind(ind_t2_mod_early,ind_t2_mod_late,nan_policy='omit')
+	print "t-test ind t2 = "+str(tval_ind_t2)+", "+str(pval_ind_t2)
+
+
+
+
+
+
 ########################HELPERS~########################
 
 
@@ -6674,4 +7175,33 @@ def get_data_window_lfp(lfp, centers, pre_win, post_win):
 	except TypeError:
 		traces = None
 		print "No traces for this file"
+	return traces
+
+def get_data_window(trace, centers, pre_win, post_win):
+	if len(centers)>1:
+		centers = np.squeeze(np.asarray(centers)).astype(np.int64)
+	else:
+		centers = np.asarray(centers).astype(np.int64)
+	data = np.squeeze(trace)
+	N = data.size
+	##do some padding
+	pad = np.zeros(pre_win+post_win)
+	data = np.concatenate((pad,data,pad))
+	##offset the centers by the same amount
+	centers = centers+(pre_win+post_win)
+	##now, make sure our centers are all within the range of our data length
+	to_remove = []
+	for j, center in enumerate(centers):
+		if center >= data.size:
+			to_remove.append(j)
+			print "Event index exceeds data length. Deleting event at "+str(center)
+	clean_centers = np.delete(centers,to_remove)
+	if clean_centers.size == 0:
+		traces = None
+		print "No traces for this file"
+	else:
+		traces = np.zeros((pre_win+post_win, len(clean_centers)))
+		##the actual windowing functionality:
+		for n, idx in enumerate(clean_centers):
+			traces[:,n] = data[idx-pre_win:idx+post_win]
 	return traces
