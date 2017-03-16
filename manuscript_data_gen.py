@@ -15,6 +15,7 @@ import sys
 import log_regression as lr
 import log_regression2 as lr2
 import lin_regression as linr
+import lin_regression2 as lin2
 # import lin_regression2 as linr2
 import spectrograms as specs
 import RatUnits4 as ru
