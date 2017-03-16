@@ -11,7 +11,7 @@ from sklearn.model_selection import train_test_split
 import multiprocessing as mp
 
 """
-A function to fit a logistic model, and return the 
+A function to fit a cross-validated Ridge regression model, and return the 
 model accuracy using three-fold cross-validation.
 inputs:
 	X: the independent data; could be spike rates over some window.
@@ -68,13 +68,15 @@ def permutation_test(args):
 	a_actual = log_fit(X,y,n_iter=n_iter_cv)
 	#now run the permutation test, keeping track of how many times the shuffled
 	##accuracy outperforms the actual
-	times_exceeded = 0 
+	times_exceeded = 0
+	chance_rates = [] 
 	for i in range(n_iter_p):
 		y_shuff = np.random.permutation(y)
 		a_shuff = log_fit(X,y_shuff,n_iter=n_iter_cv)
 		if a_shuff > a_actual:
 			times_exceeded += 1
-	return a_actual, float(times_exceeded)/n_iter_p
+		chance_rates.append(a_shuff)
+	return a_actual, np.asarray(chance_rates).mean(), float(times_exceeded)/n_iter_p
 
 """
 a function to run permutation testing on multiple
@@ -106,11 +108,13 @@ def permutation_test_multi(X,y,n_iter_cv=5,n_iter_p=500):
 	results = async_result.get()
 	##parse the results
 	accuracies = np.zeros(X.shape[0])
+	chance_rates = np.zeros(X.shape[0])
 	p_vals = np.zeros(X.shape[0])
 	for i in range(len(results)):
 		accuracies[i] = results[i][0]
-		p_vals[i] = results[i][1]
-	return accuracies,p_vals
+		p_vals[i] = results[i][2]
+		chance_rates[i] = results[i][1]
+	return accuracies,chance_rates,p_vals
 
 """
 A helper function to make a non-binary array

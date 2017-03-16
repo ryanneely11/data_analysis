@@ -4622,8 +4622,8 @@ def log_regress_units(unit_types=['Str_units']):
 	##first, we need to get two arrays: X; the data matrix of spike data
 	##in dimensions trials x units x bins, and then y; the binary matrix
 	## of target 1 and target 2 values.
-	root_dir =r"F:\data"
-	save_file = r"F:\NatureNeuro\rebuttal\data\new_regressions\indirect_singles_400ms_bins.hdf5"
+	root_dir =r"D:\Ryan\V1_BMI"
+	save_file = r"D:\Ryan\V1_BMI\NatureNeuro\rebuttal\data\new_regressions\DMS_singles_400ms_bins.hdf5"
 	##make some arrays to store
 	if animal_list is None:
 		animal_list = [x for x in ru.animals.keys() if not x.startswith('m')]
@@ -4834,7 +4834,7 @@ def log_regress_grouped_units(unit_types=['Str_units']):
 								y = y[idx]
 								X = X[idx,:]
 								##finally, we can actually do the regression
-								accuracy, pval = lr2.permutation_test((X,y,5,500))
+								accuracy,chance,pval = lr2.permutation_test((X,y,5,500))
 								##now save the data
 								f_out = h5py.File(save_file,'a')
 								try:
@@ -4844,71 +4844,61 @@ def log_regress_grouped_units(unit_types=['Str_units']):
 								s_group = a_group.create_group(session)
 								s_group.create_dataset('pval',data=np.array(pval))
 								s_group.create_dataset('accuracy',data=np.array(accuracy))
+								s_group.create_dataset('chance',data=np.asarray(chance))
 								f_out.close()
 	print "Done"
 
 
 ##function to plot the results from the above function
 def plot_log_groups():
-	datafile = r"L:\data\NatureNeuro\rebuttal\data\grouped_PLC_regression.hdf5"
+	datafile = r"D:\Ryan\V1_BMI\NatureNeuro\rebuttal\data\new_regressions\direct_pop_400ms_bins.hdf5"
 	f = h5py.File(datafile,'r')
 	animal_list = f.keys()
 	##store the means of all the animals
-	totals = []
 	sig_vals = []
 	accuracies = []
 	for a in animal_list:
-		total_units = np.asarray(f[a]['total_units'])
-		sig = np.asarray(f[a]['sig_vals'])
-		accuracy = np.asarray(f[a]['pred_strength'])
-		totals.append(total_units)
-		sig_vals.append(sig)
-		accuracies.append(accuracy)
-	totals = equalize_arrs(totals)
+		sig = []
+		acc = []
+		for s in f[a].keys():
+			sig.append(np.asarray(f[a][s]['pval'])*1)
+			acc.append(np.asarray(f[a][s]['accuracy'])*1)
+		sig_vals.append(np.asarray(sig))
+		accuracies.append(np.asarray(acc))
+	f.close()
 	sig_vals = equalize_arrs(sig_vals)
 	accuracies = equalize_arrs(accuracies)
-	x_axis = np.arange(1,totals.shape[1]+1)
+	x_axis = np.arange(1,accuracies.shape[1]+1)
 	##count the number of animals for each session with significant predictability
 	##first, the total number of animals that we have data for for this day
-	total_animals = np.zeros(totals.shape[1])
+	total_animals = np.zeros(accuracies.shape[1])
 	##and the total animals with significant predictability
-	sig_animals = np.zeros(totals.shape[1])
-	for i in range(totals.shape[1]):
+	sig_animals = np.zeros(accuracies.shape[1])
+	for i in range(accuracies.shape[1]):
 		total_animals[i] = float(sig_vals[:,i][~np.isnan(sig_vals[:,i])].size)
 		sig_animals[i] = float(np.where(sig_vals[:,i]<=0.05)[0].size)
 	sig_perc = sig_animals/total_animals
 	##now do the plots
-	fig,(ax1,ax2,ax3) = plt.subplots(3,sharex=True)
-	mean_total = np.nanmean(totals,axis=0)
-	serr_total = np.nanstd(totals,axis=0)/totals.shape[0]
+	fig,(ax1,ax3) = plt.subplots(2,sharex=True)
 	mean_acc = np.nanmean(accuracies,axis=0)
-	serr_acc = np.nanstd(accuracies,axis=0)/accuracies.shape[0]
+	serr_acc = np.nanstd(accuracies,axis=0)/np.sqrt(accuracies.shape[0])
 	ax1.set_ylabel("Prediction\n accuracy",fontsize=14)
-	ax2.set_ylabel("Number\n of units",fontsize=14)
 	ax3.set_ylabel("Percent\n significant",fontsize=14)
 	ax3.set_xlabel("Training day",fontsize=14)
-	ax1.set_title("Prediction accuracy of indirect population",fontsize=14)
-	ax2.set_title ("Total number of indirect units",fontsize=14)
-	ax3.set_title("Percent of animals with significant prediction by indirect units",fontsize=14)
+	ax1.set_title("Prediction accuracy of direct population",fontsize=14)
+	ax3.set_title("Percent of animals with significant prediction by direct units",fontsize=14)
 	ax1.errorbar(x_axis,mean_acc,yerr=serr_acc,color='k',linewidth=2)
-	ax2.errorbar(x_axis,mean_total,yerr=serr_total,color='k',linewidth=2)
 	ax3.plot(sig_perc,color='k',linewidth=2)
 	for tick in ax1.xaxis.get_major_ticks():
 		tick.label.set_fontsize(14)
 	for tick in ax1.yaxis.get_major_ticks():
 		tick.label.set_fontsize(14)
-	for tick in ax2.xaxis.get_major_ticks():
-		tick.label.set_fontsize(14)
-	for tick in ax2.yaxis.get_major_ticks():
-		tick.label.set_fontsize(14)
 	for tick in ax3.xaxis.get_major_ticks():
 		tick.label.set_fontsize(14)
 	for tick in ax3.yaxis.get_major_ticks():
 		tick.label.set_fontsize(14)
-	for i in range(totals.shape[0]):
+	for i in range(accuracies.shape[0]):
 		ax1.plot(x_axis,accuracies[i,:],alpha=0.5,color='k')
-		ax2.plot(x_axis,totals[i,:],alpha=0.5,color='k')
-	f.close()
 
 
 def linear_regression_direct_indirect(unit_types=['Str_units']):
@@ -4923,8 +4913,8 @@ def linear_regression_direct_indirect(unit_types=['Str_units']):
 	##first, we need to get two arrays: X; the data matrix of spike data
 	##in dimensions trials x units x bins, and then y; the binary matrix
 	## of target 1 and target 2 values.
-	root_dir =r"F:\data"
-	save_file = r"F:\NatureNeuro\rebuttal\data\new_regressions\ridge_indirect_direct_400ms.hdf5"
+	root_dir =r"D:\Ryan\V1_BMI"
+	save_file = r"D:\Ryan\V1_BMI\NatureNeuro\rebuttal\data\new_regressions\ridge_DMS_direct_400ms_bins.hdf5"
 	##make some arrays to store
 	if animal_list is None:
 		animal_list = [x for x in ru.animals.keys() if not x.startswith('m')]
@@ -5043,7 +5033,7 @@ def linear_regression_direct_indirect(unit_types=['Str_units']):
 
 ##function to plot the results from the above function
 def plot_lin_regression():
-	datafile = r"D:\Ryan\V1_BMI\NatureNeuro\rebuttal\data\direct_DMS_regression_500ms.hdf5"
+	datafile = r"D:\Ryan\V1_BMI\NatureNeuro\rebuttal\data\new_regressions\ridge_indirect_direct_400ms.hdf5"
 	f = h5py.File(datafile,'r')
 	animal_list = f.keys()
 	##store the means of all the animals
@@ -5051,41 +5041,40 @@ def plot_lin_regression():
 	sig_vals = []
 	var_explained = []
 	for a in animal_list:
-		total_units = np.asarray(f[a]['total_units'])
-		sig = np.asarray(f[a]['sig_val'])
-		var = np.asarray(f[a]['var_explained'])
-		totals.append(total_units)
-		sig_vals.append(sig)
-		var_explained.append(var)
-	totals = equalize_arrs(totals)[:,0:13]
-	sig_vals = equalize_arrs(sig_vals)[:,0:13]
-	var_explained = equalize_arrs(var_explained)[:,0:13]
-	x_axis = np.arange(1,14)
-	##count the number of animals for each session with significant predictability
-	##first, the total number of animals that we have data for for this day
-	total_animals = np.zeros(totals.shape[1])
-	##and the total animals with significant predictability
-	sig_animals = np.zeros(totals.shape[1])
-	for i in range(totals.shape[1]):
-		total_animals[i] = float(sig_vals[:,i][~np.isnan(sig_vals[:,i])].size)
-		sig_animals[i] = float(np.where(sig_vals[:,i]<=0.05)[0].size)
-	sig_perc = sig_animals/total_animals
+		tot = []
+		r2 = []
+		sig = []
+		for s in f[a].keys():
+			r2.append(np.asarray(f[a][s]['R2s']).mean())
+			sig.append((np.asarray(f[a][s]['pvals'])<0.05).sum())
+			tot.append(np.asarray(f[a][s]['R2s']).size)
+		totals.append(np.asarray(tot))
+		sig_vals.append(np.asarray(sig))
+		var_explained.append(np.asarray(r2))
+	f.close()
+	totals = equalize_arrs(totals)
+	sig_vals = equalize_arrs(sig_vals)
+	var_explained = equalize_arrs(var_explained)
+	x_axis = np.arange(1,totals.shape[1]+1)
+	sig_perc = sig_vals/totals
 	##now do the plots
 	fig,(ax1,ax2,ax3) = plt.subplots(3,sharex=True)
 	mean_total = np.nanmean(totals,axis=0)
-	serr_total = np.nanstd(totals,axis=0)/totals.shape[0]
+	serr_total = np.nanstd(totals,axis=0)/np.sqrt(totals.shape[0])
 	mean_var = np.nanmean(var_explained,axis=0)
-	serr_var = np.nanstd(var_explained,axis=0)/var_explained.shape[0]
-	ax1.set_ylabel("Explained variance score",fontsize=14)
+	serr_var = np.nanstd(var_explained,axis=0)/np.sqrt(var_explained.shape[0])
+	mean_sig = np.nanmean(sig_perc,axis=0)
+	serr_sig = np.nanstd(sig_perc,axis=0)/np.sqrt(sig_perc.shape[0])
+	ax1.set_ylabel("R2",fontsize=14)
 	ax2.set_ylabel("Number\n of units",fontsize=14)
 	ax3.set_ylabel("Percent\n significant",fontsize=14)
 	ax3.set_xlabel("Training day",fontsize=14)
 	ax1.set_title("Variance of direct units explained by DMS units",fontsize=14)
 	ax2.set_title ("Total number of DMS units",fontsize=14)
-	ax3.set_title("Percent of animals with significant E1/E2 prediction by DMS units",fontsize=14)
+	ax3.set_title("Percent direct units with significant prediction by indirect units",fontsize=14)
 	ax1.errorbar(x_axis,mean_var,yerr=serr_var,color='k',linewidth=2)
 	ax2.errorbar(x_axis,mean_total,yerr=serr_total,color='k',linewidth=2)
-	ax3.plot(x_axis,sig_perc,color='k',linewidth=2)
+	ax3.errorbar(x_axis,mean_sig,yerr=serr_sig,color='k',linewidth=2)
 	for tick in ax1.xaxis.get_major_ticks():
 		tick.label.set_fontsize(14)
 	for tick in ax1.yaxis.get_major_ticks():
@@ -5101,32 +5090,74 @@ def plot_lin_regression():
 	for i in range(totals.shape[0]):
 		ax1.plot(x_axis,var_explained[i,:],alpha=0.5,color='k')
 		ax2.plot(x_axis,totals[i,:],alpha=0.5,color='k')
+		ax3.plot(x_axis,sig_perc[i,:],alpha=0.5,color='k')
+	##now let's get the summary for all days
+	x = np.array([1,2])
+	err_x = np.array([0.1])
+	labels = ['mean R2','perc sig']
+	ps_summ = np.nanmean(sig_perc,axis=1)
+	r2_summ = np.nanmean(var_explained,axis=1)
+	ps_mean = ps_summ.mean()
+	ps_err = stats.sem(ps_summ)
+	r2_mean = r2_summ.mean()
+	r2_err = stats.sem(r2_summ)
+	fig,ax = plt.subplots(1)
+	ax2 = ax.twinx()
+	ax2.errorbar(x[0],ps_mean,yerr=ps_err,xerr=err_x,fmt='none',ecolor='k',capthick=2,elinewidth=2)
+	ax.errorbar(x[1],r2_mean,yerr=r2_err,xerr=err_x,fmt='none',ecolor='k',capthick=2,elinewidth=2)
+	for i in range(ps_summ.shape[0]):
+		ax2.plot(x[0],ps_summ[i],marker='o',color='k')
+	for i in range(r2_summ.shape[0]):
+		ax.plot(x[1],r2_summ[i],marker='o',color='k')
+	ax.set_xticks([1,2])
+	ax.set_xticklabels(labels)
+	ax.set_ylabel("R2",fontsize=14)
+	ax2.set_ylabel("Percent significant",fontsize=14)
+	ax.set_title("Direct unit activity predicted by indirect units",fontsize=14)
+	for tick in ax.yaxis.get_major_ticks():
+		tick.label.set_fontsize(14)
+	for tick in ax2.yaxis.get_major_ticks():
+		tick.label.set_fontsize(14)
+	for tick in ax.xaxis.get_major_ticks():
+		tick.label.set_fontsize(14)
 	# ax1.set_xlim(0,12)
-	ax1.set_ylim(-1,0.4)
+	#ax1.set_ylim(-1,0.4)
 	# ax2.set_xlim(0,12)
 	# ax3.set_xlim(0,12)
-	f.close()
 
 """
 A function to plot the results from the LR function (individual units)
 """
 def plot_log_regression():
-	datafile = r"F:\NatureNeuro\rebuttal\data\indirect_log_regression_500ms.hdf5"
+	datafile = r"D:\Ryan\V1_BMI\NatureNeuro\rebuttal\data\new_regressions\indirect_singles_400ms_bins.hdf5"
 	f = h5py.File(datafile,'r')
 	animal_list = f.keys()
 	##store the means of all the animals
 	totals = []
 	sigs = []
+	accuracies = []
 	for a in animal_list:
-		total_units = np.asarray(f[a]['total_units'])
-		sig_units = np.asarray(f[a]['sig_units'])
-		totals.append(total_units)
-		sigs.append(sig_units)
+		sessions = np.sort(f[a].keys())
+		tot = []
+		acc = []
+		sig = []
+		##now get the data
+		for s in sessions:
+			a_data = np.asarray(f[a][s]['accuracies'])
+			p_data = np.asarray(f[a][s]['pvals'])
+			tot.append(a_data.size)
+			acc.append(np.nanmean(a_data))
+			sig.append((p_data<0.05).sum())
+		accuracies.append(np.asarray(acc))
+		totals.append(np.asarray(tot))
+		sigs.append(np.asarray(sig))
+	f.close()
 	totals = equalize_arrs(totals)
 	sigs = equalize_arrs(sigs)
+	accuracies = equalize_arrs(accuracies)
 	perc = (sigs/totals)*100
 	mean = np.nanmean(perc,axis=0)
-	serr = np.nanstd(perc,axis=0)/perc.shape[0]
+	serr = np.nanstd(perc,axis=0)/np.sqrt(perc.shape[0])
 	fig,ax = plt.subplots(1)
 	x_axis = np.arange(1,mean.size+1)
 	ax.errorbar(x_axis,mean,yerr=serr,color='k',linewidth=2)
@@ -5142,9 +5173,9 @@ def plot_log_regression():
 	##now for the totals and the raw sig numbers
 	fig,(ax1,ax2) = plt.subplots(2,sharex=True)
 	mean_total = np.nanmean(totals,axis=0)
-	serr_total = np.nanstd(totals,axis=0)/totals.shape[0]
+	serr_total = np.nanstd(totals,axis=0)/np.sqrt(totals.shape[0])
 	mean_sig = np.nanmean(sigs,axis=0)
-	serr_sig = np.nanstd(sigs,axis=0)/sigs.shape[0]
+	serr_sig = np.nanstd(sigs,axis=0)/np.sqrt(sigs.shape[0])
 	ax1.set_ylabel("Number of units",fontsize=14)
 	ax2.set_ylabel("Number of units",fontsize=14)
 	ax2.set_xlabel("Training day",fontsize=14)
@@ -5163,7 +5194,23 @@ def plot_log_regression():
 	for i in range(totals.shape[0]):
 		ax1.plot(x_axis,sigs[i,:],alpha=0.5,color='k')
 		ax2.plot(x_axis,totals[i,:],alpha=0.5,color='k')
-	f.close()
+	##plot the accuracies
+	mean = np.nanmean(accuracies,axis=0)
+	serr = np.nanstd(accuracies,axis=0)/np.sqrt(accuracies.shape[0])
+	fig,ax = plt.subplots(1)
+	x_axis = np.arange(1,mean.size+1)
+	ax.errorbar(x_axis,mean,yerr=serr,color='k',linewidth=2)
+	for i in range(accuracies.shape[0]):
+		ax.plot(x_axis,accuracies[i,:],color='k',linewidth=1,alpha=0.5)
+	ax.set_xlabel("Training day",fontsize=14)
+	ax.set_ylabel("Mean accuracy",fontsize=14)
+	ax.set_title("Accuracy of single indirect units for target choice",fontsize=14)
+	for tick in ax.xaxis.get_major_ticks():
+		tick.label.set_fontsize(14)
+	for tick in ax.yaxis.get_major_ticks():
+		tick.label.set_fontsize(14)
+
+
 
 """
 A function to look at the online volitional target-locked modulations
