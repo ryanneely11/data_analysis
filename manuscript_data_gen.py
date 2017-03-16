@@ -4622,11 +4622,11 @@ def log_regress_units(unit_types=['Str_units']):
 	##first, we need to get two arrays: X; the data matrix of spike data
 	##in dimensions trials x units x bins, and then y; the binary matrix
 	## of target 1 and target 2 values.
-	root_dir =r"D:\Ryan\V1_BMI"
-	save_file = r"D:\Ryan\V1_BMI\NatureNeuro\rebuttal\data\new_regressions\DMS_singles_400ms_bins.hdf5"
+	root_dir =r"F:\data"
+	save_file = r"F:\NatureNeuro\rebuttal\data\new_regressions\indirect_singles_400ms_bins.hdf5"
 	##make some arrays to store
 	if animal_list is None:
-		animal_list = [x for x in ru.animals.keys() if not x.startswith['m']]
+		animal_list = [x for x in ru.animals.keys() if not x.startswith('m')]
 	for animal in animal_list:
 		if session_range is None:
 			session_list = ru.animals[animal][1].keys()
@@ -4635,7 +4635,7 @@ def log_regress_units(unit_types=['Str_units']):
 		for session in session_list:
 			##check to see if data for this session already exists
 			try:
-				f_out = h5py.File(save_file,'r')
+				f_out = h5py.File(save_file,'a')
 				session_exists = f_out[animal][session]
 				print animal+" "+session+" data exists; moving to next file"
 				f_out.close()
@@ -4744,11 +4744,11 @@ def log_regress_grouped_units(unit_types=['Str_units']):
 	##first, we need to get two arrays: X; the data matrix of spike data
 	##in dimensions trials x units x bins, and then y; the binary matrix
 	## of target 1 and target 2 values.
-	root_dir =r"D:\Ryan\V1_BMI"
-	save_file = r"D:\Ryan\V1_BMI\NatureNeuro\rebuttal\data\new_regressions\DMS_unit_regression_400ms_binned.hdf5"
+	root_dir =r"F:\data"
+	save_file = r"F:\NatureNeuro\rebuttal\data\new_regressions\indirect_pop_400ms_bins.hdf5"
 	##make some arrays to store
 	if animal_list is None:
-		animal_list = [x for x in ru.animals.keys() if not x.startswith['m']]
+		animal_list = [x for x in ru.animals.keys() if not x.startswith('m')]
 	for animal in animal_list:
 		if session_range is None:
 			session_list = ru.animals[animal][1].keys()
@@ -4757,7 +4757,7 @@ def log_regress_grouped_units(unit_types=['Str_units']):
 		for session in session_list:
 			##check to see if data for this session already exists
 			try:
-				f_out = h5py.File(save_file,'r')
+				f_out = h5py.File(save_file,'a')
 				session_exists = f_out[animal][session]
 				print animal+" "+session+" data exists; moving to next file"
 				f_out.close()
@@ -4835,22 +4835,18 @@ def log_regress_grouped_units(unit_types=['Str_units']):
 								X = X[idx,:]
 								##finally, we can actually do the regression
 								accuracy, pval = lr2.permutation_test((X,y,5,500))
-								##now just add the counts to the animal's array
-								pred_strength.append(accuracy)
-								pred_sig.append(pval)
-			##now save these data arrays in the global dictionary
-			results[animal] = [np.asarray(pred_sig),np.asarray(pred_strength),np.asarray(total_units)]
-	##now save the data
-	f.close()
-	f_out = h5py.File(save_file,'w-')
-	for key in results.keys():
-		group = f_out.create_group(key)
-		group.create_dataset("total_units",data=results[key][2])
-		group.create_dataset("sig_vals",data=results[key][0])
-		group.create_dataset("pred_strength",data=results[key][1])
-	f_out.close()
+								##now save the data
+								f_out = h5py.File(save_file,'a')
+								try:
+									a_group = f_out[animal]
+								except KeyError:
+									a_group = f_out.create_group(animal)
+								s_group = a_group.create_group(session)
+								s_group.create_dataset('pval',data=np.array(pval))
+								s_group.create_dataset('accuracy',data=np.array(accuracy))
+								f_out.close()
 	print "Done"
-	return results
+
 
 ##function to plot the results from the above function
 def plot_log_groups():
@@ -4927,11 +4923,11 @@ def linear_regression_direct_indirect(unit_types=['Str_units']):
 	##first, we need to get two arrays: X; the data matrix of spike data
 	##in dimensions trials x units x bins, and then y; the binary matrix
 	## of target 1 and target 2 values.
-	root_dir =r"D:\Ryan\V1_BMI"
-	save_file = r"D:\Ryan\V1_BMI\NatureNeuro\rebuttal\data\new_regressions\DMS_unit_regression_400ms_binned.hdf5"
+	root_dir =r"F:\data"
+	save_file = r"F:\NatureNeuro\rebuttal\data\new_regressions\ridge_indirect_direct_400ms.hdf5"
 	##make some arrays to store
 	if animal_list is None:
-		animal_list = [x for x in ru.animals.keys() if not x.startswith['m']]
+		animal_list = [x for x in ru.animals.keys() if not x.startswith('m')]
 	for animal in animal_list:
 		if session_range is None:
 			session_list = ru.animals[animal][1].keys()
@@ -4940,7 +4936,7 @@ def linear_regression_direct_indirect(unit_types=['Str_units']):
 		for session in session_list:
 			##check to see if data for this session already exists
 			try:
-				f_out = h5py.File(save_file,'r')
+				f_out = h5py.File(save_file,'a')
 				session_exists = f_out[animal][session]
 				print animal+" "+session+" data exists; moving to next file"
 				f_out.close()
@@ -5032,7 +5028,7 @@ def linear_regression_direct_indirect(unit_types=['Str_units']):
 								X = X.sum(axis=1).T
 								y = y.sum(axis=1).T
 								##FINALLY, we can run the linear regression
-								R2s,pvals = lin2.permutation_test_multi(X,y,n_inter_cv=5,n_iter_p=500)
+								R2s,pvals = lin2.permutation_test_multi(X,y,n_iter_cv=5,n_iter_p=500)
 								##now save these data
 								f_out = h5py.File(save_file,'a')
 								try:

@@ -116,5 +116,8 @@ returns:
 def calc_R2(y_true,y_pred):
 	u = ((y_true-y_pred)**2).sum() ##the regression sum of squares
 	v = ((y_true-y_true.mean())**2).sum() ##the residual sum of squares
-	r2 = 1-float(u)/float(v)
+	if v > 0:
+		r2 = 1-float(u)/float(v)
+	else:
+		r2 = 0
 	return r2
