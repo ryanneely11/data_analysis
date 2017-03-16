@@ -4610,8 +4610,7 @@ def get_frs_vs_performance():
 A function to do logistic regression analysis on the indirect units, to see
 how many of them are predictuve of E1 vs E2 choice.
 """
-def log_regress_units():
-	unit_type = 'Str_units' ##the type of units to run regression on
+def log_regress_units(unit_types=['Str_units']):
 	animal_list = None
 	session_range = None
 	window = [400,0]
@@ -4622,15 +4621,14 @@ def log_regress_units():
 	##first, we need to get two arrays: X; the data matrix of spike data
 	##in dimensions trials x units x bins, and then y; the binary matrix
 	## of target 1 and target 2 values.
-	source_file =r"C:\Users\Ryan\Documents\data\R7_thru_V13_all_data.hdf5"
-	save_file = r"D:\Ryan\V1_BMI\NatureNeuro\rebuttal\data\DMS_unit_regression_400ms_binned.hdf5"
-	f = h5py.File(source_file,'r')
+	root_dir =r"D:\Ryan\V1_BMI"
+	save_file = r"D:\Ryan\V1_BMI\NatureNeuro\rebuttal\data\new_regressions\DMS_singles_400ms_bins.hdf5"
 	##make some arrays to store
 	if animal_list is None:
-		animal_list = f.keys()
+		animal_list = [x for x in ru.animals.keys() if not x.startswith['m']]
 	for animal in animal_list:
 		if session_range is None:
-			session_list = f[animal].keys()
+			session_list = ru.animals[animal][1].keys()
 		else: 
 			session_list = [x for x in f[animal].keys() if int(x[-6:-4]) in session_range]
 		for session in session_list:
@@ -4643,59 +4641,90 @@ def log_regress_units():
 			except KeyError:
 				f_out.close()
 				print "analyzing data from "+animal+" "+session
-				##make sure that this file had at least 20 trials of each type
 				try:
-					n_t1 = float(f[animal][session]['event_arrays']['t1'].size)
+					t1_id = ru.animals[animal][1][session]['events']['t1'][0]
 				except KeyError:
-					n_t1 = 0
-				try: 
-					n_t2 = float(f[animal][session]['event_arrays']['t2'].size)
+					t1_id = None
+				try:
+					t2_id = ru.animals[animal][1][session]['events']['t2'][0]
 				except KeyError:
-					n_t2 = 0
-				if (n_t1 >= 15) and (n_t2 >= 15):
-					##now make sure that this file contains at least one unit of the type that we want to analyze
-					try:
-						unit_list = [x for x in f[animal][session][unit_type].keys() if not x.endswith("_wf")]
-					except KeyError:
-						unit_list = []
-					if len(unit_list) > 0:
-						##add the number of total units to the data array
-						total_units = len(unit_list)
-						##now get the data for these units
-						t1_spikes,lfps,ul = ds.load_single_group_triggered_data(source_file,
-							't1',unit_type,window,animal=animal,session=session)
-						t2_spikes,lfps,ul = ds.load_single_group_triggered_data(source_file,
-							't2',unit_type,window,animal=animal,session=session)
-						##transpose these into trials x units x bins
-						t1_spikes = np.transpose(t1_spikes,(2,0,1))
-						t2_spikes = np.transpose(t2_spikes,(2,0,1))
-						##now make our y dataset, which is just the trial outcome for all the trials
-						t1s = np.ones(t1_spikes.shape[0])
-						t2s = np.zeros(t2_spikes.shape[0])
-						y = np.concatenate((t1s,t2s),axis=0)
-						X = np.concatenate((t1_spikes,t2_spikes),axis=0).transpose(1,0,2)
-						##now let's bin the spike data
-						##I'm lazy and don't want to compute how big the binned data will be
-						test = bin_spikes(X[0,0,:],bin_width)
-						X_bins = np.zeros((X.shape[0],X.shape[1],test.shape[0]))
-						for u in range(X.shape[0]):
-							for t in range(X.shape[1]):
-								X_bins[u,t,:] = bin_spikes(X[u,t,:],bin_width)
-						##finally, we can actually do the regression
-						accuracies, pvals = lr2.permutation_test_multi(X_bins,y,n_iter_cv=5,n_iter_p=500)
-						##now just add the counts to the animal's array
-						sig_units = (pvals<=0.05).sum()
-						##now save these data
-						f_out = h5py.File(save_file,'a')
+					t2_id = None
+				##continue only if there are 2 targets for this file
+				if t2_id is not None and t1_id is not None:
+					##see if the correct unit types are present in this file
+					unit_list = []
+					for ut in unit_types:
 						try:
-							a_group = f_out[animal]
+							unit_ids = ru.animals[animal][1][session]['units'][ut]
+							for ui in unit_ids:
+								unit_list.append(ui)
 						except KeyError:
-							a_group = f_out.create_group(animal)
-						s_group = a_group.create_group(session)
-						s_group.create_dataset('pvals',data=pvals)
-						s_group.create_dataset('accuracies',data=accuracies)
-						f_out.close()
-	f.close()
+							print "No "+ut+" present in this file"
+					##continue only if there are units to analyze
+					if len(unit_list)>0:
+						plxfile = os.path.join(root_dir,animal,session)
+						##load the plx file
+						raw_data = plxread.import_file(plxfile,AD_channels=range(1,97),save_wf=False,
+								import_unsorted=False,verbose=False)
+						duration = None
+						for arr in raw_data.keys():
+							if arr.startswith('AD') and arr.endswith('_ts'):
+								duration = int(np.ceil((raw_data[arr].max()*1000)/100)*100)+1
+								break
+						else: print "No A/D timestamp data found!!!"
+						##make sure that this file had at least 20 trials of each type
+						try:
+							t1_ts = raw_data[t1_id]*1000.0
+						except KeyError:
+							t1_ts = np.array([])
+						try: 
+							t2_ts = raw_data[t2_id]*1000.0
+						except KeyError:
+							t2_ts = np.array([])
+						if (t1_ts.size >= 15) and (t2_ts.size >= 15):
+						##now load the data arrays for each unit
+							X = []
+							for unit in unit_list:
+								try:
+									spiketrain = raw_data[unit]*1000.0 #timestamps in ms
+									##convert to binary array
+									spiketrain = np.histogram(spiketrain,bins=duration,range=(0,duration))
+									spiketrain = spiketrain[0].astype(bool).astype(int)
+									spike_windows_t1 = get_data_window(spiketrain,t1_ts,window[0],window[1])
+									spike_windows_t2 = get_data_window(spiketrain,t2_ts,window[0],window[1]) ##size bins x trials
+									X.append(np.concatenate((spike_windows_t1,spike_windows_t2),axis=1)) ##concatenate trials
+								except KeyError:
+									print "Can't find "+unit+" in this file"
+							##make sure we still have more than 0 units
+							if len(X)>0:
+								X = np.asarray(X).transpose(0,2,1) ##shape should now be units x trials x bins
+								##add the number of total units to the data array
+								total_units = X.shape[0]
+								##now make our y dataset, which is just the trial outcome for all the trials
+								t1s = np.ones(t1_ts.size)
+								t2s = np.zeros(t2_ts.size)
+								y = np.concatenate((t1s,t2s),axis=0)
+								##now let's bin the spike data
+								##I'm lazy and don't want to compute how big the binned data will be
+								test = bin_spikes(X[0,0,:],bin_width)
+								X_bins = np.zeros((X.shape[0],X.shape[1],test.shape[0]))
+								for u in range(X.shape[0]):
+									for t in range(X.shape[1]):
+										X_bins[u,t,:] = bin_spikes(X[u,t,:],bin_width)
+								##finally, we can actually do the regression
+								accuracies, pvals = lr2.permutation_test_multi(X_bins,y,n_iter_cv=5,n_iter_p=500)
+								##now just add the counts to the animal's array
+								sig_units = (pvals<=0.05).sum()
+								##now save these data
+								f_out = h5py.File(save_file,'a')
+								try:
+									a_group = f_out[animal]
+								except KeyError:
+									a_group = f_out.create_group(animal)
+								s_group = a_group.create_group(session)
+								s_group.create_dataset('pvals',data=pvals)
+								s_group.create_dataset('accuracies',data=accuracies)
+								f_out.close()
 	print "done"
 
 
@@ -4703,78 +4732,111 @@ def log_regress_units():
 A function to do logistic regression analysis on the indirect units, as a group, to see
 how many of them are predictuve of E1 vs E2 choice.
 """
-def log_regress_grouped_units():
-	unit_type = 'V1_units' ##the type of units to run regression on
+def log_regress_grouped_units(unit_types=['Str_units']):
 	animal_list = None
 	session_range = None
 	window = [400,0]
+	bin_width = 50
 	##make some dictionaries to store the results
 	results = {}
 	##we should be able to run regression for each session as a whole.
 	##first, we need to get two arrays: X; the data matrix of spike data
 	##in dimensions trials x units x bins, and then y; the binary matrix
 	## of target 1 and target 2 values.
-	source_file = r"F:\data\processed\R7_thru_V13_all_data.hdf5"
-	save_file = r"F:\NatureNeuro\rebuttal\data\indirect_grouped_regression_400ms_2.hdf5"
-	f = h5py.File(source_file,'r')
+	root_dir =r"D:\Ryan\V1_BMI"
+	save_file = r"D:\Ryan\V1_BMI\NatureNeuro\rebuttal\data\new_regressions\DMS_unit_regression_400ms_binned.hdf5"
 	##make some arrays to store
 	if animal_list is None:
-		animal_list = f.keys()
+		animal_list = [x for x in ru.animals.keys() if not x.startswith['m']]
 	for animal in animal_list:
-		##these will be the arrays to store data from each training day
-		total_units = []
-		pred_strength = []
-		pred_sig = []
 		if session_range is None:
-			session_list = f[animal].keys()
+			session_list = ru.animals[animal][1].keys()
 		else: 
 			session_list = [x for x in f[animal].keys() if int(x[-6:-4]) in session_range]
 		for session in session_list:
-			##make sure that this file had at least 20 trials of each type
+			##check to see if data for this session already exists
 			try:
-				n_t1 = float(f[animal][session]['event_arrays']['t1'].size)
+				f_out = h5py.File(save_file,'r')
+				session_exists = f_out[animal][session]
+				print animal+" "+session+" data exists; moving to next file"
+				f_out.close()
 			except KeyError:
-				n_t1 = 0
-			try: 
-				n_t2 = float(f[animal][session]['event_arrays']['t2'].size)
-			except KeyError:
-				n_t2 = 0
-			if (n_t1 >= 5) and (n_t2 >= 5):
-				##now make sure that this file contains at least one unit of the type that we want to analyze
+				f_out.close()
+				print "analyzing data from "+animal+" "+session
 				try:
-					unit_list = [x for x in f[animal][session][unit_type].keys() if not x.endswith("_wf")]
+					t1_id = ru.animals[animal][1][session]['events']['t1'][0]
 				except KeyError:
+					t1_id = None
+				try:
+					t2_id = ru.animals[animal][1][session]['events']['t2'][0]
+				except KeyError:
+					t2_id = None
+				##continue only if there are 2 targets for this file
+				if t2_id is not None and t1_id is not None:
+					##see if the correct unit types are present in this file
 					unit_list = []
-				if len(unit_list) > 0:
-					##add the number of total units to the data array
-					total_units.append(len(unit_list))
-					##now get the data for these units
-					t1_spikes,lfps,ul = ds.load_single_group_triggered_data(source_file,
-						't1',unit_type,window,animal=animal,session=session)
-					t2_spikes,lfps,ul = ds.load_single_group_triggered_data(source_file,
-						't2',unit_type,window,animal=animal,session=session)
-					##data shape returned is units x time x trials;
-					##sum spike rates over the interval for each unit
-					t1_spikes = t1_spikes.sum(axis=1) ##now shape is units x trials;
-					t2_spikes = t2_spikes.sum(axis=1)
-					##value is the sum of spikes over that interval for each unit and trial
-					##transpose these into trials x units
-					t1_spikes = t1_spikes.T
-					t2_spikes = t2_spikes.T
-					##now make our y dataset, which is just the trial outcome for all the trials
-					t1s = np.ones(t1_spikes.shape[0])
-					t2s = np.zeros(t2_spikes.shape[0])
-					y = np.concatenate((t1s,t2s),axis=0)
-					X = np.concatenate((t1_spikes,t2_spikes),axis=0)
-					###not really sure if this is necessary, but lets just mix up the arrays
-					idx = np.random.permutation(np.arange(y.shape[0]))
-					y = y[idx]
-					X = X[idx,:]
-					##finally, we can actually do the regression
-					accuracy, pval = lr2.permutation_test((X,y))
-					##now just add the counts to the animal's array
-					pred_strength.append(accuracy)
-					pred_sig.append(pval)
+					for ut in unit_types:
+						try:
+							unit_ids = ru.animals[animal][1][session]['units'][ut]
+							for ui in unit_ids:
+								unit_list.append(ui)
+						except KeyError:
+							print "No "+ut+" present in this file"
+					##continue only if there are units to analyze
+					if len(unit_list)>0:
+						plxfile = os.path.join(root_dir,animal,session)
+						##load the plx file
+						raw_data = plxread.import_file(plxfile,AD_channels=range(1,97),save_wf=False,
+								import_unsorted=False,verbose=False)
+						duration = None
+						for arr in raw_data.keys():
+							if arr.startswith('AD') and arr.endswith('_ts'):
+								duration = int(np.ceil((raw_data[arr].max()*1000)/100)*100)+1
+								break
+						else: print "No A/D timestamp data found!!!"
+						##make sure that this file had at least 20 trials of each type
+						try:
+							t1_ts = raw_data[t1_id]*1000.0
+						except KeyError:
+							t1_ts = np.array([])
+						try: 
+							t2_ts = raw_data[t2_id]*1000.0
+						except KeyError:
+							t2_ts = np.array([])
+						if (t1_ts.size >= 15) and (t2_ts.size >= 15):
+						##now load the data arrays for each unit
+							X = []
+							for unit in unit_list:
+								try:
+									spiketrain = raw_data[unit]*1000.0 #timestamps in ms
+									##convert to binary array
+									spiketrain = np.histogram(spiketrain,bins=duration,range=(0,duration))
+									spiketrain = spiketrain[0].astype(bool).astype(int)
+									spike_windows_t1 = get_data_window(spiketrain,t1_ts,window[0],window[1])
+									spike_windows_t2 = get_data_window(spiketrain,t2_ts,window[0],window[1]) ##size bins x trials
+									X.append(np.concatenate((spike_windows_t1,spike_windows_t2),axis=1)) ##concatenate trials
+								except KeyError:
+									print "Can't find "+unit+" in this file"
+							##make sure we still have more than 0 units
+							if len(X)>0:
+								X = np.asarray(X).transpose(0,2,1) ##shape should now be units x trials x bins
+								##add the number of total units to the data array
+								total_units = X.shape[0]
+								##now make our y dataset, which is just the trial outcome for all the trials
+								t1s = np.ones(t1_ts.size)
+								t2s = np.zeros(t2_ts.size)
+								y = np.concatenate((t1s,t2s),axis=0)
+								##now we'll just take the spike counts of X over the interval 
+								X = X.sum(axis=2).T ##now it's just trials x units
+								###not really sure if this is necessary, but lets just mix up the arrays
+								idx = np.random.permutation(np.arange(y.shape[0]))
+								y = y[idx]
+								X = X[idx,:]
+								##finally, we can actually do the regression
+								accuracy, pval = lr2.permutation_test((X,y,5,500))
+								##now just add the counts to the animal's array
+								pred_strength.append(accuracy)
+								pred_sig.append(pval)
 			##now save these data arrays in the global dictionary
 			results[animal] = [np.asarray(pred_sig),np.asarray(pred_strength),np.asarray(total_units)]
 	##now save the data
@@ -4852,100 +4914,135 @@ def plot_log_groups():
 	f.close()
 
 
-def linear_regression_direct_indirect():
-	unit_type = 'Str_units' ##the type of units to predict e1 and e2 unit activity on
+def linear_regression_direct_indirect(unit_types=['Str_units']):
+	direct_types = ['e1_units','e2_units']
 	animal_list = None
 	session_range = None
-	window = [100,0]
+	window = [400,0]
+	bin_width = 50
 	##make some dictionaries to store the results
 	results = {}
 	##we should be able to run regression for each session as a whole.
 	##first, we need to get two arrays: X; the data matrix of spike data
 	##in dimensions trials x units x bins, and then y; the binary matrix
 	## of target 1 and target 2 values.
-	source_file = r"F:\data\processed\R7_thru_V13_all_data.hdf5"
-	save_file = r"F:\data\NatureNeuro\rebuttal\data\direct_DMS_regression_100ms.hdf5"
-	f = h5py.File(source_file,'r')
+	root_dir =r"D:\Ryan\V1_BMI"
+	save_file = r"D:\Ryan\V1_BMI\NatureNeuro\rebuttal\data\new_regressions\DMS_unit_regression_400ms_binned.hdf5"
 	##make some arrays to store
 	if animal_list is None:
-		animal_list = f.keys()
+		animal_list = [x for x in ru.animals.keys() if not x.startswith['m']]
 	for animal in animal_list:
-		##these will be the arrays to store data from each training day
-		total_units = []
-		var_explained = []
-		sig = []
 		if session_range is None:
-			session_list = f[animal].keys()
+			session_list = ru.animals[animal][1].keys()
 		else: 
 			session_list = [x for x in f[animal].keys() if int(x[-6:-4]) in session_range]
 		for session in session_list:
-			##make sure that this file had at least 20 trials of each type
+			##check to see if data for this session already exists
 			try:
-				n_t1 = float(f[animal][session]['event_arrays']['t1'].size)
+				f_out = h5py.File(save_file,'r')
+				session_exists = f_out[animal][session]
+				print animal+" "+session+" data exists; moving to next file"
+				f_out.close()
 			except KeyError:
-				n_t1 = 0
-			try: 
-				n_t2 = float(f[animal][session]['event_arrays']['t2'].size)
-			except KeyError:
-				n_t2 = 0
-			if (n_t1 >= 10):
-				##now make sure that this file contains at least one unit of the type that we want to analyze
+				f_out.close()
+				print "analyzing data from "+animal+" "+session
 				try:
-					unit_list = [x for x in f[animal][session][unit_type].keys() if not x.endswith("_wf")]
+					t1_id = ru.animals[animal][1][session]['events']['t1'][0]
 				except KeyError:
+					t1_id = None
+				try:
+					t2_id = ru.animals[animal][1][session]['events']['t2'][0]
+				except KeyError:
+					t2_id = None
+				##continue only if there are 2 targets for this file
+				if t2_id is not None and t1_id is not None:
+					##see if the correct unit types are present in this file
 					unit_list = []
-				if len(unit_list) > 0:
-					print "Working on "+animal+" "+session
-					##get the list of e1 and e2 units
-					e1_list = [x for x in f[animal][session]['e1_units'].keys() if not x.endswith("_wf")]
-					e2_list = [x for x in f[animal][session]['e1_units'].keys() if not x.endswith("_wf")]
-					##add the number of total units to the data array
-					total_units.append(len(unit_list))
-					##now get the data for each unit type; we'll stick with just the rewarded targets
-					e1_t1_spikes,lfps,ul = ds.load_single_group_triggered_data(source_file,
-						't1','e1_units',window,animal=animal,session=session)
-					e2_t1_spikes,lfps,ul = ds.load_single_group_triggered_data(source_file,
-						't1','e2_units',window,animal=animal,session=session)
-					##now concatenate these into just 'direct' units
-					direct_spikes = np.concatenate((e1_t1_spikes,e2_t1_spikes),axis=0)
-					##now get the data for the indirect units
-					indirect_spikes,lfps,ul = ds.load_single_group_triggered_data(source_file,
-						't1',unit_type,window,animal=animal,session=session)
-					##data shape here is units x time x trials
-					##now z-score the firing rates
-					# for u in range(direct_spikes.shape[0]):
-					# 	for t in range(direct_spikes.shape[2]):
-					# 		direct_spikes[u,t] = zscore(direct_spikes[u,t])
-					# for u in range(indirect_spikes.shape[0]):
-					# 	for t in range(indirect_spikes.shape[2]):
-					# 		indirect_spikes[u,t] = zscore(indirect_spikes[u,t])
-					##now take the mean z-score over the sample interval
-					direct_spikes = np.sum(direct_spikes,axis=1)
-					indirect_spikes = np.sum(indirect_spikes,axis=1)
-					##now shape is units x trials
-					##reshape into trials x units
-					direct_spikes = direct_spikes.T
-					indirect_spikes = indirect_spikes.T
-					##now we want to run this through a linear regression
-					##first get the variance explained
-					ve = linr.run_cv(direct_spikes,indirect_spikes)
-					p = linr.permutation_test(direct_spikes,indirect_spikes)
-					##now add to the results
-					var_explained.append(ve)
-					sig.append(p)
-			##now save these data arrays in the global dictionary
-			results[animal] = [np.asarray(sig),np.asarray(var_explained),np.asarray(total_units)]
-	##now save the data
-	f.close()
-	f_out = h5py.File(save_file,'w-')
-	for key in results.keys():
-		group = f_out.create_group(key)
-		group.create_dataset("total_units",data=results[key][2])
-		group.create_dataset("sig_val",data=results[key][0])
-		group.create_dataset("var_explained",data=results[key][1])
-	f_out.close()
+					for ut in unit_types:
+						try:
+							unit_ids = ru.animals[animal][1][session]['units'][ut]
+							for ui in unit_ids:
+								unit_list.append(ui)
+						except KeyError:
+							print "No "+ut+" present in this file"
+					direct_list = []
+					for ut in direct_types:
+						try:
+							unit_ids = ru.animals[animal][1][session]['units'][ut]
+							for ui in unit_ids:
+								direct_list.append(ui)
+						except KeyError:
+							print "No "+ut+" present in this file"
+					##continue only if there are units to analyze
+					if len(unit_list)>0 and len(direct_list)>0:
+						plxfile = os.path.join(root_dir,animal,session)
+						##load the plx file
+						raw_data = plxread.import_file(plxfile,AD_channels=range(1,97),save_wf=False,
+								import_unsorted=False,verbose=False)
+						duration = None
+						for arr in raw_data.keys():
+							if arr.startswith('AD') and arr.endswith('_ts'):
+								duration = int(np.ceil((raw_data[arr].max()*1000)/100)*100)+1
+								break
+						else: print "No A/D timestamp data found!!!"
+						##make sure that this file had at least 20 trials of each type
+						try:
+							t1_ts = raw_data[t1_id]*1000.0
+						except KeyError:
+							t1_ts = np.array([])
+						try: 
+							t2_ts = raw_data[t2_id]*1000.0
+						except KeyError:
+							t2_ts = np.array([])
+						if (t1_ts.size >= 1) and (t2_ts.size >= 1):
+						##now load the data arrays for each direct unit
+							y = []
+							for unit in direct_list:
+								try:
+									spiketrain = raw_data[unit]*1000.0 #timestamps in ms
+									##convert to binary array
+									spiketrain = np.histogram(spiketrain,bins=duration,range=(0,duration))
+									spiketrain = spiketrain[0].astype(bool).astype(int)
+									spike_windows_t1 = get_data_window(spiketrain,t1_ts,window[0],window[1])
+									spike_windows_t2 = get_data_window(spiketrain,t2_ts,window[0],window[1]) ##size bins x trials
+									y.append(np.concatenate((spike_windows_t1,spike_windows_t2),axis=1)) ##concatenate trials
+								except KeyError:
+									print "Can't find "+unit+" in this file"
+							##repeat for the other units
+							X = []
+							for unit in unit_list:
+								try:
+									spiketrain = raw_data[unit]*1000.0 #timestamps in ms
+									##convert to binary array
+									spiketrain = np.histogram(spiketrain,bins=duration,range=(0,duration))
+									spiketrain = spiketrain[0].astype(bool).astype(int)
+									spike_windows_t1 = get_data_window(spiketrain,t1_ts,window[0],window[1])
+									spike_windows_t2 = get_data_window(spiketrain,t2_ts,window[0],window[1]) ##size bins x trials
+									X.append(np.concatenate((spike_windows_t1,spike_windows_t2),axis=1)) ##concatenate trials
+								except KeyError:
+									print "Can't find "+unit+" in this file"
+							##make sure we still have more than 0 units
+							if len(X)>0 and len(y)>0:
+								X = np.asarray(X) ##shape should now be units x bins x trials
+								y = np.asarray(y)
+								##add the number of total units to the data array
+								total_units = X.shape[0]
+								##sum the spike counts over the interval, and transpose into trials x units
+								X = X.sum(axis=1).T
+								y = y.sum(axis=1).T
+								##FINALLY, we can run the linear regression
+								R2s,pvals = lin2.permutation_test_multi(X,y,n_inter_cv=5,n_iter_p=500)
+								##now save these data
+								f_out = h5py.File(save_file,'a')
+								try:
+									a_group = f_out[animal]
+								except KeyError:
+									a_group = f_out.create_group(animal)
+								s_group = a_group.create_group(session)
+								s_group.create_dataset('pvals',data=pvals)
+								s_group.create_dataset('R2s',data=R2s)
+								f_out.close()
 	print "Done"
-	return results
 
 ##function to plot the results from the above function
 def plot_lin_regression():
