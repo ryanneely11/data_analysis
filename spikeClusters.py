@@ -215,7 +215,7 @@ class pca_clustering(events.build_events):
         size_r, size_c = data.shape[0], data.shape[1]
 
         if n_samples > data.shape[0]:
-            print 'Too many sample points'
+            print('Too many sample points')
             return -1
 
         # Construct B bootstrap training samples and run the base cluster

@@ -194,25 +194,25 @@ def spike_field_coherence(spikes, lfp, StarRate, rate, Fs = 1000.0, fpass = [0,1
 	J1 = fft_lfp(lfp) ##multi-taper fft of lfp data
 	J2, Msp2, Nsp2 = fft_spikes(spikes) #mtfft of spike data
 	zerosp[Nsp2==0] = 1 ##set the trials where no spikes were found to have zerosp = 1
-    ##pare down the FFT data to incude only freqs in the fpass range
+	##pare down the FFT data to incude only freqs in the fpass range
 	J1 = J1[findx,:,:]
 	J2 = J2[findx,:,:]
-    #calculate the cross-spectrum of the two signals,
-    #taking the average of the tapered components
+	#calculate the cross-spectrum of the two signals,
+	#taking the average of the tapered components
 	S12 = np.mean(J1.conj()*J2,axis = 1)
-    #calculate the autospectra of the two signals
+	#calculate the autospectra of the two signals
 	S1 = np.mean(J1.conj()*J1,axis = 1)
 	S2 = np.mean(J2.conj()*J2, axis = 1)
-    #average the cross- and auto-spectra before calculating coherence
-    ##(as per Koralek et al,(2012, 2013) and Gregoriou et al, 2009)
+	#average the cross- and auto-spectra before calculating coherence
+	##(as per Koralek et al,(2012, 2013) and Gregoriou et al, 2009)
 	if trialave:
 		S12 = np.mean(S12,axis = 1)
 		S1 = np.mean(S1, axis = 1)
 		S2 = np.mean(S2, axis = 1)
-    ##calculate coherence using the spike rate correction from Aoi et al, 2015
+	##calculate coherence using the spike rate correction from Aoi et al, 2015
 	c0 = StarRate/rate
 	C12 = S12/np.sqrt(S1*S2)/np.sqrt((1-c0)*rate/S2/c0+1)
-    #return the absolute value of the coherence (and the freq grid values)
+	#return the absolute value of the coherence (and the freq grid values)
 	C = abs(C12)
 	phi = np.angle(C12)
 	if err is not None:
@@ -224,72 +224,72 @@ def spike_field_coherence(spikes, lfp, StarRate, rate, Fs = 1000.0, fpass = [0,1
 
 
 def spike_field_cohgram(spikes, lfp, StarRate, Rate, movingwin, Fs = 1000.0, fpass = [0, 100], err = None):
-    """
-    Calculate the coherence values over time by using a sliding window. Inputs are
-    an array of binary spike trains in the format samples x trials, an array
-    of ****MATCHING ORDERED**** lfp signals in the same format, a 
-    movingwin parameter in the format [window, winstep], sample rate in Hz and 
-    the frequency window to restrict analysis to. 
-    """
-    lfp = lfp.squeeze() ##get rid of singleton dimensions for the next step
-    spikes = spikes.squeeze()
-    if len(lfp.shape) > 1: ##if there is more than one trace, set N and numTraces appropriately
-        numTraces = lfp.shape[1]
-    else: ##if there is only 1, set N and numTraces
-        lfp = lfp[:,None]
-        spikes = spikes[:,None]
-        numTraces = 1
+	"""
+	Calculate the coherence values over time by using a sliding window. Inputs are
+	an array of binary spike trains in the format samples x trials, an array
+	of ****MATCHING ORDERED**** lfp signals in the same format, a 
+	movingwin parameter in the format [window, winstep], sample rate in Hz and 
+	the frequency window to restrict analysis to. 
+	"""
+	lfp = lfp.squeeze() ##get rid of singleton dimensions for the next step
+	spikes = spikes.squeeze()
+	if len(lfp.shape) > 1: ##if there is more than one trace, set N and numTraces appropriately
+		numTraces = lfp.shape[1]
+	else: ##if there is only 1, set N and numTraces
+		lfp = lfp[:,None]
+		spikes = spikes[:,None]
+		numTraces = 1
 
-    if lfp.shape[0] != spikes.shape[0]:
-        if lfp.shape[0] > spikes.shape[0]:
-            lfp = lfp[0:spikes.shape[0],:]
-        else:
-            spikes = spikes[0:lfp.shape[0],:]
-    N = lfp.shape[0]
-    Nwin = int(round(movingwin[0]*Fs)) ##window size in samples
-    Nstep = int(round(movingwin[1]*Fs)) ##step size in samples
-    nfft = (2**spec.nextpow2(Nwin)) ##the nfft length for the given window
-    winstart = np.arange(0,N-Nwin,Nstep) ##array of all the window starting values
-    nw = winstart.shape[0] ##number of total windows
+	if lfp.shape[0] != spikes.shape[0]:
+		if lfp.shape[0] > spikes.shape[0]:
+			lfp = lfp[0:spikes.shape[0],:]
+		else:
+			spikes = spikes[0:lfp.shape[0],:]
+	N = lfp.shape[0]
+	Nwin = int(round(movingwin[0]*Fs)) ##window size in samples
+	Nstep = int(round(movingwin[1]*Fs)) ##step size in samples
+	nfft = (2**spec.nextpow2(Nwin)) ##the nfft length for the given window
+	winstart = np.arange(0,N-Nwin,Nstep) ##array of all the window starting values
+	nw = winstart.shape[0] ##number of total windows
 
-    ##get the frequency grid values based on user input
-    f,findx = getfgrid(Fs,nfft,fpass)
-    Nf = len(f)
-    #container for the coherence data
-    C = np.zeros((nw,Nf))
-    S12 = np.zeros((nw, Nf))
-    S1 = np.zeros((nw, Nf))
-    S2 = np.zeros((nw, Nf))
-    phi = np.zeros((nw, Nf))
-    Cerr = np.zeros((2, nw, Nf))
-    phistd = np.zeros((nw, Nf))
-    zerosp = np.zeros((nw, numTraces))
+	##get the frequency grid values based on user input
+	f,findx = getfgrid(Fs,nfft,fpass)
+	Nf = len(f)
+	#container for the coherence data
+	C = np.zeros((nw,Nf))
+	S12 = np.zeros((nw, Nf))
+	S1 = np.zeros((nw, Nf))
+	S2 = np.zeros((nw, Nf))
+	phi = np.zeros((nw, Nf))
+	Cerr = np.zeros((2, nw, Nf))
+	phistd = np.zeros((nw, Nf))
+	zerosp = np.zeros((nw, numTraces))
 
-    for n in range(nw):
-        indx = np.arange(winstart[n],winstart[n]+Nwin) ##index values to take from data based on current window
-        spikeswin = spikes[indx,:] ##current data window for all lfp segments
-        lfpwin = lfp[indx,:] ##current data window for all segments
-        #calculate coherence for the given window
-        c, ph, s12, s1, s2, f, zsp, confc, phie, cerr = spike_field_coherence(spikeswin,
-            lfpwin, StarRate, Rate, Fs = Fs, fpass = fpass, trialave = True, err = err)
-        C[n,:] = c
-        phi[n,:] = ph
-        S12[n,:] = s12
-        S1[n,:] = s1
-        S2[n,:] = s2
-        zerosp[n,:] = zsp
-        if err is not None:
-            phistd[n,:] = phie
-            Cerr[0,n,:] = cerr[0,:].squeeze()
-            Cerr[1,n,:] = cerr[1,:].squeeze()
+	for n in range(nw):
+		indx = np.arange(winstart[n],winstart[n]+Nwin) ##index values to take from data based on current window
+		spikeswin = spikes[indx,:] ##current data window for all lfp segments
+		lfpwin = lfp[indx,:] ##current data window for all segments
+		#calculate coherence for the given window
+		c, ph, s12, s1, s2, f, zsp, confc, phie, cerr = spike_field_coherence(spikeswin,
+			lfpwin, StarRate, Rate, Fs = Fs, fpass = fpass, trialave = True, err = err)
+		C[n,:] = c
+		phi[n,:] = ph
+		S12[n,:] = s12
+		S1[n,:] = s1
+		S2[n,:] = s2
+		zerosp[n,:] = zsp
+		if err is not None:
+			phistd[n,:] = phie
+			Cerr[0,n,:] = cerr[0,:].squeeze()
+			Cerr[1,n,:] = cerr[1,:].squeeze()
 
-    C = C.squeeze(); S12 = S12.squeeze(); S1 = S1.squeeze(); S2 = S2.squeeze(); phi = phi.squeeze()
-    zerosp = zerosp.squeeze()
-    #calculate the time axis values
-    winmid=winstart+round(Nwin/2)
-    t=winmid/Fs
+	C = C.squeeze(); S12 = S12.squeeze(); S1 = S1.squeeze(); S2 = S2.squeeze(); phi = phi.squeeze()
+	zerosp = zerosp.squeeze()
+	#calculate the time axis values
+	winmid=winstart+round(Nwin/2)
+	t=winmid/Fs
 
-    return C, phi, S12, S1, S2, t, f, zerosp, confc, phistd, Cerr
+	return C, phi, S12, S1, S2, t, f, zerosp, confc, phistd, Cerr
 
 
 """
@@ -349,7 +349,7 @@ def fft_lfp(data, Fs = 1000):
 	data_proj = data2*tapers2 ##multiply data by tapers
 	J = np.fft.fft(data_proj,nfft, axis = 0)/Fs ##fft of projected data
 	J
-    #print'...Done!'
+	#print'...Done!'
 
 	return J
 
@@ -361,7 +361,7 @@ Fs is the sample rate.
 """
 def fft_spikes(data):
 	Fs = 1000.0
-    #print 'Calculating multi-taper fft of spike data...'
+	#print 'Calculating multi-taper fft of spike data...'
 	data = data.squeeze() ##get rid of singleton dimensions for the next step
 	if len(data.shape) > 1: ##if there is more than one trace, set N and numTraces appropriately
 		N = data.shape[0]
@@ -409,7 +409,7 @@ def coherr (C, J1, J2, err, trialave):
 	errchk = err[0]
 	p = err[1]
 	pp = 1-p/2.0
-    ##find the number of degrees of freedom
+	##find the number of degrees of freedom
 	if trialave:
 		dim = K*Ch
 		dof = 2*dim
@@ -420,14 +420,14 @@ def coherr (C, J1, J2, err, trialave):
 		dim = K
 		dof = 2*dim*np.ones((Ch))
 
-    ##variance of the phase:
+	##variance of the phase:
 	if dof <= 2:
 		confC = 1
 	else:
 		df = 1/((dof/2.0)-1)
 		confC = np.sqrt(1-p**df)
 
-    ##phase standard deviation
+	##phase standard deviation
 	if errchk == 1:
 		totnum = nf*Ch
 		phistd = np.zeros((totnum))
@@ -439,7 +439,7 @@ def coherr (C, J1, J2, err, trialave):
 		phistd = phistd.reshape(nf,Ch)
 		Cerr = 0
 	elif errchk == 2:
-        #print "computing jacknife error"
+		#print "computing jacknife error"
 		tcrit = stats.t.ppf(pp, dof-1)
 		if trialave:
 			atanhCxyk = np.zeros((dim, J1.shape[0]))
@@ -463,7 +463,7 @@ def coherr (C, J1, J2, err, trialave):
 			Cxyk = eJ12k/np.sqrt(eJ1k*eJ2k)
 			absCxyk = np.abs(Cxyk)
 			try:
- 				atanhCxyk[k,:,:] = np.sqrt(2*dim-2)*np.arctanh(absCxyk)
+				atanhCxyk[k,:,:] = np.sqrt(2*dim-2)*np.arctanh(absCxyk)
 				phasefactoryxyk[k,:,:] = Cxyk/absCxyk
 			except IndexError:
 				atanhCxyk[k,:] = np.sqrt(2*dim-2)*np.arctanh(absCxyk)

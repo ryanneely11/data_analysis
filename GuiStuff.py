@@ -1,6 +1,6 @@
 ## this file is a repository for Tkinter code that might be reused.
 
-import Tkinter as Tk
+import tkinter as Tk
 
 ##a function to create a multi-selection list box, and
 ###return a list of user-selected items.

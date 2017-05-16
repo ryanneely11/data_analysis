@@ -87,6 +87,6 @@ def sort_by_timestamp(concat_arr):
 def save_as_gdf(f_out, data):
 	##save the data using the correct parameters
 	np.savetxt(f_out, data.T, delimiter = " ", fmt = "%i")
-	print "Data saved!"
+	print("Data saved!")
 
 

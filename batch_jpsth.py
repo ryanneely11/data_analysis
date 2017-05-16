@@ -25,12 +25,12 @@ def run_batch(f_in, f_out, pre_win, post_win, target, bin = 1):
 	async_result = pool.map_async(get_jpsth, argList)
 	pool.close()
 	pool.join()
-	print "All processes have returned; parsing results"
+	print("All processes have returned; parsing results")
 	results_list = async_result.get()
 	##parse all of the data and save to the specified output file
 	parse_results(results_list, f_out)
 	f.close()
-	print "Complete!"
+	print("Complete!")
 		
 
 def get_jpsth(args):
@@ -53,9 +53,9 @@ def get_jpsth(args):
 	e2_2 = ds.get_data_window(events, pre_win, post_win, e2_arrays[0][:,1]).T
 	#calculate jpsth's for e1 and e2 pairs
 	result_e1 = jp.jpsth(e1_1, e1_2, bin = bin)
-	print "finished with jpsth for e1 from session " + session
+	print("finished with jpsth for e1 from session " + session)
 	result_e2 = jp.jpsth(e2_1, e2_2, bin = bin)
-	print "finished with jpsth for e2 from session " + session
+	print("finished with jpsth for e2 from session " + session)
 	return (result_e1, result_e2)
 
 def parse_results(results_list, f_out):
@@ -136,4 +136,4 @@ def parse_results(results_list, f_out):
 	#e2_data.create_dataset("sigTroughEndpoints", data = e2_sigTroughEndpoints)
 	##close the file
 	g.close()
-	print "data saved!"
+	print("data saved!")

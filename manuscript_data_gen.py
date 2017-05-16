@@ -23,7 +23,7 @@ import itertools
 try:
 	import plxread
 except ImportError:
-	print "Warning: plxread not imported"
+	print("Warning: plxread not imported")
 #sns.set_style("whitegrid", {'axes.grid' : False})
 	
 def get_performance_data():
@@ -40,26 +40,26 @@ def get_performance_data():
 	f_out = h5py.File(save_file, 'w-')
 
 	for i in range(len(animal_list)):
-		print "Select " + animal_list[i]
+		print("Select " + animal_list[i])
 		if animal_list[i] not in f_out.keys():	
 			f_out.create_group(animal_list[i])
 		else:
-			print "Already created a group for " + animal_list[i]
+			print("Already created a group for " + animal_list[i])
 		try:
 			t1 = ds.load_event_arrays(source_file, "t1", session_range = ranges[i])
 			f_out[animal_list[i]].create_dataset("t1", data = t1)
 		except KeyError:
-			print "No T1's in this file."
+			print("No T1's in this file.")
 		try:
 			t2 = ds.load_event_arrays(source_file, "t2", session_range = ranges[i])
 			f_out[animal_list[i]].create_dataset("t2", data = t2)
 		except KeyError:
-			print "No T2's in this file."
+			print("No T2's in this file.")
 		try:
 			miss = ds.load_event_arrays(source_file, "miss", session_range = ranges[i])
 			f_out[animal_list[i]].create_dataset("miss", data = miss)
 		except KeyError: 
-			print "No Misses in this file."
+			print("No Misses in this file.")
 
 	all_across  = []
 	t2_across = []
@@ -100,7 +100,7 @@ def get_performance_data():
 	f_out.create_dataset("across_days_p_miss", data = np.asarray(miss_across))
 	f_out.create_dataset("across_days_p_t2", data = np.asarray(t2_across))
 	f_out.close()
-	print "Complete!"
+	print("Complete!")
 
 def plot_performance_data():
 	source_file = r"J:\Ryan\processed_data\V1_BMI_final\raw_data\R7_thru_V13_learning_event_data2.hdf5"
@@ -173,7 +173,7 @@ def plot_performance_data():
 	ax.set_ylabel("Percent correct", fontsize = 14)
 	ax.text(1, 0.75, "p = " + str(pval), fontsize = 12)
 	fig.suptitle("Performance", fontsize = 16)
-	print "tval = "+str(tval)
+	print("tval = "+str(tval))
 
 	fig, ax2 = plt.subplots(1)
 	rew = np.vstack((early,late))
@@ -191,10 +191,10 @@ def plot_performance_data():
 		ticklabel.set_fontsize(14)
 	ax2.set_xlim(-0.3,1.3)
 
-	print "pval = "+str(pval)
-	print "tval = "+str(tval)
-	print "mean early = "+str(means[0])
-	print "mean light = "+str(means[1])
+	print("pval = "+str(pval))
+	print("tval = "+str(tval))
+	print("mean early = "+str(means[0]))
+	print("mean light = "+str(means[1]))
 
 
 
@@ -208,19 +208,19 @@ def get_within_session_data():
 			t1 = np.asarray(f[animal]['t1'])
 			arrays.append(t1)
 		except KeyError:
-			print "No t1's."
+			print("No t1's.")
 		try:
 			t2 = np.asarray(f[animal]['t2'])
 			arrays.append(t2)
 		except KeyError:
-			print "No t2's."
+			print("No t2's.")
 			t2 = np.zeros(t1.shape)
 			arrays.append(t2)
 		try:
 			miss = np.asarray(f[animal]['miss'])
 			arrays.append(miss)
 		except KeyError:
-			print "No Misses."
+			print("No Misses.")
 			miss = np.zeros(t1.shape)
 			arrays.append(miss)
 		##figure out the size of the largest array
@@ -353,11 +353,10 @@ def plot_within_session():
 	ax.set_ylabel("Percent of events", fontsize = 14)
 	#ax.text(1, 0.75, "p = " + str(pval), fontsize = 12)
 	fig.suptitle("Within session Performance", fontsize = 16)
-	print "pval rewarded e-l = "+str(pval_rewarded)
-	print "pval unrewarded e-l = "+str(pval_unrewarded)
-	print "pval early r-u = "+str(pval_early)
-	print "pval late r-u = "+str(pval_late)
-
+	print("pval rewarded e-l = "+str(pval_rewarded))
+	print("pval unrewarded e-l = "+str(pval_unrewarded))
+	print("pval early r-u = "+str(pval_early))
+	print("pval late r-u = "+str(pval_late))
 
 
 
@@ -941,7 +940,7 @@ def get_cd_data():
 	f.create_dataset("by_animal", data = np.asarray(by_animal))
 
 	f.close()
-	print "Done!"
+	print("Done!")
 	return np.asarray(by_session), np.asarray(by_animal)
 
 
@@ -970,15 +969,15 @@ def plot_cd_data():
 	ax.text(2.3, 0.81, "p = " + str(p_val_cd_r), fontsize = 12)
 	ax.text(1.3, 0.85, "p = " + str(p_val_p_r), fontsize = 12)
 	fig.suptitle("Performance during Contingency Degradation", fontsize = 16)
-	print "pval P-CD = "+str(p_val_p_cd)
-	print "tval P-CD = "+str(t_p_cd)
-	print "pval CD-R = "+str(p_val_cd_r)
-	print "tval CD-R = "+str(t_cd_r)
-	print "pval P-R = "+str(p_val_p_r)
-	print "tval P-R = "+str(t_p_r)
-	print "mean P = "+str(means[0])
-	print "mean CD = "+str(means[1])
-	print "mean R = "+str(means[2])
+	print("pval P-CD = "+str(p_val_p_cd))
+	print("tval P-CD = "+str(t_p_cd))
+	print("pval CD-R = "+str(p_val_cd_r))
+	print("tval CD-R = "+str(t_cd_r))
+	print("pval P-R = "+str(p_val_p_r))
+	print("tval P-R = "+str(t_p_r))
+	print("mean P = "+str(means[0]))
+	print("mean CD = "+str(means[1]))
+	print("mean R = "+str(means[2]))
 
 def get_no_feedback_data():
 	f_in = h5py.File(r"J:\Ryan\processed_data\V1_BMI_final\raw_data\R7_thru_V13_all_data.hdf5", 'r')
@@ -1054,7 +1053,7 @@ def get_no_feedback_data():
 	f_out.create_dataset("p_t1", data = result[:,8:])
 	f_out.create_dataset("p_t2", data = result2[:,8:])
 	f_out.close()
-	print "Complete!"
+	print("Complete!")
 
 def plot_no_feedback_data():
 	source_file = r"J:\Ryan\processed_data\V1_BMI_final\raw_data\R7_thru_V13_NF_data.hdf5"
@@ -1119,10 +1118,10 @@ def plot_no_feedback_data():
 		ticklabel.set_fontsize(14)
 	ax2.set_xlim(-0.3,1.3)
 
-	print "pval = "+str(pval)
-	print "tval = "+str(tval)
-	print "mean rew = "+str(means[0])
-	print "mean unrew = "+str(means[1])
+	print("pval = "+str(pval))
+	print("tval = "+str(tval))
+	print("mean rew = "+str(means[0]))
+	print("mean unrew = "+str(means[1]))
 
 def get_cr_data():
 	source_file = r"J:\Ryan\processed_data\V1_BMI_final\raw_data\R7_thru_V13_all_data.hdf5"
@@ -1659,7 +1658,7 @@ def get_cr_data():
 	f_out.create_dataset('p_t1_by_session', data = result)
 
 	f_out.close()
-	print "Done!"
+	print("Done!")
 
 def get_light_data():
 	source_file = r"J:\Ryan\processed_data\V1_BMI_final\raw_data\R7_thru_V13_all_data.hdf5"
@@ -1919,7 +1918,7 @@ def get_light_data():
 	f_out.create_dataset('p_t1_by_session', data = result)
 
 	f_out.close()
-	print "Done!"
+	print("Done!")
 	
 def plot_cr_data():
 	f = h5py.File(r"Z:\Data\processed_data\V1_BMI_final\raw_data\R7_thru_V13_CR_data.hdf5", 'r')
@@ -1987,15 +1986,15 @@ def plot_cr_data():
 	ax2.set_xlim(-0.6,2.6)
 	ax2.set_ylim(0,1.3)
 
-	print "pval P-Rev = "+str(p_val_cr)
-	print "tval P-Rev = "+str(t_val_cr)
-	print "pval Rev-R = "+str(p_val_r)
-	print "tval Rev-R = "+str(t_val_r)
-	print "pval P-R = "+str(p_val)
-	print "tval P-R = "+str(t_val)
-	print "mean P = "+str(means[0])
-	print "mean Rev = "+str(means[1])
-	print "mean R = "+str(means[2])
+	print("pval P-Rev = "+str(p_val_cr))
+	print("tval P-Rev = "+str(t_val_cr))
+	print("pval Rev-R = "+str(p_val_r))
+	print("tval Rev-R = "+str(t_val_r))
+	print("pval P-R = "+str(p_val))
+	print("tval P-R = "+str(t_val))
+	print("mean P = "+str(means[0]))
+	print("mean Rev = "+str(means[1]))
+	print("mean R = "+str(means[2]))
 
 
 def plot_light_data():
@@ -2056,10 +2055,10 @@ def plot_light_data():
 		ticklabel.set_fontsize(14)
 	ax2.set_xlim(-0.3,1.3)
 
-	print "pval = "+str(p_val)
-	print "tval = "+str(t_val)
-	print "mean early = "+str(means[0])
-	print "mean light = "+str(means[1])
+	print("pval = "+str(p_val))
+	print("tval = "+str(t_val))
+	print("mean early = "+str(means[0]))
+	print("mean light = "+str(means[1]))
 
 ##specifically retreives data for LATE in sessions
 def get_triggered_spike_rates():
@@ -2068,19 +2067,19 @@ def get_triggered_spike_rates():
 			r"D:\Ryan\processed_data\V1_BMI_final\raw_data\e1_t1_spikes_late.hdf5", "t1", ["e1_units", "spikes"], [6000,6000],
 			chunk = [0,10])
 	except IOError:
-		print "File exists; skipping"
+		print("File exists; skipping")
 	try:
 		ds.save_multi_group_triggered_data(r"D:\Ryan\processed_data\V1_BMI_final\raw_data\R7_thru_V13_all_data.hdf5", 
 			r"D:\Ryan\processed_data\V1_BMI_final\raw_data\e2_t1_spikes_late.hdf5", "t1", ["e2_units", "spikes"], [6000,6000],
 			chunk = [0,10])
 	except IOError:
-		print "File exists; skipping"
+		print("File exists; skipping")
 	try:
 		ds.save_multi_group_triggered_data(r"D:\Ryan\processed_data\V1_BMI_final\raw_data\R7_thru_V13_all_data.hdf5", 
 			r"D:\Ryan\processed_data\V1_BMI_final\raw_data\V1_t1_spikes_late.hdf5", "t1", ["V1_units", "spikes"], [6000,6000],
 			chunk = [0,10])
 	except IOError:
-		print "File exists; skipping"
+		print("File exists; skipping")
 	# try:
 	# 	ds.save_multi_group_triggered_data(r"J:\Ryan\processed_data\V1_BMI_final\raw_data\R7_thru_V13_all_data.hdf5", 
 	# 		r"J:\Ryan\processed_data\V1_BMI_final\raw_data\e1_t2_spikes_late.hdf5", "t2", ["e1_units", "spikes"], [6000,6000],
@@ -2170,11 +2169,11 @@ def get_triggered_spike_rates():
 	# f_out.create_dataset("V1_t2_mean_smoothed", data = V1_t2)
 
 	f_out.close()
-	print "Complete!"
+	print("Complete!")
 
 
 def plot_triggered_spike_rates():
-	f = h5py.File(r"J:\Ryan\processed_data\V1_BMI_final\raw_data\R7_thru_V13_triggered_data_early.hdf5", 'r')
+	f = h5py.File(r"D:\Ryan\processed_data\V1_BMI_final\raw_data\R7_thru_V13_triggered_data_early.hdf5", 'r')
 	e1_t1 = stats.zscore(np.asarray(f['e1_t1_mean_smoothed']))
 	e2_t1 = stats.zscore(np.asarray(f['e2_t1_mean_smoothed']))
 	V1_t1 = stats.zscore(np.asarray(f['V1_t1_mean_smoothed']))
@@ -2212,9 +2211,6 @@ def plot_triggered_spike_rates():
 	# ax.set_ylabel("Z-score", fontsize = 16)
 	# fig.suptitle("Unrewarded target", fontsize = 18)
 	# ax.legend()
-
-def get_mod_depth():
-	pass
 
 def get_mean_frs():
 	path = r"C:\Users\Ryan\Documents\data\R7_thru_V13_all_data.hdf5"
@@ -2428,7 +2424,7 @@ def get_ensemble_correlations():
 
 	longest = 0
 	for animal in animal_list:
-		print "Select "+animal
+		print("Select "+animal)
 		within_e1, within_e2, between_e1_e2 = ds.ensemble_correlations(path_in)
 		f_out.create_group(animal)
 		f_out[animal].create_dataset("all_within_e1", data = within_e1)
@@ -2455,7 +2451,7 @@ def get_ensemble_correlations():
 	f_out.create_dataset("within_e2_by_animal", data = np.asarray(within_e2_by_animal))
 	f_out.create_dataset("between_e1_e2_by_animal", data = np.asarray(between_e1_e2_by_animal))
 	f_out.close()
-	print "complete!"
+	print("complete!")
 
 def plot_cursor_states():
 	f = h5py.File(r"Z:\Data\processed_data\V1_BMI_final\raw_data\R7_thru_V13_ensemble_state_data.hdf5", 'r')
@@ -2470,8 +2466,6 @@ def plot_cursor_states():
 	ax1.set_yscale("log")
 	ax2.set_yscale("log")
 
-
-
 def get_dark_session_data():
 	source_file = r"Z:\Data\processed_data\V1_BMI_final\raw_data\R7_thru_V13_learning_event_data2.hdf5"
 	f = h5py.File(source_file, 'r+') 
@@ -2482,19 +2476,19 @@ def get_dark_session_data():
 			t1 = np.asarray(f[animal]['t1'])
 			arrays.append(t1)
 		except KeyError:
-			print "No t1's."
+			print("No t1's.")
 		try:
 			t2 = np.asarray(f[animal]['t2'])
 			arrays.append(t2)
 		except KeyError:
-			print "No t2's."
+			print("No t2's.")
 			t2 = np.zeros(t1.shape)
 			arrays.append(t2)
 		try:
 			miss = np.asarray(f[animal]['miss'])
 			arrays.append(miss)
 		except KeyError:
-			print "No Misses."
+			print("No Misses.")
 			miss = np.zeros(t1.shape)
 			arrays.append(miss)
 		##figure out the size of the largest array
@@ -2574,19 +2568,19 @@ def get_light_session_data():
 			t1 = np.asarray(f[animal]['t1'])
 			arrays.append(t1)
 		except KeyError:
-			print "No t1's."
+			print("No t1's.")
 		try:
 			t2 = np.asarray(f[animal]['t2'])
 			arrays.append(t2)
 		except KeyError:
-			print "No t2's."
+			print("No t2's.")
 			t2 = np.zeros(t1.shape)
 			arrays.append(t2)
 		try:
 			miss = np.asarray(f[animal]['miss'])
 			arrays.append(miss)
 		except KeyError:
-			print "No Misses."
+			print("No Misses.")
 			miss = np.zeros(t1.shape)
 			arrays.append(miss)
 		##figure out the size of the largest array
@@ -2656,8 +2650,6 @@ def get_light_session_data():
 	f.create_dataset('light_sessions_t2', data = all_sessions_t2)
 	f.close()
 
-
-
 def plot_within_session_light_dark():
 	source_file = r"Z:\Data\processed_data\V1_BMI_final\raw_data\R7_thru_V13_learning_event_data2.hdf5"
 	f = h5py.File(source_file, 'r')
@@ -2709,9 +2701,9 @@ def plot_within_session_light_dark():
 	ax.set_xticklabels(labels)
 	ax.set_ylabel("percentage correct", fontsize = 14)
 	ax.set_xlabel("Condition", fontsize = 14)
-	print "pval light early-late= "+str(p_val_light)
-	print "pval dark early-late= "+str(p_val_dark)
-	print "pval light-dark-late= "+str(p_val_light_dark)
+	print("pval light early-late= "+str(p_val_light))
+	print("pval dark early-late= "+str(p_val_dark))
+	print("pval light-dark-late= "+str(p_val_light_dark))
 
 
 def plot_light_change_sessions():
@@ -2764,10 +2756,10 @@ def plot_light_change_sessions():
 		ticklabel.set_fontsize(14)
 	ax2.set_xlim(-0.3,1.3)
 
-	print "pval = "+str(p_val)
-	print "tval = "+str(t_val)
-	print "mean light = "+str(means[0])
-	print "mean dark = "+str(means[1])
+	print("pval = "+str(p_val))
+	print("tval = "+str(t_val))
+	print("mean light = "+str(means[0]))
+	print("mean dark = "+str(means[1]))
 
 
 def save_V1_ds_ff_cohgram_data():	
@@ -3732,19 +3724,19 @@ def plot_jaws_v_gfp_learning():
 	#bars = ax2.bar(idx, means, width, color = ['g','g','r','r','r'], yerr = None, 
 	#	alpha = 1,linewidth=2)
 
-	print "mean gfp early = "+str(means[0])
-	print "mean gfp late = "+str(means[1])
-	print "P-val gfp early vs late= "+str(gfp_early_late)
-	print "T-val gfp early vs late= "+str(t_gfp_el)
-	print "mean jaws early = "+str(means[2])
-	print "mean jaws late = "+str(means[3])
-	print "mean jaws nostim = "+str(means[4])
-	print "P-val jaws early vs late= "+str(jaws_early_late)
-	print "T-val jaws early vs late= "+str(t_jaws_el)
-	print "P-val jaws late vs jaws no stim= "+str(jaws_late_latenostim)
-	print "T-val jaws late vs jaws no stim= "+str(t_jaws_lns)
-	print "P-val gfp late vs jaws late= "+str(gfp_jaws_late)
-	print "P-val gfp late vs jaws no stim= "+str(gfp_late_jaws_notstim)
+	print("mean gfp early = "+str(means[0]))
+	print("mean gfp late = "+str(means[1]))
+	print("P-val gfp early vs late= "+str(gfp_early_late))
+	print("T-val gfp early vs late= "+str(t_gfp_el))
+	print("mean jaws early = "+str(means[2]))
+	print("mean jaws late = "+str(means[3]))
+	print("mean jaws nostim = "+str(means[4]))
+	print("P-val jaws early vs late= "+str(jaws_early_late))
+	print("T-val jaws early vs late= "+str(t_jaws_el))
+	print("P-val jaws late vs jaws no stim= "+str(jaws_late_latenostim))
+	print("T-val jaws late vs jaws no stim= "+str(t_jaws_lns))
+	print("P-val gfp late vs jaws late= "+str(gfp_jaws_late))
+	print("P-val gfp late vs jaws no stim= "+str(gfp_late_jaws_notstim))
 
 
 def plot_late_jaws_manips():
@@ -3821,19 +3813,19 @@ def plot_late_jaws_manips():
 	ax2.set_xlim(-0.3,1.3)
 	ax2.set_ylim(-0,1)
 
-	print "mean LED off 1 = "+str(means1[0])
-	print "mean LED 50 = "+str(means1[1])
-	print "mean LED off 2 = "+str(means1[2])
-	print "mean train LED off = "+str(means2[0])
-	print "mean test LED on = "+str(means2[1])
-	print "pval train LED off v train LED on= "+str(p_perf)
-	print "tval train LED off v train LED on= "+str(t_perf)
-	print "pval LED off 1 vs Stim50 = "+str(p_no_v_50)
-	print "tval LED off 1 v stim_50= "+str(t_no_v_50)
-	print "pval stim_50 v LED off 2= "+str(p_50_v_no)
-	print "tval stim_50 v LED off 2= "+str(t_50_v_no)
-	print "pval LED off 1 v LED off 2= "+str(p_no_v_no)
-	print "tval LED off v LED off 2= "+str(t_no_v_no)
+	print("mean LED off 1 = "+str(means1[0]))
+	print("mean LED 50 = "+str(means1[1]))
+	print("mean LED off 2 = "+str(means1[2]))
+	print("mean train LED off = "+str(means2[0]))
+	print("mean test LED on = "+str(means2[1]))
+	print("pval train LED off v train LED on= "+str(p_perf))
+	print("tval train LED off v train LED on= "+str(t_perf))
+	print("pval LED off 1 vs Stim50 = "+str(p_no_v_50))
+	print("tval LED off 1 v stim_50= "+str(t_no_v_50))
+	print("pval stim_50 v LED off 2= "+str(p_50_v_no))
+	print("tval stim_50 v LED off 2= "+str(t_50_v_no))
+	print("pval LED off 1 v LED off 2= "+str(p_no_v_no))
+	print("tval LED off v LED off 2= "+str(t_no_v_no))
 
 
 
@@ -3931,22 +3923,22 @@ def plot_within_session_by_animal():
 	# ax.set_ylabel("Percent of events", fontsize = 14)
 	# #ax.text(1, 0.75, "p = " + str(pval), fontsize = 12)
 	# fig.suptitle("Within session Performance", fontsize = 16)
-	print "pval rewarded e-l = "+str(pval_rewarded)
-	print "pval unrewarded e-l = "+str(pval_unrewarded)
-	print "pval early r-u = "+str(pval_early)
-	print "pval late r-u = "+str(pval_late)
-	print "tval rewarded e-l = "+str(t_rewarded)
-	print "tval unrewarded e-l = "+str(t_unrewarded)
-	print "tval early r-u = "+str(t_early)
-	print "tval late r-u = "+str(t_late)
-	print "mean rew early = "+str(means[0])
-	print "sem rew early = "+str(yerr[0])
-	print "mean rew late = "+str(means[1])
-	print "sem rew late = "+str(yerr[1])
-	print "mean unrew early = "+str(means[2])
-	print "sem unrew early = "+str(yerr[2])
-	print "mean unrew late = "+str(means[3])
-	print "sem unrew late = "+str(yerr[3])
+	print("pval rewarded e-l = "+str(pval_rewarded))
+	print("pval unrewarded e-l = "+str(pval_unrewarded))
+	print("pval early r-u = "+str(pval_early))
+	print("pval late r-u = "+str(pval_late))
+	print("tval rewarded e-l = "+str(t_rewarded))
+	print("tval unrewarded e-l = "+str(t_unrewarded))
+	print("tval early r-u = "+str(t_early))
+	print("tval late r-u = "+str(t_late))
+	print("mean rew early = "+str(means[0]))
+	print("sem rew early = "+str(yerr[0]))
+	print("mean rew late = "+str(means[1]))
+	print("sem rew late = "+str(yerr[1]))
+	print("mean unrew early = "+str(means[2]))
+	print("sem unrew early = "+str(yerr[2]))
+	print("mean unrew late = "+str(means[3]))
+	print("sem unrew late = "+str(yerr[3]))
 
 
 def plot_within_session_light_dark2():
@@ -4041,20 +4033,20 @@ def plot_within_session_light_dark2():
 	ax2.set_xlim(-0.35,3.35)
 	ax2.set_ylabel("percentage correct", fontsize = 14)
 	ax2.set_xlabel("Condition", fontsize = 14)
-	print "pval light early-late= "+str(p_val_light)
-	print "pval dark early-late= "+str(p_val_dark)
-	print "pval light-dark-late= "+str(p_val_light_dark)
-	print "tval light early-late= "+str(t_light)
-	print "tval dark early-late= "+str(t_dark)
-	print "tval light-dark-late= "+str(t_light_dark)
-	print "mean light early = "+str(means[0])
-	print "sem light early = "+str(sem[0])
-	print "mean light late = "+str(means[1])
-	print "sem light late = "+str(sem[1])
-	print "mean dark early = "+str(means[2])
-	print "sem dark early = "+str(sem[2])
-	print "mean dark late = "+str(means[3])
-	print "sem dark late = "+str(sem[3])
+	print("pval light early-late= "+str(p_val_light))
+	print("pval dark early-late= "+str(p_val_dark))
+	print("pval light-dark-late= "+str(p_val_light_dark))
+	print("tval light early-late= "+str(t_light))
+	print("tval dark early-late= "+str(t_dark))
+	print("tval light-dark-late= "+str(t_light_dark))
+	print("mean light early = "+str(means[0]))
+	print("sem light early = "+str(sem[0]))
+	print("mean light late = "+str(means[1]))
+	print("sem light late = "+str(sem[1]))
+	print("mean dark early = "+str(means[2]))
+	print("sem dark early = "+str(sem[2]))
+	print("mean dark late = "+str(means[3]))
+	print("sem dark late = "+str(sem[3]))
 
 
 def get_mean_frs2():
@@ -4235,18 +4227,18 @@ def plot_fr_data2():
 	ax2.set_xlim(-0.5,5.35)
 	ax2.set_ylabel("Fr, Hz", fontsize = 14)
 	ax2.set_xlabel("Condition", fontsize = 14)
-	print "pval e1 early-late= "+str(p_val_e1)
-	print "tval e1 early-late= "+str(t_val_e1)
-	print "pval e2 early-late= "+str(p_val_e2)
-	print "tval e2 early-late= "+str(t_val_e2)
-	print "pval ind early-late= "+str(p_val_ind)
-	print "tval ind early-late= "+str(t_val_ind)
-	print "mean e1 early = "+str(means[0])
-	print "mean e1 late = "+str(means[1])
-	print "mean e2 early = "+str(means[2])
-	print "mean e2 late = "+str(means[3])
-	print "mean ind early = "+str(means[4])
-	print "mean ind late = "+str(means[5])
+	print("pval e1 early-late= "+str(p_val_e1))
+	print("tval e1 early-late= "+str(t_val_e1))
+	print("pval e2 early-late= "+str(p_val_e2))
+	print("tval e2 early-late= "+str(t_val_e2))
+	print("pval ind early-late= "+str(p_val_ind))
+	print("tval ind early-late= "+str(t_val_ind))
+	print("mean e1 early = "+str(means[0]))
+	print("mean e1 late = "+str(means[1]))
+	print("mean e2 early = "+str(means[2]))
+	print("mean e2 late = "+str(means[3]))
+	print("mean ind early = "+str(means[4]))
+	print("mean ind late = "+str(means[5]))
 
 
 def plot_within_session_ratios():
@@ -4424,14 +4416,14 @@ def plot_within_session_ratios():
 	# ax.set_ylabel("Percent of events", fontsize = 14)
 	# #ax.text(1, 0.75, "p = " + str(pval), fontsize = 12)
 	# fig.suptitle("Within session Performance", fontsize = 16)
-	print "pval early e-l = "+str(pval_early)
-	print "tval early e-l = "+str(tval_early)
-	print "pval late e-l = "+str(pval_late)
-	print "tval late e-l = "+str(tval_late)
-	print "mean early-early = "+str(means[0])
-	print "mean early-late = "+str(means[1])
-	print "mean late-early = "+str(means[2])
-	print "mean late-late = "+str(means[3])
+	print("pval early e-l = "+str(pval_early))
+	print("tval early e-l = "+str(tval_early))
+	print("pval late e-l = "+str(pval_late))
+	print("tval late e-l = "+str(tval_late))
+	print("mean early-early = "+str(means[0]))
+	print("mean early-late = "+str(means[1]))
+	print("mean late-early = "+str(means[2]))
+	print("mean late-late = "+str(means[3]))
 
 
 #######################################################
@@ -4458,7 +4450,7 @@ def get_frs_vs_performance():
 			f_out = h5py.File(save_path,'a')
 			try:
 				session_exists = f_out[animal][session]
-				print animal+" "+session+" data exists; moving on"
+				print(animal+" "+session+" data exists; moving on")
 				f_out.close()
 			except KeyError:
 				session_e1 = []
@@ -4466,7 +4458,7 @@ def get_frs_vs_performance():
 				session_e2 = []
 				session_p2 = []
 				plxfile = os.path.join(root_dir,animal,session)
-				print "working on "+animal+" "+session
+				print("working on "+animal+" "+session)
 				e1_names = ru.animals[animal][1][session]['units']['e1_units']
 				e2_names = ru.animals[animal][1][session]['units']['e2_units']
 				try:
@@ -4517,7 +4509,7 @@ def get_frs_vs_performance():
 							session_e1.append(n_spikes/duration)
 							session_p1.append(score)
 					except KeyError:
-						print name+" not in this file; skipping"
+						print(name+" not in this file; skipping")
 				for name in e2_names:
 					try:
 						n_spikes =  raw_data[name].size
@@ -4525,7 +4517,7 @@ def get_frs_vs_performance():
 							session_e2.append(n_spikes/duration)
 							session_p2.append(score)
 					except KeyError:
-						print name+" not in this file; skipping"
+						print(name+" not in this file; skipping")
 				f_out = h5py.File(save_path,'a')
 				try:
 					a_group = f_out[animal]
@@ -4603,8 +4595,8 @@ def get_frs_vs_performance():
 	ax2.set_xlabel("Mean FR, Hz",fontsize=14)
 	p_e1 = stats.pearsonr(e1_rates,p_correct1)
 	p_e2 = stats.pearsonr(e2_rates,p_correct2)
-	print "pval e1 = "+str(p_e1)
-	print "pval e2 = "+str(p_e2)
+	print("pval e1 = "+str(p_e1))
+	print("pval e2 = "+str(p_e2))
 
 
 """
@@ -4637,11 +4629,11 @@ def log_regress_units(unit_types=['Str_units']):
 			try:
 				f_out = h5py.File(save_file,'a')
 				session_exists = f_out[animal][session]
-				print animal+" "+session+" data exists; moving to next file"
+				print(animal+" "+session+" data exists; moving to next file")
 				f_out.close()
 			except KeyError:
 				f_out.close()
-				print "analyzing data from "+animal+" "+session
+				print("analyzing data from "+animal+" "+session)
 				try:
 					t1_id = ru.animals[animal][1][session]['events']['t1'][0]
 				except KeyError:
@@ -4660,7 +4652,7 @@ def log_regress_units(unit_types=['Str_units']):
 							for ui in unit_ids:
 								unit_list.append(ui)
 						except KeyError:
-							print "No "+ut+" present in this file"
+							print("No "+ut+" present in this file")
 					##continue only if there are units to analyze
 					if len(unit_list)>0:
 						plxfile = os.path.join(root_dir,animal,session)
@@ -4672,7 +4664,7 @@ def log_regress_units(unit_types=['Str_units']):
 							if arr.startswith('AD') and arr.endswith('_ts'):
 								duration = int(np.ceil((raw_data[arr].max()*1000)/100)*100)+1
 								break
-						else: print "No A/D timestamp data found!!!"
+						else: print("No A/D timestamp data found!!!")
 						##make sure that this file had at least 20 trials of each type
 						try:
 							t1_ts = raw_data[t1_id]*1000.0
@@ -4695,7 +4687,7 @@ def log_regress_units(unit_types=['Str_units']):
 									spike_windows_t2 = get_data_window(spiketrain,t2_ts,window[0],window[1]) ##size bins x trials
 									X.append(np.concatenate((spike_windows_t1,spike_windows_t2),axis=1)) ##concatenate trials
 								except KeyError:
-									print "Can't find "+unit+" in this file"
+									print("Can't find "+unit+" in this file")
 							##make sure we still have more than 0 units
 							if len(X)>0:
 								X = np.asarray(X).transpose(0,2,1) ##shape should now be units x trials x bins
@@ -4726,7 +4718,7 @@ def log_regress_units(unit_types=['Str_units']):
 								s_group.create_dataset('pvals',data=pvals)
 								s_group.create_dataset('accuracies',data=accuracies)
 								f_out.close()
-	print "done"
+	print("done")
 
 
 """
@@ -4759,11 +4751,11 @@ def log_regress_grouped_units(unit_types=['Str_units']):
 			try:
 				f_out = h5py.File(save_file,'a')
 				session_exists = f_out[animal][session]
-				print animal+" "+session+" data exists; moving to next file"
+				print(animal+" "+session+" data exists; moving to next file")
 				f_out.close()
 			except KeyError:
 				f_out.close()
-				print "analyzing data from "+animal+" "+session
+				print("analyzing data from "+animal+" "+session)
 				try:
 					t1_id = ru.animals[animal][1][session]['events']['t1'][0]
 				except KeyError:
@@ -4782,7 +4774,7 @@ def log_regress_grouped_units(unit_types=['Str_units']):
 							for ui in unit_ids:
 								unit_list.append(ui)
 						except KeyError:
-							print "No "+ut+" present in this file"
+							print("No "+ut+" present in this file")
 					##continue only if there are units to analyze
 					if len(unit_list)>0:
 						plxfile = os.path.join(root_dir,animal,session)
@@ -4794,7 +4786,7 @@ def log_regress_grouped_units(unit_types=['Str_units']):
 							if arr.startswith('AD') and arr.endswith('_ts'):
 								duration = int(np.ceil((raw_data[arr].max()*1000)/100)*100)+1
 								break
-						else: print "No A/D timestamp data found!!!"
+						else: print("No A/D timestamp data found!!!")
 						##make sure that this file had at least 20 trials of each type
 						try:
 							t1_ts = raw_data[t1_id]*1000.0
@@ -4817,7 +4809,7 @@ def log_regress_grouped_units(unit_types=['Str_units']):
 									spike_windows_t2 = get_data_window(spiketrain,t2_ts,window[0],window[1]) ##size bins x trials
 									X.append(np.concatenate((spike_windows_t1,spike_windows_t2),axis=1)) ##concatenate trials
 								except KeyError:
-									print "Can't find "+unit+" in this file"
+									print("Can't find "+unit+" in this file")
 							##make sure we still have more than 0 units
 							if len(X)>0:
 								X = np.asarray(X).transpose(0,2,1) ##shape should now be units x trials x bins
@@ -4846,28 +4838,33 @@ def log_regress_grouped_units(unit_types=['Str_units']):
 								s_group.create_dataset('accuracy',data=np.array(accuracy))
 								s_group.create_dataset('chance',data=np.asarray(chance))
 								f_out.close()
-	print "Done"
+	print("Done")
 
 
 ##function to plot the results from the above function
 def plot_log_groups():
-	datafile = r"D:\Ryan\V1_BMI\NatureNeuro\rebuttal\data\new_regressions\direct_pop_400ms_bins.hdf5"
+	datafile = r"D:\Ryan\V1_BMI\NatureNeuro\rebuttal\data\new_regressions\indirect_pop_400ms_bins.hdf5"
 	f = h5py.File(datafile,'r')
 	animal_list = f.keys()
 	##store the means of all the animals
 	sig_vals = []
 	accuracies = []
+	chance = []
 	for a in animal_list:
 		sig = []
 		acc = []
+		ch = []
 		for s in f[a].keys():
 			sig.append(np.asarray(f[a][s]['pval'])*1)
 			acc.append(np.asarray(f[a][s]['accuracy'])*1)
+			ch.append(np.asarray(f[a][s]['chance'])*1)
 		sig_vals.append(np.asarray(sig))
 		accuracies.append(np.asarray(acc))
+		chance.append(np.asarray(ch))
 	f.close()
 	sig_vals = equalize_arrs(sig_vals)
 	accuracies = equalize_arrs(accuracies)
+	chance = equalize_arrs(chance)
 	x_axis = np.arange(1,accuracies.shape[1]+1)
 	##count the number of animals for each session with significant predictability
 	##first, the total number of animals that we have data for for this day
@@ -4882,12 +4879,15 @@ def plot_log_groups():
 	fig,(ax1,ax3) = plt.subplots(2,sharex=True)
 	mean_acc = np.nanmean(accuracies,axis=0)
 	serr_acc = np.nanstd(accuracies,axis=0)/np.sqrt(accuracies.shape[0])
+	mean_chance = np.nanmean(chance,axis=0)
+	serr_chance = np.nanstd(chance,axis=0)/np.sqrt(chance.shape[0])
 	ax1.set_ylabel("Prediction\n accuracy",fontsize=14)
 	ax3.set_ylabel("Percent\n significant",fontsize=14)
 	ax3.set_xlabel("Training day",fontsize=14)
-	ax1.set_title("Prediction accuracy of direct population",fontsize=14)
+	ax1.set_title("Prediction accuracy of indirect population",fontsize=14)
 	ax3.set_title("Percent of animals with significant prediction by direct units",fontsize=14)
 	ax1.errorbar(x_axis,mean_acc,yerr=serr_acc,color='k',linewidth=2)
+	ax1.fill_between(x_axis,mean_chance-serr_chance,mean_chance+serr_chance,color='cyan',alpha=0.5)
 	ax3.plot(sig_perc,color='k',linewidth=2)
 	for tick in ax1.xaxis.get_major_ticks():
 		tick.label.set_fontsize(14)
@@ -4899,6 +4899,34 @@ def plot_log_groups():
 		tick.label.set_fontsize(14)
 	for i in range(accuracies.shape[0]):
 		ax1.plot(x_axis,accuracies[i,:],alpha=0.5,color='k')
+	##now do a summary figure for all days
+	##now let's get the summary for all days
+	x = np.array([1])
+	err_x = np.array([0.1])
+	labels = ['mean accuracy']
+	acc_summ = np.nanmean(accuracies,axis=1)
+	chance_summ = np.nanmean(chance,axis=1)
+	acc_mean = acc_summ.mean()
+	acc_err = stats.sem(acc_summ)
+	chance_mean = chance_summ.mean()
+	chance_err = stats.sem(chance_summ)
+	fig,ax = plt.subplots(1)
+	ax.errorbar(x,acc_mean,yerr=acc_err,xerr=err_x,fmt='none',ecolor='k',capthick=2,elinewidth=2)
+	for i in range(acc_summ.shape[0]):
+		ax.plot(x,acc_summ[i],marker='o',color='k')
+	##to plot chance rates
+	chance_means = np.array([chance_mean,chance_mean,chance_mean])
+	chance_errs = np.array([chance_err,chance_err,chance_err])
+	ax.fill_between(np.array([0.5,1,1.5]),chance_means-chance_errs,chance_means+chance_errs,
+		color='cyan',alpha=0.5)
+	ax.set_xticks([1])
+	ax.set_xticklabels(labels)
+	ax.set_ylabel("Accuracy",fontsize=14)
+	ax.set_title("Target choice predicted by indirect population",fontsize=14)
+	for tick in ax.yaxis.get_major_ticks():
+		tick.label.set_fontsize(14)
+	for tick in ax.xaxis.get_major_ticks():
+		tick.label.set_fontsize(14)
 
 
 def linear_regression_direct_indirect(unit_types=['Str_units']):
@@ -4928,11 +4956,11 @@ def linear_regression_direct_indirect(unit_types=['Str_units']):
 			try:
 				f_out = h5py.File(save_file,'a')
 				session_exists = f_out[animal][session]
-				print animal+" "+session+" data exists; moving to next file"
+				print(animal+" "+session+" data exists; moving to next file")
 				f_out.close()
 			except KeyError:
 				f_out.close()
-				print "analyzing data from "+animal+" "+session
+				print("analyzing data from "+animal+" "+session)
 				try:
 					t1_id = ru.animals[animal][1][session]['events']['t1'][0]
 				except KeyError:
@@ -4951,7 +4979,7 @@ def linear_regression_direct_indirect(unit_types=['Str_units']):
 							for ui in unit_ids:
 								unit_list.append(ui)
 						except KeyError:
-							print "No "+ut+" present in this file"
+							print("No "+ut+" present in this file")
 					direct_list = []
 					for ut in direct_types:
 						try:
@@ -4959,7 +4987,7 @@ def linear_regression_direct_indirect(unit_types=['Str_units']):
 							for ui in unit_ids:
 								direct_list.append(ui)
 						except KeyError:
-							print "No "+ut+" present in this file"
+							print("No "+ut+" present in this file")
 					##continue only if there are units to analyze
 					if len(unit_list)>0 and len(direct_list)>0:
 						plxfile = os.path.join(root_dir,animal,session)
@@ -4971,7 +4999,7 @@ def linear_regression_direct_indirect(unit_types=['Str_units']):
 							if arr.startswith('AD') and arr.endswith('_ts'):
 								duration = int(np.ceil((raw_data[arr].max()*1000)/100)*100)+1
 								break
-						else: print "No A/D timestamp data found!!!"
+						else: print("No A/D timestamp data found!!!")
 						##make sure that this file had at least 20 trials of each type
 						try:
 							t1_ts = raw_data[t1_id]*1000.0
@@ -4994,7 +5022,7 @@ def linear_regression_direct_indirect(unit_types=['Str_units']):
 									spike_windows_t2 = get_data_window(spiketrain,t2_ts,window[0],window[1]) ##size bins x trials
 									y.append(np.concatenate((spike_windows_t1,spike_windows_t2),axis=1)) ##concatenate trials
 								except KeyError:
-									print "Can't find "+unit+" in this file"
+									print("Can't find "+unit+" in this file")
 							##repeat for the other units
 							X = []
 							for unit in unit_list:
@@ -5007,7 +5035,7 @@ def linear_regression_direct_indirect(unit_types=['Str_units']):
 									spike_windows_t2 = get_data_window(spiketrain,t2_ts,window[0],window[1]) ##size bins x trials
 									X.append(np.concatenate((spike_windows_t1,spike_windows_t2),axis=1)) ##concatenate trials
 								except KeyError:
-									print "Can't find "+unit+" in this file"
+									print("Can't find "+unit+" in this file")
 							##make sure we still have more than 0 units
 							if len(X)>0 and len(y)>0:
 								X = np.asarray(X) ##shape should now be units x bins x trials
@@ -5029,7 +5057,7 @@ def linear_regression_direct_indirect(unit_types=['Str_units']):
 								s_group.create_dataset('pvals',data=pvals)
 								s_group.create_dataset('R2s',data=R2s)
 								f_out.close()
-	print "Done"
+	print("Done")
 
 ##function to plot the results from the above function
 def plot_lin_regression():
@@ -5209,6 +5237,35 @@ def plot_log_regression():
 		tick.label.set_fontsize(14)
 	for tick in ax.yaxis.get_major_ticks():
 		tick.label.set_fontsize(14)
+	##now let's get the summary for all days
+	x = np.array([1,2])
+	err_x = np.array([0.1])
+	labels = ['mean acc','perc sig']
+	ps_summ = np.nanmean(perc,axis=1)
+	r2_summ = np.nanmean(accuracies,axis=1)
+	ps_mean = ps_summ.mean()
+	ps_err = stats.sem(ps_summ)
+	r2_mean = r2_summ.mean()
+	r2_err = stats.sem(r2_summ)
+	fig,ax = plt.subplots(1)
+	ax2 = ax.twinx()
+	ax2.errorbar(x[0],ps_mean,yerr=ps_err,xerr=err_x,fmt='none',ecolor='k',capthick=2,elinewidth=2)
+	ax.errorbar(x[1],r2_mean,yerr=r2_err,xerr=err_x,fmt='none',ecolor='k',capthick=2,elinewidth=2)
+	for i in range(ps_summ.shape[0]):
+		ax2.plot(x[0],ps_summ[i],marker='o',color='k')
+	for i in range(r2_summ.shape[0]):
+		ax.plot(x[1],r2_summ[i],marker='o',color='k')
+	ax.set_xticks([1,2])
+	ax.set_xticklabels(labels)
+	ax.set_ylabel("Accuracy",fontsize=14)
+	ax2.set_ylabel("Percent units significant",fontsize=14)
+	ax.set_title("Target choice by individual indirect units",fontsize=14)
+	for tick in ax.yaxis.get_major_ticks():
+		tick.label.set_fontsize(14)
+	for tick in ax2.yaxis.get_major_ticks():
+		tick.label.set_fontsize(14)
+	for tick in ax.xaxis.get_major_ticks():
+		tick.label.set_fontsize(14)
 
 
 
@@ -5218,10 +5275,10 @@ compared to the ones observed during rewarded tone playback
 """
 def get_rev1_bs():
 	root_dir = r"K:\Ryan\V1_BMI"
-	animal_list = ['V14','V15','V16']
+	animal_list = ['V14','V15','V16'"R13", "R11", "V01", "V02", "V03", "V04", "V05", "V11", "V13", "R7", "R8"]
 	session_list = ['BMI_D06','BMI_D07']
 	window = [6000,6000]
-	save_file = h5py.File(r"K:\Ryan\V1_BMI\NatureNeuro\rebuttal\data\rev1_expt.hdf5",'w-')
+	save_file = h5py.File(r"D:\Ryan\V1_BMI\Cell\data\triggered_spike_rates.hdf5",'w-')
 	##open the file 
 	for animal in animal_list:
 		a_group = save_file.create_group(animal)
@@ -5243,13 +5300,13 @@ def get_rev1_bs():
 				if arr.startswith('AD') and arr.endswith('_ts'):
 					duration_v = int(np.ceil((v_data[arr].max()*1000)/100)*100)+1
 					break
-			else: print "No A/D timestamp data found!!!"
+			else: print("No A/D timestamp data found!!!")
 			duration_pb = None
 			for arr in pb_data.keys():
 				if arr.startswith('AD') and arr.endswith('_ts'):
 					duration_pb = int(np.ceil((pb_data[arr].max()*1000)/100)*100)+1
 					break
-			else: print "No A/D timestamp data found!!!"
+			else: print("No A/D timestamp data found!!!")
 			##now get the E1 unit data 
 			e1_v = []
 			e1_pb = []
@@ -5314,7 +5371,7 @@ def get_rev1_bs():
 			s_group.create_dataset('t1_e2_pb',data=t1_e2_pb)
 			s_group.create_dataset('t2_e2_pb',data=t2_e2_pb)
 	save_file.close()
-	print 'Done'
+	print('Done')
 
 """
 a function to plot the playback data saved by the above function
@@ -5335,7 +5392,7 @@ def plot_rev1_bs():
 	e2_t2_pb = []
 	##go through each animal and take the average of the sessions 
 	for animal in animal_list:
-		print "working on animal "+animal
+		print("working on animal "+animal)
 		e1t1v = []
 		e1t2v = []
 		e2t1v = []
@@ -5346,7 +5403,7 @@ def plot_rev1_bs():
 		e2t1pb = []
 		e2t2pb = []
 		for session in f[animal].keys():
-			print "working on session "+session
+			print("working on session "+session)
 			e1t1v.append(np.asarray(f[animal][session]['t1_e1_v']))
 			e1t2v.append(np.asarray(f[animal][session]['t2_e1_v']))
 			e2t1v.append(np.asarray(f[animal][session]['t1_e2_v']))
@@ -5378,25 +5435,27 @@ def plot_rev1_bs():
 	e2_t1_pb = np.asarray(e2_t1_pb)
 	e2_t2_pb = np.asarray(e2_t2_pb)
 	##now I probably want to look at the averages for each animal separately
-	e1_t1_v_means = np.zeros((e1_t1_v.shape[0],238)) ##being lazy and not calculating this other dimension
-	e1_t2_v_means = np.zeros((e1_t2_v.shape[0],238))
-	e2_t1_v_means = np.zeros((e2_t1_v.shape[0],238))
-	e2_t2_v_means = np.zeros((e2_t2_v.shape[0],238))
+	win_d = ss.windowRate(e1_t1_v[0,:,:].T,[200,50]).shape[0]
+	e1_t1_v_means = np.zeros((e1_t1_v.shape[0],win_d)) ##being lazy and not calculating this other dimension
+	e1_t2_v_means = np.zeros((e1_t2_v.shape[0],win_d))
+	e2_t1_v_means = np.zeros((e2_t1_v.shape[0],win_d))
+	e2_t2_v_means = np.zeros((e2_t2_v.shape[0],win_d))
 	####
-	e1_t1_pb_means = np.zeros((e1_t1_pb.shape[0],238))
-	e1_t2_pb_means = np.zeros((e1_t2_pb.shape[0],238))
-	e2_t1_pb_means = np.zeros((e2_t1_pb.shape[0],238))
-	e2_t2_pb_means = np.zeros((e2_t2_pb.shape[0],238))
+	e1_t1_pb_means = np.zeros((e1_t1_pb.shape[0],win_d))
+	e1_t2_pb_means = np.zeros((e1_t2_pb.shape[0],win_d))
+	e2_t1_pb_means = np.zeros((e2_t1_pb.shape[0],win_d))
+	e2_t2_pb_means = np.zeros((e2_t2_pb.shape[0],win_d))
 	for a in range(e1_t1_v.shape[0]):
-		e1_t1_v_means[a,:] = stats.zscore(ss.windowRate(e1_t1_v[a,:,:].T,[100,50]).mean(axis=1)) ##this is the average trace for this animal, over all units/trials
-		e1_t2_v_means[a,:] = stats.zscore(ss.windowRate(e1_t2_v[a,:,:].T,[100,50]).mean(axis=1))
-		e2_t1_v_means[a,:] = stats.zscore(ss.windowRate(e2_t1_v[a,:,:].T,[100,50]).mean(axis=1))
-		e2_t2_v_means[a,:] = stats.zscore(ss.windowRate(e2_t2_v[a,:,:].T,[100,50]).mean(axis=1))
+		e1_t1_v_means[a,:] = stats.zscore(ss.windowRate(e1_t1_v[a,:,:].T,[200,50]).mean(axis=1)) ##this is the average trace for this animal, over all units/trials
+		e1_t2_v_means[a,:] = stats.zscore(ss.windowRate(e1_t2_v[a,:,:].T,[200,50]).mean(axis=1))
+		e2_t1_v_means[a,:] = stats.zscore(ss.windowRate(e2_t1_v[a,:,:].T,[200,50]).mean(axis=1))
+		e2_t2_v_means[a,:] = stats.zscore(ss.windowRate(e2_t2_v[a,:,:].T,[200,50]).mean(axis=1))
 		###
-		e1_t1_pb_means[a,:] = stats.zscore(ss.windowRate(e1_t1_pb[a,:,:].T,[100,50]).mean(axis=1)) ##this is the average trace for this animal, over all units/trials
-		e1_t2_pb_means[a,:] = stats.zscore(ss.windowRate(e1_t2_pb[a,:,:].T,[100,50]).mean(axis=1))
-		e2_t1_pb_means[a,:] = stats.zscore(ss.windowRate(e2_t1_pb[a,:,:].T,[100,50]).mean(axis=1))
-		e2_t2_pb_means[a,:] = stats.zscore(ss.windowRate(e2_t1_pb[a,:,:].T,[100,50]).mean(axis=1))
+		e1_t1_pb_means[a,:] = stats.zscore(ss.windowRate(e1_t1_pb[a,:,:].T,[200,50]).mean(axis=1)) ##this is the average trace for this animal, over all units/trials
+		e1_t2_pb_means[a,:] = stats.zscore(ss.windowRate(e1_t2_pb[a,:,:].T,[200,50]).mean(axis=1))
+		e2_t1_pb_means[a,:] = stats.zscore(ss.windowRate(e2_t1_pb[a,:,:].T,[200,50]).mean(axis=1))
+		e2_t2_pb_means[a,:] = stats.zscore(ss.windowRate(e2_t1_pb[a,:,:].T,[200,50]).mean(axis=1))
+	e2_t1_v_means = e1_t2_v_means
 	##now get the means and std errs
 	e1_t1_v_mean = e1_t1_v_means.mean(axis=0)
 	e1_t2_v_mean = e1_t2_v_means.mean(axis=0)
@@ -5483,15 +5542,15 @@ def plot_rev1_bs():
 	ax_pb.fill_between(x,e2_t2_pb_mean+e2_t2_pb_serr,e2_t2_pb_mean-e2_t2_pb_serr,color='b',alpha=0.5)
 	ax_pb.legend()
 	###now I guess we can also plot the modulation depths
-	e1_t1_mod_v = abs(e1_t1_v_means).max(axis=1)
-	e1_t2_mod_v = abs(e1_t2_v_means).max(axis=1)
-	e2_t1_mod_v = abs(e2_t1_v_means).max(axis=1)
-	e2_t2_mod_v = abs(e2_t2_v_means).max(axis=1)
+	e1_t1_mod_v = abs(e1_t1_v_means[:,110:120]).max(axis=1)
+	e1_t2_mod_v = abs(e1_t2_v_means[:,110:120]).max(axis=1)
+	e2_t1_mod_v = abs(e2_t1_v_means[:,110:120]).max(axis=1)
+	e2_t2_mod_v = abs(e2_t2_v_means[:,110:120]).max(axis=1)
 	###
-	e1_t1_mod_pb = abs(e1_t1_pb_means).max(axis=1)
-	e1_t2_mod_pb = abs(e1_t2_pb_means).max(axis=1)
-	e2_t1_mod_pb = abs(e2_t1_pb_means).max(axis=1)
-	e2_t2_mod_pb = abs(e2_t2_pb_means).max(axis=1)
+	e1_t1_mod_pb = abs(e1_t1_pb_means[:,110:120]).max(axis=1)
+	e1_t2_mod_pb = abs(e1_t2_pb_means[:,110:120]).max(axis=1)
+	e2_t1_mod_pb = abs(e2_t1_pb_means[:,110:120]).max(axis=1)
+	e2_t2_mod_pb = abs(e2_t2_pb_means[:,110:120]).max(axis=1)
 	##now do the combination of all ensembles
 	t1_mod_v = np.concatenate((e1_t1_mod_v,e2_t1_mod_v))
 	t1_mod_pb = np.concatenate((e1_t1_mod_pb,e2_t1_mod_pb))
@@ -5520,7 +5579,7 @@ def plot_rev1_bs():
 	for ticklabel in ax_e1.get_yticklabels():
 		ticklabel.set_fontsize(14)
 	ax_e1.set_xlim(-0.5,1.5)
-	ax_e1.set_ylim(2.5,5.5)
+	ax_e1.set_ylim(0,5.5)
 	ax_e1.set_ylabel("Modulation depth",fontsize=14)
 	ax_e1.set_title("Average E1 modulation depth",fontsize=14)
 	##now for E2
@@ -5534,7 +5593,7 @@ def plot_rev1_bs():
 	for ticklabel in ax_e2.get_yticklabels():
 		ticklabel.set_fontsize(14)
 	ax_e2.set_xlim(-0.5,1.5)
-	ax_e2.set_ylim(2.5,5.5)
+	ax_e2.set_ylim(0,5.5)
 	ax_e2.set_ylabel("Modulation depth",fontsize=14)
 	ax_e2.set_title("Average E2 modulation depth",fontsize=14)
 	all_mod_fig = plt.figure()
@@ -5552,7 +5611,7 @@ def plot_rev1_bs():
 	for ticklabel in ax_all.get_yticklabels():
 		ticklabel.set_fontsize(14)
 	ax_all.set_xlim(-0.5,1.5)
-	ax_all.set_ylim(1,5.5)
+	ax_all.set_ylim(0,5.5)
 	ax_all.set_ylabel("Modulation depth",fontsize=14)
 	ax_all.set_title("Average ensemble modulation depth",fontsize=14)
 	#finally do some significance testing
@@ -5562,18 +5621,18 @@ def plot_rev1_bs():
 	tval_e2 =stats.ttest_rel(e2_t1_mod_v, e2_t1_mod_pb)[0]
 	pval_all = stats.ttest_rel(t1_mod_v,t1_mod_pb)[1]
 	tval_all = stats.ttest_rel(t1_mod_v,t1_mod_pb)[0]
-	print "E1 online mean = "+str(e1_t1_mod_v.mean())
-	print "E1 playback mean = "+str(e1_t1_mod_pb.mean())
-	print "E1 pval = "+str(pval_e1)
-	print "E1 tval = "+str(tval_e1)
-	print "E2 online mean = "+str(e2_t1_mod_v.mean())
-	print "E2 playback mean = "+str(e2_t1_mod_pb.mean())
-	print "E2 pval = "+str(pval_e2)
-	print "E2 tval = "+str(tval_e2)
-	print "all playback mean = "+str(t1_mod_pb.mean())
-	print "all online mean = "+str(t1_mod_v.mean())
-	print "all pval = "+str(pval_all)
-	print "all tval = "+str(tval_all)
+	print("E1 online mean = "+str(e1_t1_mod_v.mean()))
+	print("E1 playback mean = "+str(e1_t1_mod_pb.mean()))
+	print("E1 pval = "+str(pval_e1))
+	print("E1 tval = "+str(tval_e1))
+	print("E2 online mean = "+str(e2_t1_mod_v.mean()))
+	print("E2 playback mean = "+str(e2_t1_mod_pb.mean()))
+	print("E2 pval = "+str(pval_e2))
+	print("E2 tval = "+str(tval_e2))
+	print("all playback mean = "+str(t1_mod_pb.mean()))
+	print("all online mean = "+str(t1_mod_v.mean()))
+	print("all pval = "+str(pval_all))
+	print("all tval = "+str(tval_all))
 
 
 def get_peg_e1_e2():
@@ -5635,7 +5694,7 @@ def get_peg_e1_e2():
 				if (last_id == 'e1_catch' and current_id == 'e1_catch') or (last_id == 
 					'e2_catch' and current_id == 'e2_catch'):
 					del_idx.append(i)
-					print "repeat of "+current_id
+					print("repeat of "+current_id)
 				last_id = current_id
 			
 			for d in range(len(del_idx)):
@@ -5669,7 +5728,7 @@ def get_peg_e1_e2():
 					incorrect += 1
 					i+=1
 				else:
-					print "unrecognized event ID: "+ids[i]
+					print("unrecognized event ID: "+ids[i])
 					i+=1
 			p_e1.append(float(correct_e1)/(incorrect_e1+correct_e1))
 			p_e2.append(float(correct_e2)/(incorrect_e2+correct_e2))
@@ -5703,13 +5762,13 @@ def get_peg_e1_e2():
 	tval_e1 =stats.ttest_rel(p_ctrl, p_e1)[0]
 	pval_e2 = stats.ttest_rel(p_ctrl, p_e2)[1]
 	tval_e2 =stats.ttest_rel(p_ctrl, p_e2)[0]
-	print "ctrl mean = "+str(p_ctrl.mean())
-	print "peg e1 mean = "+str(p_e1.mean())
-	print "E1 pval = "+str(pval_e1)
-	print "E1 tval = "+str(tval_e1)
-	print "peg e2 mean = "+str(p_e2.mean())
-	print "E2 pval = "+str(pval_e2)
-	print "E2 tval = "+str(tval_e2)
+	print("ctrl mean = "+str(p_ctrl.mean()))
+	print("peg e1 mean = "+str(p_e1.mean()))
+	print("E1 pval = "+str(pval_e1))
+	print("E1 tval = "+str(tval_e1))
+	print("peg e2 mean = "+str(p_e2.mean()))
+	print("E2 pval = "+str(pval_e2))
+	print("E2 tval = "+str(tval_e2))
 	return p_ctrl,p_e1,p_e2
 
 def get_time_locked_lfp():
@@ -5733,14 +5792,18 @@ def get_time_locked_lfp():
 			#if session_list is None:
 			session_list = ru.animals[animal][1].keys()
 			for session in session_list:
-				print "Working on "+animal+" "+session
+				print("Working on "+animal+" "+session)
 				filepath = os.path.join(root_dir,animal,session) ##the file path to the volitional part
 				##start with the non-manipulation file
-				data = plxread.import_file(filepath,AD_channels=range(1,97),save_wf=False,
+				data = plxread.import_file(filepath,AD_channels=list(range(1,97)),save_wf=False,
 					import_unsorted=False,verbose=False)
 				##we are going to need the T1 and T2 timestamps fo each file
 				t1_id = ru.animals[animal][1][session]['events'][target][0] ##the event name in the plexon file
-				lfp_id = ru.animals[animal][1][session]['lfp'][unit_type][0] ##we'll just take the first LFP channel since many only have one chan anyway
+				try:
+					lfp_id = ru.animals[animal][1][session]['lfp'][unit_type][0] ##we'll just take the first LFP channel since many only have one chan anyway
+				except:
+					unit_type2 = list(ru.animals[animal][1][session]['lfp'])[0]
+					lfp_id = ru.animals[animal][1][session]['lfp'][unit_type2][0]
 				t1_ts = data[t1_id]*1000
 				lfp = data[lfp_id]
 				if len(t1_ts)>0:
@@ -5754,7 +5817,7 @@ def get_time_locked_lfp():
 	# 		f.__delitem__('m11/BMI_D09')
 	# except KeyError:
 	# 	pass
-	print 'done!'
+	print ('done!')
 
 def get_mouse_lfp_specgram():
 	datafile = r"D:\Ryan\V1_BMI\NatureNeuro\rebuttal\data\mouse_lfp_t1.hdf5"
@@ -5775,7 +5838,6 @@ def get_mouse_lfp_specgram():
 	f_out.create_dataset('all_sessions',data=np.concatenate(all_sessions,axis=2))
 	f.close()
 	f_out.close()
-	print 'done'
 
 def get_mouse_lfp_spectrum():
 	datafile = r"D:\Ryan\V1_BMI\NatureNeuro\rebuttal\data\lfp_t1.hdf5"
@@ -5797,7 +5859,6 @@ def get_mouse_lfp_spectrum():
 	f_out.create_dataset('all_sessions',data=np.asarray(all_sessions))
 	f.close()
 	f_out.close()
-	print 'done'
 
 def plot_lfp_specgram():
 	source_file =  r"D:\Ryan\V1_BMI\NatureNeuro\rebuttal\data\mouse_lfp_spec.hdf5"
@@ -6040,11 +6101,11 @@ def save_ff_cohgram_data():
 	sig2 = 'V1_lfp'
 	sig_type = 'lfp'
 	target = 't1'
-	animal_list = ["R11","R13"]
+	animal_list = ["R11","R13","V02","V03","V04","V05","V11","V13"]
 	window = [6000,6000]
 	session_range = None	
 	root_dir = r"D:\Ryan\V1_BMI"
-	save_file = r"D:\Ryan\V1_BMI\NatureNeuro\rebuttal\data\PLC_DS_ffc2.hdf5"
+	save_file = r"D:\Ryan\V1_BMI\NatureNeuro\rebuttal\data\V1_DS_ffc.hdf5"
 	if animal_list is None:
 		animal_list = ru.animals.keys()
 	for animal in animal_list:
@@ -6077,7 +6138,7 @@ def save_ff_cohgram_data():
 					event = 0
 				##if we do have everything we need, continue
 				if (len(sig_list1)>0 and len(sig_list2)>0 and event != 0):
-					print "working on "+animal+" "+session
+					print("working on "+animal+" "+session)
 					##open the raw plexon data file
 					raw_data = plxread.import_file(plxfile,AD_channels=range(1,97),save_wf=False,
 						import_unsorted=False,verbose=False)
@@ -6116,7 +6177,7 @@ def save_ff_cohgram_data():
 						a_group = f_out.create_group(animal)
 					a_group.create_dataset(session, data=np.asarray(cohgrams))
 					f_out.close()
-	print "Done!"
+	print("Done!")
 
 def save_sf_cohgram_data():
 	##define some gobal parameters
@@ -6163,7 +6224,7 @@ def save_sf_cohgram_data():
 					event = 0
 				##if we do have everything we need, continue
 				if (len(sig_list1)>0 and len(sig_list2)>0 and event != 0):
-					print "working on "+animal+" "+session
+					print("working on "+animal+" "+session)
 					##open the raw plexon data file
 					raw_data = plxread.import_file(plxfile,AD_channels=range(1,97),save_wf=False,
 						import_unsorted=False,verbose=False)
@@ -6218,7 +6279,7 @@ def save_sf_cohgram_data():
 						a_group = f_out.create_group(animal)
 					a_group.create_dataset(session, data=np.asarray(cohgrams))
 					f_out.close()
-	print "Done!"
+	print("Done!")
 
 def get_ensemble_correlations_mouse():
 	##define some gobal parameters
@@ -6255,7 +6316,7 @@ def get_ensemble_correlations_mouse():
 				ind_list = []
 			##if we do have everything we need, continue
 			if (len(e1_list)>0 and len(e2_list)>0 and len(ind_list)>0):
-				print "working on "+animal+" "+session
+				print("working on "+animal+" "+session)
 				##open the raw plexon data file
 				raw_data = plxread.import_file(plxfile,AD_channels=range(100,200),save_wf=False,
 					import_unsorted=False,verbose=False)
@@ -6321,7 +6382,7 @@ def get_ensemble_correlations_mouse():
 				s_group.create_dataset("E2",data = np.asarray(e2_data))
 				s_group.create_dataset("indirect",data = np.asarray(ind_data))
 				f_out.close()
-	print "Done!"
+	print("Done!")
 
 
 def plot_mouse_correlations():
@@ -6554,7 +6615,7 @@ def get_target_latencies():
 				miss_id = 0
 			##if we do have everything we need, continue
 			if (t1_id != 0):
-				print "working on "+animal+" "+session
+				print("working on "+animal+" "+session)
 				##open the raw plexon data file
 				raw_data = plxread.import_file(plxfile,AD_channels=range(1,97),save_wf=False,
 					import_unsorted=False,verbose=False)
@@ -6562,17 +6623,17 @@ def get_target_latencies():
 				try:
 					t1_ts = raw_data[t1_id]*1000.0
 				except KeyError:
-					print "No t1's for this session"
+					print("No t1's for this session")
 					t1_ts = np.array([])
 				try:
 					t2_ts = raw_data[t2_id]*1000.0
 				except KeyError:
-					print "No t2's for this session"
+					print("No t2's for this session")
 					t2_ts = np.array([])
 				try:
 					miss_ts = raw_data[miss_id]*1000.0
 				except KeyError:
-					print "No misses for this file"
+					print("No misses for this file")
 					miss_ts = np.array([])
 				###now get 2 arrays, one of all the timestamps and one of all the timestamp IDs
 				ids = np.concatenate((np.full(t1_ts.size,"t1",dtype='S2'),
@@ -6604,7 +6665,7 @@ def get_target_latencies():
 						miss_times.append(trial_duration)
 						t += 1
 					else:
-						print "unknown trial type: "+ids[t+1]
+						print("unknown trial type: "+ids[t+1])
 						t+=1
 				t1_times = np.asarray(t1_times)
 				t2_times = np.asarray(t2_times)
@@ -6619,7 +6680,7 @@ def get_target_latencies():
 				s_group.create_dataset("t2",data=t2_times)
 				s_group.create_dataset("miss",data=miss_times)
 				f_out.close()
-	print "Done"
+	print("Done")
 
 def plot_target_latencies():
 	##define global parameters
@@ -6681,10 +6742,10 @@ def plot_target_latencies():
 	#ax.set_ylim(8,19)
 	pval_animals = stats.ttest_rel(animal_average_early,animal_average_late)[1]
 	tval_animals = stats.ttest_rel(animal_average_early,animal_average_late)[0]
-	print "mean early = "+str(early_mean)
-	print "mean late = "+str(late_mean)
-	print "pval = "+str(pval_animals)
-	print "tval = "+str(tval_animals)
+	print("mean early = "+str(early_mean))
+	print("mean late = "+str(late_mean))
+	print("pval = "+str(pval_animals))
+	print("tval = "+str(tval_animals))
 	##now look at all trials pooled
 	early_mean = all_trials_early.mean()
 	early_sem = stats.sem(all_trials_early)
@@ -6712,10 +6773,10 @@ def plot_target_latencies():
 	ax.set_ylabel("Time to target (s)",fontsize=14)
 	ax.set_xticklabels(["Early","Late"])
 	ax.set_title("Latencies to rewarded targets",fontsize=14)
-	print "mean early = "+str(early_mean)
-	print "mean late = "+str(late_mean)
-	print "pval = "+str(pval_all)
-	print "tval = "+str(tval_all)
+	print("mean early = "+str(early_mean))
+	print("mean late = "+str(late_mean))
+	print("pval = "+str(pval_all))
+	print("tval = "+str(tval_all))
 
 def plot_dms_locked():
 	f = h5py.File(r"D:\Ryan\V1_BMI\processed_data\V1_BMI_final\raw_data\dms_spikes_smoothed.hdf5")
@@ -6765,7 +6826,7 @@ def get_timelocked_frs():
 			#if session_list is None:
 			session_list = ru.animals[animal][1].keys()
 			for session in session_list:
-				print "Working on "+animal+" "+session
+				print("Working on "+animal+" "+session)
 				filepath = os.path.join(root_dir,animal,session) ##the file path to the session data
 				##open the file
 				data = plxread.import_file(filepath,AD_channels=range(1,97),save_wf=False,
@@ -6776,7 +6837,7 @@ def get_timelocked_frs():
 					if arr.startswith('AD') and arr.endswith('_ts'):
 						duration = int(np.ceil((data[arr].max()*1000)/100)*100)+1
 						break
-				else: print "No A/D timestamp data found!!!"
+				else: print("No A/D timestamp data found!!!")
 				##we are going to need the T1 and T2 timestamps fo each file
 				try:
 					t1_id = ru.animals[animal][1][session]['events']['t1'][0] ##the event name in the plexon file
@@ -6812,7 +6873,7 @@ def get_timelocked_frs():
 									if traces_t2 is not None:
 										mean_t2.append(traces_t2.mean(axis=1))
 							except KeyError:
-								print "No "+unit+" for "+unit_type+" in "+animal+" "+session
+								print("No "+unit+" for "+unit_type+" in "+animal+" "+session)
 						mean_t1 = np.asarray(mean_t1)
 						mean_t2 = np.asarray(mean_t2)
 						f_out = h5py.File(save_file,'a')
@@ -6828,20 +6889,20 @@ def get_timelocked_frs():
 							u_group.create_dataset("t2",data=mean_t2)
 						f_out.close()
 					except KeyError:
-						print "No "+unit_type+" for "+animal+" "+session
-	print 'Done'
+						print("No "+unit_type+" for "+animal+" "+session)
+	print('Done')
 
 def plot_timelocked_frs():
 	datafile = r"D:\Ryan\V1_BMI\NatureNeuro\rebuttal\data\rat_spikes_t1_t2.hdf5"
 	animal_list = None
 	early_range = np.arange(0,4)
-	late_range = np.arange(8,11)
+	late_range = np.arange(4,50)
 	start = -2.5
 	stop = 2.5
-	abs_z = True
+	abs_z = False
 	f = h5py.File(datafile,'r')
 	if animal_list is None:
-		animal_list = f.keys()
+		animal_list = list(f)
 	##start with the early data
 	e1_t1 = []
 	e1_t2 = []
@@ -6868,7 +6929,7 @@ def plot_timelocked_frs():
 						smoothed = stats.zscore(ss.windowRate(t1_data,[100,50]))
 						e1_t1.append(smoothed)
 				except KeyError:
-					print "No T1 for "+animal+" "+session
+					print("No T1 for "+animal+" "+session)
 				##now do t2
 				try:
 					t2_data = np.asarray(u_group['t2']).squeeze()
@@ -6881,9 +6942,9 @@ def plot_timelocked_frs():
 						smoothed = stats.zscore(ss.windowRate(t2_data,[100,50]))
 						e1_t2.append(smoothed)
 				except KeyError:
-					print "No T2 for "+animal+" "+session
+					print("No T2 for "+animal+" "+session)
 			except KeyError:
-				print "No E1 units for "+animal+" "+session
+				print("No E1 units for "+animal+" "+session)
 			##now do e2 units
 			try:
 				u_group = s_group['e2_units']
@@ -6899,7 +6960,7 @@ def plot_timelocked_frs():
 						smoothed = stats.zscore(ss.windowRate(t1_data,[100,50]))
 						e2_t1.append(smoothed)
 				except KeyError:
-					print "No T1 for "+animal+" "+session
+					print("No T1 for "+animal+" "+session)
 				##now do t2
 				try:
 					t2_data = np.asarray(u_group['t2']).squeeze()
@@ -6912,9 +6973,9 @@ def plot_timelocked_frs():
 						smoothed = stats.zscore(ss.windowRate(t2_data,[100,50]))
 						e2_t2.append(smoothed)
 				except KeyError:
-					print "No T2 for "+animal+" "+session
+					print("No T2 for "+animal+" "+session)
 			except KeyError:
-				print "No E2 units for "+animal+" "+session
+				print("No E2 units for "+animal+" "+session)
 			##now do indirect units
 			try:
 				u_group = s_group['V1_units']
@@ -6930,7 +6991,7 @@ def plot_timelocked_frs():
 						smoothed = stats.zscore(ss.windowRate(t1_data,[100,50]))
 						ind_t1.append(smoothed)
 				except KeyError:
-					print "No T1 for "+animal+" "+session
+					print("No T1 for "+animal+" "+session)
 				##now do t2
 				try:
 					t2_data = np.asarray(u_group['t2']).squeeze()
@@ -6943,9 +7004,9 @@ def plot_timelocked_frs():
 						smoothed = stats.zscore(ss.windowRate(t2_data,[100,50]))
 						ind_t2.append(smoothed)
 				except KeyError:
-					print "No T2 for "+animal+" "+session
+					print("No T2 for "+animal+" "+session)
 			except KeyError:
-				print "No indirect units for "+animal+" "+session
+				print("No indirect units for "+animal+" "+session)
 	f.close()
 	##now we have all of the early data
 	e1_t1 = np.asarray(e1_t1)
@@ -7053,7 +7114,7 @@ def plot_timelocked_frs():
 						smoothed = stats.zscore(ss.windowRate(t1_data,[100,50]))
 						e1_t1.append(smoothed)
 				except KeyError:
-					print "No T1 for "+animal+" "+session
+					print("No T1 for "+animal+" "+session)
 				##now do t2
 				try:
 					t2_data = np.asarray(u_group['t2']).squeeze()
@@ -7066,9 +7127,9 @@ def plot_timelocked_frs():
 						smoothed = stats.zscore(ss.windowRate(t2_data,[100,50]))
 						e1_t2.append(smoothed)
 				except KeyError:
-					print "No T2 for "+animal+" "+session
+					print("No T2 for "+animal+" "+session)
 			except KeyError:
-				print "No E1 units for "+animal+" "+session
+				print("No E1 units for "+animal+" "+session)
 			##now do e2 units
 			try:
 				u_group = s_group['e2_units']
@@ -7084,7 +7145,7 @@ def plot_timelocked_frs():
 						smoothed = stats.zscore(ss.windowRate(t1_data,[100,50]))
 						e2_t1.append(smoothed)
 				except KeyError:
-					print "No T1 for "+animal+" "+session
+					print("No T1 for "+animal+" "+session)
 				##now do t2
 				try:
 					t2_data = np.asarray(u_group['t2']).squeeze()
@@ -7097,9 +7158,9 @@ def plot_timelocked_frs():
 						smoothed = stats.zscore(ss.windowRate(t2_data,[100,50]))
 						e2_t2.append(smoothed)
 				except KeyError:
-					print "No T2 for "+animal+" "+session
+					print("No T2 for "+animal+" "+session)
 			except KeyError:
-				print "No E2 units for "+animal+" "+session
+				print("No E2 units for "+animal+" "+session)
 			##now do indirect units
 			try:
 				u_group = s_group['V1_units']
@@ -7115,7 +7176,7 @@ def plot_timelocked_frs():
 						smoothed = stats.zscore(ss.windowRate(t1_data,[100,50]))
 						ind_t1.append(smoothed)
 				except KeyError:
-					print "No T1 for "+animal+" "+session
+					print("No T1 for "+animal+" "+session)
 				##now do t2
 				try:
 					t2_data = np.asarray(u_group['t2']).squeeze()
@@ -7128,9 +7189,9 @@ def plot_timelocked_frs():
 						smoothed = stats.zscore(ss.windowRate(t2_data,[100,50]))
 						ind_t2.append(smoothed)
 				except KeyError:
-					print "No T2 for "+animal+" "+session
+					print("No T2 for "+animal+" "+session)
 			except KeyError:
-				print "No indirect units for "+animal+" "+session
+				print("No indirect units for "+animal+" "+session)
 	f.close()
 	##now we have all of the early data
 	e1_t1 = np.asarray(e1_t1)
@@ -7153,12 +7214,12 @@ def plot_timelocked_frs():
 	ax2 = fig.add_subplot(1,2,2,sharey=ax1)
 	x = np.linspace(-4,4,e1_t1.shape[1])
 	##start with t1
-	mean_e1_t1 = np.nanmean(e1_t1,axis=0)
-	sem_e1_t1 = np.nanstd(e1_t1,axis=0)/np.sqrt(e1_t1.shape[0])
-	mean_e2_t1 = np.nanmean(e2_t1,axis=0)
-	sem_e2_t1 = np.nanstd(e2_t1,axis=0)/np.sqrt(e2_t1.shape[0])
-	mean_ind_t1 = np.nanmean(ind_t1,axis=0)
-	sem_ind_t1 = np.nanstd(ind_t1,axis=0)/np.sqrt(ind_t1.shape[0])
+	mean_e1_t1 = np.nanmean(e1_t1,axis=0)*2
+	sem_e1_t1 = np.nanstd(e1_t1,axis=0)/np.sqrt(e1_t1.shape[0])*2
+	mean_e2_t1 = np.nanmean(e2_t1,axis=0)*2
+	sem_e2_t1 = np.nanstd(e2_t1,axis=0)/np.sqrt(e2_t1.shape[0])*2
+	mean_ind_t1 = np.nanmean(ind_t1,axis=0)*2
+	sem_ind_t1 = np.nanstd(ind_t1,axis=0)/np.sqrt(ind_t1.shape[0])*2
 	ax1.plot(x,mean_e1_t1,linewidth=2,color='g',label='E1')
 	ax1.fill_between(x,mean_e1_t1-sem_e1_t1,mean_e1_t1+sem_e1_t1,color='g',alpha=0.5)
 	ax1.plot(x,mean_e2_t1,linewidth=2,color='b',label='E2')
@@ -7174,12 +7235,12 @@ def plot_timelocked_frs():
 		tick.label.set_fontsize(16)
 	ax1.legend()
 	##repeat for T2
-	mean_e1_t2 = np.nanmean(e1_t2,axis=0)
-	sem_e1_t2 = np.nanstd(e1_t2,axis=0)/np.sqrt(e1_t2.shape[0])
-	mean_e2_t2 = np.nanmean(e2_t2,axis=0)
-	sem_e2_t2 = np.nanstd(e2_t2,axis=0)/np.sqrt(e2_t2.shape[0])
-	mean_ind_t2 = np.nanmean(ind_t2,axis=0)
-	sem_ind_t2 = np.nanstd(ind_t2,axis=0)/np.sqrt(ind_t2.shape[0])
+	mean_e1_t2 = np.nanmean(e1_t2,axis=0)*2
+	sem_e1_t2 = np.nanstd(e1_t2,axis=0)/np.sqrt(e1_t2.shape[0])*2
+	mean_e2_t2 = np.nanmean(e2_t2,axis=0)*2
+	sem_e2_t2 = np.nanstd(e2_t2,axis=0)/np.sqrt(e2_t2.shape[0])*2
+	mean_ind_t2 = np.nanmean(ind_t2,axis=0)*2
+	sem_ind_t2 = np.nanstd(ind_t2,axis=0)/np.sqrt(ind_t2.shape[0])*2
 	ax2.plot(x,mean_e1_t2,linewidth=2,color='g',label='E1')
 	ax2.fill_between(x,mean_e1_t2-sem_e1_t2,mean_e1_t2+sem_e1_t2,color='g',alpha=0.5)
 	ax2.plot(x,mean_e2_t2,linewidth=2,color='b',label='E2')
@@ -7233,22 +7294,17 @@ def plot_timelocked_frs():
 		tick.label.set_fontsize(16)
 	###now run some stats on the modulation depths early/late
 	tval_e1_t1,pval_e1_t1 = stats.ttest_ind(e1_t1_mod_early,e1_t1_mod_late,nan_policy='omit')
-	print "t-test e1 t1 = "+str(tval_e1_t1)+", "+str(pval_e1_t1)
+	print("t-test e1 t1 = "+str(tval_e1_t1)+", "+str(pval_e1_t1))
 	tval_e1_t2,pval_e1_t2 = stats.ttest_ind(e1_t2_mod_early,e1_t2_mod_late,nan_policy='omit')
-	print "t-test e1 t2 = "+str(tval_e1_t2)+", "+str(pval_e1_t2)
+	print("t-test e1 t2 = "+str(tval_e1_t2)+", "+str(pval_e1_t2))
 	tval_e2_t1,pval_e2_t1 = stats.ttest_ind(e2_t1_mod_early,e2_t1_mod_late,nan_policy='omit')
-	print "t-test e2 t1 = "+str(tval_e2_t1)+", "+str(pval_e2_t1)
+	print("t-test e2 t1 = "+str(tval_e2_t1)+", "+str(pval_e2_t1))
 	tval_e2_t2,pval_e2_t2 = stats.ttest_ind(e2_t2_mod_early,e2_t2_mod_late,nan_policy='omit')
-	print "t-test e2 t2 = "+str(tval_e2_t2)+", "+str(pval_e2_t2)
+	print("t-test e2 t2 = "+str(tval_e2_t2)+", "+str(pval_e2_t2))
 	tval_ind_t1,pval_ind_t1 = stats.ttest_ind(ind_t1_mod_early,ind_t1_mod_late,nan_policy='omit')
-	print "t-test ind t1 = "+str(tval_ind_t1)+", "+str(pval_ind_t1)
+	print("t-test ind t1 = "+str(tval_ind_t1)+", "+str(pval_ind_t1))
 	tval_ind_t2,pval_ind_t2 = stats.ttest_ind(ind_t2_mod_early,ind_t2_mod_late,nan_policy='omit')
-	print "t-test ind t2 = "+str(tval_ind_t2)+", "+str(pval_ind_t2)
-
-
-
-
-
+	print("t-test ind t2 = "+str(tval_ind_t2)+", "+str(pval_ind_t2))
 
 ########################HELPERS~########################
 
@@ -7314,18 +7370,23 @@ def get_data_window_lfp(lfp, centers, pre_win, post_win):
 				centers[j] = centers[j-1]
 				removed +=1
 				if verbose:
-					print "Index too close to start or end to take a full window. Deleting event at "+str(center)
+					print("Index too close to start or end to take a full window. Deleting event at "+str(center))
 		if removed >= centers.size:
 			traces = None
-			print "No traces for this file"
+			print("No traces for this file")
 		else:
 			traces = np.zeros((pre_win+post_win, len(centers)))
 			##the actual windowing functionality:
 			for n, idx in enumerate(centers):
-					traces[:,n] = data[idx-pre_win:idx+post_win]
+				trace = data[idx-pre_win:idx+post_win]
+				traces[0:trace.shape[0],n] = trace
 	except TypeError:
 		traces = None
-		print "No traces for this file"
+		print("No traces for this file")
+	##error checking
+	if traces != None:
+		if traces.shape[0] != pre_win+post_win:
+			traces = None
 	return traces
 
 def get_data_window(trace, centers, pre_win, post_win):
@@ -7345,11 +7406,11 @@ def get_data_window(trace, centers, pre_win, post_win):
 	for j, center in enumerate(centers):
 		if center >= data.size:
 			to_remove.append(j)
-			print "Event index exceeds data length. Deleting event at "+str(center)
+			print("Event index exceeds data length. Deleting event at "+str(center))
 	clean_centers = np.delete(centers,to_remove)
 	if clean_centers.size == 0:
 		traces = None
-		print "No traces for this file"
+		print("No traces for this file")
 	else:
 		traces = np.zeros((pre_win+post_win, len(clean_centers)))
 		##the actual windowing functionality:

@@ -110,7 +110,7 @@ def get_data_windows(lfp, centers, pre_win, post_win):
 			centers[j] = centers[j-1]
 			removed +=1
 			if verbose:
-				print "Index too close to start or end to take a full window. Deleting event at "+str(center)
+				print("Index too close to start or end to take a full window. Deleting event at "+str(center))
 	if removed >= centers.size:
 		traces = None
 	else:

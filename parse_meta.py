@@ -17,9 +17,9 @@ def get_meta(filepath):
 	units = [key for key in data.keys() if key.startswith('sig')]
 	lfp_chans = [key for key in data.keys() if key.startswith('AD') and not key.endswith('_ts')]
 	events =  [key for key in data.keys() if key.startswith('Event')]
-	print "Units: "
-	print units
-	print "LFP: "
-	print lfp_chans
-	print "Events "
-	print events
+	print("Units: ")
+	print(units)
+	print("LFP: ")
+	print(lfp_chans)
+	print("Events ")
+	print(events)

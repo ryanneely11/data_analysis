@@ -35,7 +35,7 @@ def gauss_convolve(array, sigma):
 		if array.shape[0] == array.size:
 			result = gaussian_filter(array, sigma = sigma, order = 0, mode = "constant", cval = 0.0)
 		else:
-			print "Check your array dimenszions!"
+			print("Check your array dimenszions!")
 	return result
 
 def windowRate(data, movingwin):
@@ -89,9 +89,9 @@ def thin_spikes(data1, data2, sigma):
 	"""
 	##check to see if data matrices are the same dimensions
 	if data1.shape != data2.shape:
-		print "Data matrices are not the same size!"
-	print "data1 shape is " + str(data1.shape[0]) + ", " + str(data1.shape[1])
-	print "data2 shape is " + str(data2.shape[0]) + ", " + str(data2.shape[1])
+		print("Data matrices are not the same size!")
+	print("data1 shape is " + str(data1.shape[0]) + ", " + str(data1.shape[1]))
+	print("data2 shape is " + str(data2.shape[0]) + ", " + str(data2.shape[1]))
 		
 	#convolve spike trains with a gaussian kernel
 	set_1 = gauss_convolve(data1, sigma)
@@ -122,10 +122,10 @@ def thin_spikes(data1, data2, sigma):
 	#now, going back to the original data sets, remove spikes according to the calculated probability
 	##***EDIT*** added in a check to make sure that the algorithm doesn't remove ALL of the spikes; it
 	##can result in zero-division errors when used with other analyses.
-	print "data1 shape is " + str(data1.shape[0]) + ", " + str(data1.shape[1])
-	print "data2 shape is " + str(data2.shape[0]) + ", " + str(data2.shape[1])
-	print  "shape of higher_fr is " + str(higher_fr.shape[0])
-	print "shape of prob_removal is " +str(prob_removal.shape[0])
+	print("data1 shape is " + str(data1.shape[0]) + ", " + str(data1.shape[1]))
+	print("data2 shape is " + str(data2.shape[0]) + ", " + str(data2.shape[1]))
+	print("shape of higher_fr is " + str(higher_fr.shape[0]))
+	print("shape of prob_removal is " +str(prob_removal.shape[0]))
 	for trial in np.arange(0, data1.shape[1]):
 		for bin in np.arange(0,data1.shape[0]):
 			if higher_fr[bin] == 1 and np.random.random() < prob_removal[bin] and data1[:,trial].sum() > 1.0:
@@ -216,7 +216,7 @@ def spike_field_cohgram(spikes, lfp, movingwin=[0.3,0.01], Fs = 1000.0, fpass = 
 		g.create_dataset("S2", data = S2)
 		g.create_dataset("phi", data = phi)
 		g.close()
-		print "data saved."
+		print("data saved.")
 
 	return C, phi, S12, S1, S2, t, f, zerosp, confc, phistd, Cerr
 
@@ -301,7 +301,7 @@ def field_field_cohgram(lfp1, lfp2, movingwin = [0.3,0.01], Fs = 1000.0, fpass =
 		g.create_dataset("S2", data = S2)
 		g.create_dataset("phi", data = phi)
 		g.close()
-		print "data saved."
+		print("data saved.")
 
 	return C, phi, S12, S1, S2, t, f, confc, phistd, Cerr
 
@@ -387,7 +387,7 @@ def spike_spike_cohgram(spikes1, spikes2, movingwin, Fs = 1000.0, fpass = [0,100
 		g.create_dataset("S2", data = S2)
 		g.create_dataset("phi", data = phi)
 		g.close()
-		print "data saved."
+		print("data saved.")
 
 	return C, phi, S12, S1, S2, t, f, zerosp, confc, phistd, Cerr
 
@@ -876,7 +876,7 @@ def compare_pairwise_coherence(t1_data1, t1_names1, t1_data2, t1_names2,
 	nfft = 2**spec.nextpow2(N)
 	##make sure that the order of the units in both groups is the same
 	if t1_names1 != t2_names1 or t1_names2 != t2_names2:
-		print "Unit order mismatch!!!"
+		print("Unit order mismatch!!!")
 	## a container of significant pairs
 	sig_t1_u1 = None
 	sig_t1_u2 = None
@@ -909,7 +909,7 @@ def compare_pairwise_coherence(t1_data1, t1_names1, t1_data2, t1_names2,
 				##coherence in this band across the two conditions
 			t, p = stats.ttest_rel(interest_mean, other_mean)
 			if p <= sig and interest_mean.mean() > other_mean.mean():
-				print "Found something significant according to SS2"
+				print("Found something significant according to SS2")
 				if sig_t1_u1 is not None:
 					sig_t1_u1 = np.hstack((sig_t1_u1,t1_data1[i,:,:]))
 					sig_t1_u2 = np.hstack((sig_t1_u2,t1_data2[j,:,:]))
@@ -920,7 +920,7 @@ def compare_pairwise_coherence(t1_data1, t1_names1, t1_data2, t1_names2,
 					sig_t1_u2 = t1_data2[j,:,:]
 					sig_t2_u1 = t2_data1[i,:,:]
 					sig_t2_u2 = t2_data2[j,:,:]
-				print "Successfully added data to SS2 results"
+				print("Successfully added data to SS2 results")
 	return sig_t1_u1, sig_t1_u2, sig_t2_u1, sig_t2_u2
 
 
@@ -937,7 +937,7 @@ def cross_corr(p1,p2,winrad,dt):
 	n1=p1.size
 	n2=p2.size
 	if n1!=n2:
-		print 'Inputs have different sizes.'
+		print('Inputs have different sizes.')
 	
 	n=n1    # n is the number of time units in each process (the size of the vectors)
 	T=n*dt  # T is the length of the spike train in the correct units

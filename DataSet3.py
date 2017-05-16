@@ -10,7 +10,7 @@ import numpy as np
 try:
 	import plxread
 except ImportError:
-	print "Warning: plxread not imported"
+	print("Warning: plxread not imported")
 import h5py
 import RatUnits4 as ru
 #from progressbar import *
@@ -34,7 +34,7 @@ def batch_plx_to_hdf5(directory):
 	os.chdir(directory)
 	for f in glob.glob("*.plx"):
 		cur_file = os.path.join(directory,f)
-		print "Saving "+cur_file
+		print("Saving "+cur_file)
 		##create the output file in the same dir
 		try:
 			out_file = h5py.File(cur_file.strip('plx')+'hdf5','w-')
@@ -46,9 +46,9 @@ def batch_plx_to_hdf5(directory):
 				out_file.create_dataset(k,data=data[k])
 			out_file.close()
 		except IOError:
-			print cur_file.strip('plx')+'hdf5 exists; skipping'
+			print(cur_file.strip('plx')+'hdf5 exists; skipping')
 	os.chdir(cd)
-	print "Done!"
+	print("Done!")
 	return None
 
 
@@ -74,11 +74,11 @@ def save_session_data(file_path, verbose = True, chunk_sessions = False):
 		sessions_dict[an] =  gs.multichoice(ru.animals[an][1].keys(), title = "Sessions for "+an)
 		##create a file group for this animal
 	for animal in sessions_dict:
-		if verbose: print "Current animal is "+ animal
+		if verbose: print("Current animal is "+ animal)
 		animal_group = fout.create_group(animal)
 		##run through each selected session, organizing and saving the data
 		for current_session in sessions_dict[animal]:
-			if verbose: print "Current file is "+ current_session
+			if verbose: print("Current file is "+ current_session)
 			if chunk_sessions:
 				chunk_start =int(raw_input("Enter the start time (mins) for "+animal+" "+current_session))*1000*60
 				chunk_end =int(raw_input("Enter the end time (mins) for "+animal+" "+current_session))*1000*60
@@ -87,7 +87,7 @@ def save_session_data(file_path, verbose = True, chunk_sessions = False):
 				AD_channels = range(1,200), save_wf = True, import_unsorted = False, verbose = False)
 			##dont abort everything if file doesn't exist
 			if session_data == None:
-				print "File " + current_session +" does not exist! Skipping..."
+				print("File " + current_session +" does not exist! Skipping...")
 				break
 			##create a sub-group in the file for this session
 			session_group = animal_group.create_group(current_session)
@@ -98,8 +98,8 @@ def save_session_data(file_path, verbose = True, chunk_sessions = False):
 			events_dict = ru.animals[animal][1][current_session]['events']
 			for e_item in events_dict:
 				if events_dict[e_item][0] not in event_list:
-					print "*****"+events_dict[e_item][0]+\
-					" is not in "+animal+" "+current_session+"*****"
+					print("*****"+events_dict[e_item][0]+\
+					" is not in "+animal+" "+current_session+"*****")
 					to_remove.append(e_item)
 			if len(to_remove) != 0:
 				for item in to_remove:
@@ -121,8 +121,8 @@ def save_session_data(file_path, verbose = True, chunk_sessions = False):
 					duration = int(np.ceil((session_data[arr].max()*1000)/100)*100)+1
 					break
 			if duration != None:
-				if verbose: print "Duration of "+current_session+" is "+str(duration)
-			else: print "No A/D timestamp data found!!!"
+				if verbose: print("Duration of "+current_session+" is "+str(duration))
+			else: print("No A/D timestamp data found!!!")
 			##generate some random events based on #of t1 hits and the recording duration
 			##these will still be in seconds to match the event TS data
 			rand_event =  np.random.random_integers(0,duration/1000, session_data[events_dict['t1'][0]].size)
@@ -137,17 +137,17 @@ def save_session_data(file_path, verbose = True, chunk_sessions = False):
 					idx =np.where(np.logical_and(event_ts_data >= chunk_start, event_ts_data <= chunk_end))[0]
 					event_ts_data = event_ts_data[idx] - chunk_start
 				event_group.create_dataset(event_type, data = event_ts_data)
-				if verbose: print "Successfully added event timestamps for event " + event_type
+				if verbose: print("Successfully added event timestamps for event " + event_type)
 			##based on metadata information, split spiketrains and lfp signals into the appropriate groups/datasets
 			for unit_group in unit_groups:
-				if verbose: print "Working through units from " + unit_group
+				if verbose: print("Working through units from " + unit_group)
 				##get a list of the members of this group for this file
 				members = ru.animals[animal][1][current_session]['units'][unit_group]
 				##check to make sure each member unit is actually sorted in the file
 				to_remove = []
 				for unit in members:
 					if unit not in units_list:
-						print unit +" is not in this file! Deleting... \n"
+						print(unit +" is not in this file! Deleting... \n")
 						to_remove.append(unit)
 				if len(to_remove) != 0:
 					for item in to_remove:
@@ -184,8 +184,8 @@ def save_session_data(file_path, verbose = True, chunk_sessions = False):
 									raw_ad = session_data[arr]
 									break
 							if raw_ad is not None:
-								if verbose: print "Matching A/D signal found for channel "+chan+" (" + unit_group + ")"
-							else: print "No matching A/D signal found for channel "+chan+" (" + unit_group + ")"+"!\n"
+								if verbose: print("Matching A/D signal found for channel "+chan+" (" + unit_group + ")")
+							else: print("No matching A/D signal found for channel "+chan+" (" + unit_group + ")"+"!\n")
 							##get the LFP timestamp signal from the same channel
 							ad_ts = None
 							for arr in session_data.keys():
@@ -193,8 +193,8 @@ def save_session_data(file_path, verbose = True, chunk_sessions = False):
 									ad_ts = session_data[arr]
 									break
 							if ad_ts is not None:
-								if verbose: print "Matching A/D timestamps found for channel "+chan+" (" + unit_group+ ")"
-							else: print "No matching A/D timestamps found for channel "+chan+" (" + unit_group +")"+"!\n"
+								if verbose: print("Matching A/D timestamps found for channel "+chan+" (" + unit_group+ ")")
+							else: print("No matching A/D timestamps found for channel "+chan+" (" + unit_group +")"+"!\n")
 							#convert the ad ts to samples, and integers for indexing
 							ad_ts = np.ceil((ad_ts*1000)).astype(int)
 							##account for any gaps caused by pausing the plexon session ****IMPORTANT STEP****	
@@ -207,9 +207,9 @@ def save_session_data(file_path, verbose = True, chunk_sessions = False):
 								full_ad = full_ad[chunk_start:chunk_end]
 							try:
 								unit_group_group.create_dataset(current_unit, data = np.vstack((spiketrain, full_ad)))
-								if verbose: print "Successfully added data for " + current_unit
+								if verbose: print("Successfully added data for " + current_unit)
 							except:
-								print "Did not add data for " + current_unit
+								print("Did not add data for " + current_unit)
 							##get the matching waveform signal
 							wf_sigs = None
 							for arr in session_data.keys():
@@ -217,20 +217,20 @@ def save_session_data(file_path, verbose = True, chunk_sessions = False):
 									wf_sigs = session_data[arr]
 									break
 							if wf_sigs is not None:
-								if verbose: print "Matching waveforms found for channel "+chan
+								if verbose: print("Matching waveforms found for channel "+chan)
 								##append wfs to the file
 								try:
 									unit_group_group.create_dataset(current_unit+"_wf", data = wf_sigs)
-									if verbose: print "Successfully added wf data for unit " + current_unit
-								except: print "Did not add wfs for " + current_unit
-							else: print "No matching waveforms found for channel "+chan+"!"		
+									if verbose: print("Successfully added wf data for unit " + current_unit)
+								except: print("Did not add wfs for " + current_unit)
+							else: print("No matching waveforms found for channel "+chan+"!")
 						else:
-							print "Channel "+chan+" (" + unit_group+ ")" + "does not meet spike rate requirements. Removing..."
+							print("Channel "+chan+" (" + unit_group+ ")" + "does not meet spike rate requirements. Removing...")
 					else: 
-						print "Channel "+chan+" (" + unit_group+ ")" + "does not meet SNR requirements. Removing..."
+						print("Channel "+chan+" (" + unit_group+ ")" + "does not meet SNR requirements. Removing...")
 	fout.close()
 	gc.collect()
-	print "Data save complete!!"
+	print("Data save complete!!")
 
 """
 This function converts data from one session to a gdf file for use with the Kirkland et all
@@ -256,14 +256,14 @@ def session_to_gdf(f_in, f_out, event_ids, group_ids):
 			event_array = np.asarray(f[animal][session]["event_arrays"][trigger]).squeeze()
 			event_arrs[trigger] = event_array			
 		except KeyError:
-			print "The event trigger you specified is not in the file."
+			print("The event trigger you specified is not in the file.")
 	##get the spike arrays
 	unit_arrs = {}
 	for group in group_ids:
 		try:
 			unit_group = f[animal][session][group]
 		except KeyError:
-			print "The units group you specified is not in the file."
+			print("The units group you specified is not in the file.")
 		##the unit group also includes wf data, so ignore that
 		unit_list = [unit for unit in unit_group.keys() if not unit.endswith("_wf")]
 		##add the data to the dictionary
@@ -280,7 +280,7 @@ def session_to_gdf(f_in, f_out, event_ids, group_ids):
 	sorted_data = dg.sort_by_timestamp(np.hstack(all_arrs))
 	##export to a gdf file
 	dg.save_as_gdf(f_out, sorted_data)
-	print "GDF file saved!"
+	print("GDF file saved!")
 
 
 """
@@ -317,7 +317,7 @@ def load_event_arrays(f_in, event_type, session_range = None, binary = True):
 		##now that you have the list of sessions, grab the appropriate event array data for that 
 		##session
 		for current_session in sessions_list:
-			print "current session is " + current_session
+			print("current session is " + current_session)
 			all_arrays.append(np.asarray(animal_group[current_session]["event_arrays"][event_type]))
 	##if binary arrays are desired, create them
 	if binary:
@@ -361,11 +361,11 @@ def load_event_arrays2(f_in, event_type, animal = None, session_list = None, bin
 	##now that you have the list of sessions, grab the appropriate event array data for that 
 	##session
 	for current_session in session_list:
-		print "current session is " + current_session
+		print("current session is " + current_session)
 		try:
 			all_arrays.append(np.asarray(animal_group[current_session]["event_arrays"][event_type]))
 		except KeyError:
-			print animal+" "+current_session+" has no "+event_type
+			print(animal+" "+current_session+" has no "+event_type)
 			all_arrays.append(np.array([np.random.randint(1000*60*30)]))
 	##if binary arrays are desired, create them
 	if binary:
@@ -409,10 +409,10 @@ def save_full_session_data(f_in, f_out, signal):
 	g.close()
 
 	for animal in sessions_dict:
-		print "Current animal is "+ animal
+		print("Current animal is "+ animal)
 		for session in sessions_dict[animal]:
 			g = h5py.File(f_out, 'r+')
-			print "Current Session is " + session
+			print("Current Session is " + session)
 			##get the datasets for this session for each unit
 			unit_list = [unit for unit in f[animal][session][signal[0]].keys() if not unit.endswith("_wf")]
 			if len(unit_list) > 0:
@@ -428,7 +428,7 @@ def save_full_session_data(f_in, f_out, signal):
 
 			g.close()
 			gc.collect()
-	print "Complete!!"
+	print("Complete!!")
 
 
 """
@@ -457,7 +457,7 @@ def save_full_specgrams(f_in, f_out, sigType, norm = True, window = [0.5, 0.05],
 	async_result = pool.map_async(get_specgrams, arglist)
 	pool.close()
 	pool.join()
-	print "All processes have returned; parsing results"
+	print("All processes have returned; parsing results")
 	results_list = async_result.get()
 	timebase = window[1]*1000.0
 	##save the data
@@ -467,7 +467,7 @@ def save_full_specgrams(f_in, f_out, sigType, norm = True, window = [0.5, 0.05],
 	g.create_dataset("timebase_ms", data = timebase)
 	g.create_dataset("frequency", data = fpass)
 	g.close()
-	print "Complete!"
+	print("Complete!")
 
 ##a sub-function used above for multiprocessing
 def get_specgrams(args):
@@ -520,7 +520,7 @@ def save_full_cohgrams(f_in1, f_in2, f_out, norm = True, window = [0.5, 0.05],
 	async_result = pool.map_async(get_cohgrams, arglist)
 	pool.close()
 	pool.join()
-	print "All processes have returned; parsing results"
+	print("All processes have returned; parsing results")
 	results_list = async_result.get()
 	timebase = window[1]*1000.0
 	##save the data
@@ -530,7 +530,7 @@ def save_full_cohgrams(f_in1, f_in2, f_out, norm = True, window = [0.5, 0.05],
 	g.create_dataset("timebase_ms", data = timebase)
 	g.create_dataset("frequency", data = fpass)
 	g.close()
-	print "Complete!"
+	print("Complete!")
 
 ##a sub-function used above for multiprocessing
 def get_cohgrams(args):
@@ -598,14 +598,14 @@ def get_time_locked_specgrams(f_in, master_file, f_out, target, window):
 		an, s = get_animal_and_session(name)
 		##load the corresponding event arrays, and convert according to the window used
 		##to create the spectragrans
-		print "Calculating time-locked specgrams for " + an + " " + s
+		print("Calculating time-locked specgrams for " + an + " " + s)
 		centers = np.asarray(master[an][s]['event_arrays'][target])/np.asarray(f['timebase_ms'])
-		print "Saving data to file..."
+		print("Saving data to file...")
 		g['all_arrays'][:,:,block_start[idx]:block_start[idx+1]] = get_data_window(centers, 
 			pre_win, post_win, np.asarray(f[name]).T, verbose = True)
 		g.close()
 		gc.collect()
-	print "Complete!"
+	print("Complete!")
 
 """
 This function loads spike and lfp signals for all units in a group
@@ -638,12 +638,12 @@ def load_single_group_triggered_data(f_in, trigger, units, window, animal = None
 		if chunk is not None:
 			event_array = np.asarray([x for x in event_array if x > chunk[0]*1000*60 and x < chunk[1]*1000*60])				
 	except KeyError:
-		print "The event trigger you specified is not in the file."
+		print("The event trigger you specified is not in the file.")
 	##get the handle to the group containing unit data for the specified group
 	try:
 		unit_group = f[animal][session][units]
 	except KeyError:
-		print "The units group you specified is not in the file."
+		print("The units group you specified is not in the file.")
 	##the unit group also includes wf data, so ignore that
 	unit_list = [unit for unit in unit_group.keys() if not unit.endswith("_wf")]
 	##allocate memory for the resulting data arrays
@@ -652,7 +652,7 @@ def load_single_group_triggered_data(f_in, trigger, units, window, animal = None
 	##fill arrays with trriggered data. Recall that the file you loaded saves LFP and spike
 	##arrays as a stack, so here we will separate out each signal into separate arrays.
 	for n, unit in enumerate(unit_list):
-		print "working on unit " + unit
+		print("working on unit " + unit)
 		traces = get_data_window(event_array, window[0], window[1], np.asarray(unit_group[unit]))
 		##if the get_data_window function fails, just fill the array space with a copy of the
 		##previous trace. Do the same thing if there were no spikes in the window
@@ -728,14 +728,14 @@ def save_pairwise_triggered_data(f_in, f_out, trigger1, trigger2, signal1, signa
 	g.close()
 	s = 0
 	for animal in sessions_dict:
-		print "Current animal is "+ animal
+		print("Current animal is "+ animal)
 		for session in sessions_dict[animal]:
 			g = h5py.File(f_out, 'r+')
-			print "Current Session is " + session
+			print("Current Session is " + session)
 			##get the datasets for this session
 			t1_spikes1, t1_lfps1, names = load_single_group_triggered_data(f_in, trigger1, 
 				signal1[0], window, animal = animal, session = session)
-			print "shape of t1_spikes1 is " + str(t1_spikes1.shape[0]) + ", " +str(t1_spikes1.shape[1]) + ", " + str(t1_spikes1.shape[2])
+			print("shape of t1_spikes1 is " + str(t1_spikes1.shape[0]) + ", " +str(t1_spikes1.shape[1]) + ", " + str(t1_spikes1.shape[2]))
 
 			t1_spikes2, t1_lfps2, names = load_single_group_triggered_data(f_in, trigger1, 
 				signal2[0], window, animal = animal, session = session)
@@ -770,17 +770,17 @@ def save_pairwise_triggered_data(f_in, f_out, trigger1, trigger2, signal1, signa
 				t2_data2 = t2_lfps2
 				t1_spikes2 = 0
 				t2_spikes2 = 0
-			print "shape of t1_data1 is " + str(t1_data1.shape[0]) + ", " +str(t1_data1.shape[1]) + ", " + str(t1_data1.shape[2])
+			print("shape of t1_data1 is " + str(t1_data1.shape[0]) + ", " +str(t1_data1.shape[1]) + ", " + str(t1_data1.shape[2]))
 			
 			#allocate memory for paried data
 			p_t1_data1 = np.zeros((window[0]+window[1], t1_block_start[s+1]-t1_block_start[s]))
-			print "shape of p_t1_data1 container is " + str(p_t1_data1.shape[0]) + ", " + str(p_t1_data1.shape[1])
+			print("shape of p_t1_data1 container is " + str(p_t1_data1.shape[0]) + ", " + str(p_t1_data1.shape[1]))
 			p_t1_data2 = np.zeros((window[0]+window[1], t1_block_start[s+1]-t1_block_start[s]))
-			print "shape of p_t1_data2 container is " + str(p_t1_data2.shape[0]) + ", " + str(p_t1_data2.shape[1])
+			print("shape of p_t1_data2 container is " + str(p_t1_data2.shape[0]) + ", " + str(p_t1_data2.shape[1]))
 			p_t2_data1 = np.zeros((window[0]+window[1], t2_block_start[s+1]-t2_block_start[s]))
-			print "shape of p_t2_data1 container is " + str(p_t2_data1.shape[0]) + ", " + str(p_t2_data1.shape[1])
+			print("shape of p_t2_data1 container is " + str(p_t2_data1.shape[0]) + ", " + str(p_t2_data1.shape[1]))
 			p_t2_data2 = np.zeros((window[0]+window[1], t2_block_start[s+1]-t2_block_start[s]))
-			print "shape of p_t2_data2 container is " + str(p_t2_data2.shape[0]) + ", " + str(p_t2_data2.shape[1])
+			print("shape of p_t2_data2 container is " + str(p_t2_data2.shape[0]) + ", " + str(p_t2_data2.shape[1]))
 
 			##put the paired data into the containers
 			##the number of events in this session
@@ -806,10 +806,10 @@ def save_pairwise_triggered_data(f_in, f_out, trigger1, trigger2, signal1, signa
 			#if requested, run spike thinning on any data pairs that are spike data
 			if equate_spikes:
 				if signal1[1] == "spikes":
-					print "thinning spike set 1"
+					print("thinning spike set 1")
 					ss.thin_spikes(p_t1_data1, p_t2_data1, sigma)
 				if signal2[1] == "spikes":
-					print "thinning spike set 2"
+					print("thinning spike set 2")
 					ss.thin_spikes(p_t1_data2, p_t2_data2, sigma)
 
 			##add data to the file
@@ -821,7 +821,7 @@ def save_pairwise_triggered_data(f_in, f_out, trigger1, trigger2, signal1, signa
 			g.close()
 			gc.collect()
 			s+=1
-	print "Complete!!"
+	print("Complete!!")
 
 def save_multi_group_triggered_data(f_in, f_out, trigger, signal, window, chunk = None):
 	##open the file
@@ -857,10 +857,10 @@ def save_multi_group_triggered_data(f_in, f_out, trigger, signal, window, chunk 
 	g.close()
 	s = 0
 	for animal in sessions_dict:
-		print "Current animal is "+ animal
+		print("Current animal is "+ animal)
 		for session in sessions_dict[animal]:
 			g = h5py.File(f_out, 'r+')
-			print "Current Session is " + session
+			print("Current Session is " + session)
 			##get the datasets for this session
 			spikes, lfps, names = load_single_group_triggered_data(f_in, trigger, 
 				signal[0], window, animal = animal, session = session, chunk = chunk)
@@ -871,17 +871,17 @@ def save_multi_group_triggered_data(f_in, f_out, trigger, signal, window, chunk 
 			#associated with unneeded load_
 			if signal[1] == "spikes":
 				if len(spikes.shape) < 3 or spikes.shape[0] == 1:
-					print "Warning: only one spike channel detected"
+					print("Warning: only one spike channel detected")
 					data1 = np.squeeze(spikes)
 				elif spikes.shape[2] == 1:
-					print "Only one event detected."
+					print("Only one event detected.")
 					data1 = np.squeeze(spikes).T
 				else:
 					data1 = np.hstack(np.squeeze(np.split(spikes, spikes.shape[0], 0)))
 
 			elif signal[1] == "lfp":
 				if len(lfps.shape) < 3 or lfps.shape[0] == 1:
-					print "Warning: only one spike channel detected"
+					print("Warning: only one spike channel detected")
 					data1 = np.squeeze(lfps)
 				else:
 					data1 = np.hstack(np.squeeze(np.split(lfps, lfps.shape[0], 0)))
@@ -892,7 +892,7 @@ def save_multi_group_triggered_data(f_in, f_out, trigger, signal, window, chunk 
 			g.close()
 			gc.collect()
 			s+=1
-	print "Complete!!"
+	print("Complete!!")
 
 	
 
@@ -919,7 +919,7 @@ def get_wfs(f_in, group, animal = None, session = None):
 	try:
 		unit_group = f[animal][session][group]
 	except KeyError:
-		print "The units group you specified is not in the file."
+		print("The units group you specified is not in the file.")
 	##the unit group also includes unit data, so ignore that
 	wf_list = [wf for wf in unit_group.keys() if wf.endswith("_wf")]
 	##allocate memory for the resulting data array
@@ -960,7 +960,7 @@ def CD_data(f_in, target):
 	animals = gs.multichoice(f.keys(), title = 'Select Animals to Analyze')
 	###go through each animal individually
 	for animal in animals:
-		print "You are now working on animal " + animal
+		print("You are now working on animal " + animal)
 		##make a dicitonary to store the event data
 		event_dict = {}
 		##get a list of sessions containing CD data
@@ -973,7 +973,7 @@ def CD_data(f_in, target):
 				event_dict[session] = np.histogram(raw, bins = raw.max(), range =(0,raw.max()))[0].astype(bool).astype(int)
 	 		##some sessions might not have a full set of targets. If that's the case, just fill in with a zero-array
 			except KeyError:
-				print "No " + target + " data for this file; creating a zero-array in place"
+				print("No " + target + " data for this file; creating a zero-array in place")
 				event_dict[session] = np.zeros(90*60*1000)
 
 		##ask user how many CD sessions are included in this data
@@ -982,8 +982,8 @@ def CD_data(f_in, target):
 		for i in range(num_CDs):
 			data_loc = gs.onechoice(session_list, title = "Pick the session for pre-CD, session " + str(i))
 			##let user know the total length of the session for the next step
-			print "This is session " + data_loc
-			print "Total length of this session is " + str(event_dict[data_loc].shape[0]/60.0/1000.0) + " mins"
+			print("This is session " + data_loc)
+			print("Total length of this session is " + str(event_dict[data_loc].shape[0]/60.0/1000.0) + " mins")
 			##ask user what chunk of the session contains the pre-data
 			start = int(raw_input("The start time (in mins) is: "))*60*1000
 			stop = int(raw_input("The stop time (in mins) is: "))*60*1000
@@ -992,8 +992,8 @@ def CD_data(f_in, target):
 			##repeat for the peri-CD part
 			data_loc = gs.onechoice(session_list, title = "Pick the session for peri-CD, session " + str(i))
 			##let user know the total length of the session for the next step
-			print "This is session " + data_loc
-			print "Total length of this session is " + str(event_dict[data_loc].shape[0]/60.0/1000.0) + " mins"
+			print("This is session " + data_loc)
+			print("Total length of this session is " + str(event_dict[data_loc].shape[0]/60.0/1000.0) + " mins")
 			##ask user what chunk of the session contains the pre-data
 			start = int(raw_input("The start time (in mins) is: "))*60*1000
 			stop = int(raw_input("The stop time (in mins) is: "))*60*1000
@@ -1002,8 +1002,8 @@ def CD_data(f_in, target):
 			##repeat for post
 			data_loc = gs.onechoice(session_list, title = "Pick the session for post-CD, session " + str(i))
 			##let user know the total length of the session for the next step
-			print "This is session " + data_loc
-			print "Total length of this session is " + str(event_dict[data_loc].shape[0]/60.0/1000.0) + " mins"
+			print("This is session " + data_loc)
+			print("Total length of this session is " + str(event_dict[data_loc].shape[0]/60.0/1000.0) + " mins")
 			##ask user what chunk of the session contains the pre-data
 			start = int(raw_input("The start time (in mins) is: "))*60*1000
 			stop = int(raw_input("The stop time (in mins) is: "))*60*1000
@@ -1030,7 +1030,7 @@ def get_ensemble_arrays(f_in, session_range = None, animal = None, session = Non
 		animal_list = [animal]
 	##for each animal group, get the event arrays for the appropriate sessions
 	for animal in animal_list:
-		print "Current Animal is " + animal
+		print("Current Animal is " + animal)
 		##get a handle to the current animal group
 		animal_group = myFile[animal]
 		##get a list of sessions saved in the file for this animal that are in the specified range
@@ -1048,7 +1048,7 @@ def get_ensemble_arrays(f_in, session_range = None, animal = None, session = Non
 		##now that you have the list of sessions, grab the appropriate array data for that 
 		##session
 		for current_session in sessions_list:
-			print "current session is " + current_session
+			print("current session is " + current_session)
 			session_group = animal_group[current_session]
 			##get just the binary spiketrain arrays
 			e1_keys = [item for item in session_group['e1_units'].keys() if not item.endswith('_wf')]
@@ -1085,7 +1085,7 @@ def get_cursor_vals(f_in, session_range = None, animal = None, session = None, b
 		animal_list = [animal]
 	##for each animal group, get the event arrays for the appropriate sessions
 	for animal in animal_list:
-		print "Current Animal is " + animal
+		print("Current Animal is " + animal)
 		##get a handle to the current animal group
 		animal_group = myFile[animal]
 		##get a list of sessions saved in the file for this animal that are in the specified range
@@ -1103,7 +1103,7 @@ def get_cursor_vals(f_in, session_range = None, animal = None, session = None, b
 		##now that you have the list of sessions, grab the appropriate array data for that 
 		##session
 		for current_session in sessions_list:
-			print "current session is " + current_session
+			print("current session is " + current_session)
 			session_group = animal_group[current_session]
 			##get just the binary spiketrain arrays
 			e1_keys = [item for item in session_group['e1_units'].keys() if not item.endswith('_wf')]
@@ -1153,17 +1153,17 @@ def get_data_window(centers, pre_win, post_win, data, verbose = True):
 			if center <= pre_win or center + post_win >= N:
 				centers[j] = centers[j-1]
 				if verbose:
-					print "Index too close to start or end to take a full window. Deleting event at "+str(center)
+					print("Index too close to start or end to take a full window. Deleting event at "+str(center))
 		traces = np.zeros((num_signals, pre_win+post_win, len(centers)))
 		##the actual windowing functionality:
 		for n, idx in enumerate(centers):
 				try:
 					traces[:,:,n] = data[:,idx-pre_win:idx+post_win]
 				except ValueError:
-					print "ValueError: Index deletion safeguard did not work"
+					print("ValueError: Index deletion safeguard did not work")
 					traces[:,:,n] = traces[:,:,n-1]
 	except TypeError:
-		print "No target hits in this session/time block."		
+		print("No target hits in this session/time block.")		
 		traces = np.array([0.0])
 	return np.squeeze(traces)
 
@@ -1206,9 +1206,9 @@ def pairwise_coherence(f_in, target1, target2, units1, units2, window,
 	results2 = []
 	##run through all of the sessions and get the data
 	for animal in sessions_dict:
-		print "Current animal is "+ animal
+		print("Current animal is "+ animal)
 		for session in sessions_dict[animal]:
-			print "Current Session is " + session
+			print("Current Session is " + session)
 			##get the datasets for this session
 			t1_spikes1, lfps, t1_names1 = load_single_group_triggered_data(f_in, target1, 
 				units1, window, animal = animal, session = session)
@@ -1258,9 +1258,9 @@ def sig_pairwise_coherence(f_in, target1, target2, units1, units2, window,
 	results_t2_u2 = []
 	##run through all of the sessions and get the data
 	for animal in sessions_dict:
-		print "Current animal is "+ animal
+		print("Current animal is "+ animal)
 		for session in sessions_dict[animal]:
-			print "Current Session is " + session
+			print("Current Session is " + session)
 			##get the datasets for this session
 			t1_spikes1, lfps, t1_names1 = load_single_group_triggered_data(f_in, target1, 
 				units1, window, animal = animal, session = session)
@@ -1312,9 +1312,9 @@ def ensemble_correlations(f_in, window = [120000,30000], tau = 20, dt = 1):
 	between_e1_e2 = []
 	##run through all of the sessions and get the data
 	for animal in sessions_dict:
-		print "Current animal is "+ animal
+		print("Current animal is "+ animal)
 		for session in sessions_dict[animal]:
-			print "Current Session is " + session
+			print("Current Session is " + session)
 			##get the datasets for this session
 			e1_arrays, e2_arrays, ind_arrays = get_ensemble_arrays(f_in, session_range = None, 
 				animal = animal, session = session)
@@ -1323,11 +1323,11 @@ def ensemble_correlations(f_in, window = [120000,30000], tau = 20, dt = 1):
 			try:
 				within_e1.append(ss.window_corr(e1_arrays[:,0], e1_arrays[:,1], window, tau, dt))
 			except IndexError:
-				print "only one unit for e1..."
+				print("only one unit for e1...")
 			try:
 				within_e2.append(ss.window_corr(e2_arrays[:,0], e2_arrays[:,1], window, tau, dt))
 			except IndexError:
-				print "only one unit for e2..."
+				print("only one unit for e2...")
 			try:
 				between_e1_e2.append(ss.window_corr(e1_arrays[:,0], e2_arrays[:,0], window, tau, dt))
 			except IndexError:
@@ -1394,10 +1394,10 @@ def pairwise_triggered_coherence(f_in, f_out, target1, target2, units1, units2, 
 	g.close()
 	##run through all of the sessions and get the data
 	for animal in sessions_dict:
-		print "Current animal is "+ animal
+		print("Current animal is "+ animal)
 		for session in sessions_dict[animal]:
 			g = h5py.File(f_out, 'r+')
-			print "Current Session is " + session
+			print("Current Session is " + session)
 			##get the datasets for this session
 			t1_spikes1, t1_lfps1, t1_names1 = load_single_group_triggered_data(f_in, target1, 
 				units1, window, animal = animal, session = session)
@@ -1423,7 +1423,7 @@ def pairwise_triggered_coherence(f_in, f_out, target1, target2, units1, units2, 
 			g.create_dataset(animal+"/"+session+"/t1", data = t1_cohgrams)
 			g.create_dataset(animal+"/"+session+"/t2", data = t2_cohgrams)
 			g.close()
-	print "Complete!"
+	print("Complete!")
 	return None
 
 
@@ -1449,7 +1449,7 @@ def get_STAs(f_in, target, units, lfps, window, lfp_win):
 	STAs = []
 	##run through all of the sessions and get the data
 	for s, session in enumerate(sessions):
-		print "Current Session is " + session
+		print("Current Session is " + session)
 		##get the datasets for this session
 		spikes1, lfps1, names1 = load_single_group_triggered_data(f_in, target, 
 			units, window, animal = animal, session = session)
@@ -1496,7 +1496,7 @@ def forgot_to_save_metadata(f_in, t1 = 'Event011', verbose = True):
 				and item.startswith('sig')]
 	for current_unit in units_list:
 		plt.figure()
-		print current_unit
+		print(current_unit)
 		##get the timestamp array and convert to ms
 		spiketrain = np.asarray(session_data[current_unit]) * 1000.0
 		##convert the spiketrain to a binary array
