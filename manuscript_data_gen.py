@@ -2173,7 +2173,7 @@ def get_triggered_spike_rates():
 
 
 def plot_triggered_spike_rates():
-	f = h5py.File(r"D:\Ryan\processed_data\V1_BMI_final\raw_data\R7_thru_V13_triggered_data_early.hdf5", 'r')
+	f = h5py.File("/Volumes/Ryan/Data/processed_data/V1_BMI_final/raw_data/R7_thru_V13_triggered_data.hdf5", 'r')
 	e1_t1 = stats.zscore(np.asarray(f['e1_t1_mean_smoothed']))
 	e2_t1 = stats.zscore(np.asarray(f['e2_t1_mean_smoothed']))
 	V1_t1 = stats.zscore(np.asarray(f['V1_t1_mean_smoothed']))
