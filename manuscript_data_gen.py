@@ -7306,7 +7306,109 @@ def plot_timelocked_frs():
 	tval_ind_t2,pval_ind_t2 = stats.ttest_ind(ind_t2_mod_early,ind_t2_mod_late,nan_policy='omit')
 	print("t-test ind t2 = "+str(tval_ind_t2)+", "+str(pval_ind_t2))
 
+
+########################## NEURON ######################
+
+"""
+computes the correlation coefficient of E1 units for each trial
+(including all trial types). Returns a dataframe with the CC of each trial
+as well as the animal and trial identity.
+"""
+def trial_correlations():
+	unit_type = 'e1_units'
+	root_dir = r"D:\Ryan\V1_BMI"
+	animal_list = [x for x in ru.animals.keys() if not x.startswith("m")]
+	window = [4000,100] ##trial window
+	tau = 20
+	dt = 1
+	trial_data = pd.DataFrame()
+	columns = ['animal','session','trial_type','cc']
+	for animal in animal_list:
+		session_list = ru.animals[animal][1].keys()
+		for session in session_list:
+			session_id = session[-11:-4]
+			print("Working on "+animal+" "+session_id)
+			filepath = os.path.join(root_dir,animal,session) ##the file path to the session data
+			##open the file
+			data = plxread.import_file(filepath,AD_channels=range(1,97),save_wf=False,
+				import_unsorted=False,verbose=False)
+			##what is the duration of this file
+			duration = None
+			for arr in data.keys():
+				if arr.startswith('AD') and arr.endswith('_ts'):
+					duration = int(np.ceil((data[arr].max()*1000)/100)*100)+1
+					break
+			else: print("No A/D timestamp data found!!!")
+			##we are going to need the T1, T2, and timeout timestamps fo each file
+			try:
+				t1_id = ru.animals[animal][1][session]['events']['t1'][0] ##the event name in the plexon file
+				t1_ts = data[t1_id]*1000.0
+			except KeyError:
+				t1_ts = np.array([])
+			try:
+				t2_id = ru.animals[animal][1][session]['events']['t2'][0] ##the event name in the plexon file
+				t2_ts = data[t2_id]*1000.0
+			except KeyError:
+				t2_ts = np.array([])
+			try:
+				miss_id = ru.animals[animal][1][session]['events']['miss'][0] ##the event name in the plexon file
+				miss_ts = data[miss_id]*1000.0
+			except KeyError:
+				miss_ts = np.array([])
+			##concatenate the trial timestamps, but first label all the trials in the dataframe
+			all_ts = np.concatenate([t1_ts,t2_ts,miss_ts])
+			trial_ids = []
+			for i in range(len(t1_ts)):
+				trial_ids.append('t1')
+			for i in range(len(t2_ts)):
+				trial_ids.append('t2')
+			for i in range(len(miss_ts)):
+				trial_ids.append('miss')
+			try:
+				unit_ids = ru.animals[animal][1][session]['units'][unit_type]
+				##only consider cases where there are 2 units in the ensemble (should be everything)
+				if len(unit_ids) == 2:
+					spike_data = np.zeros((2,duration))
+					for i,unit in enumerate(unit_ids):
+						##get the timestamps for this unit from the datafile
+						try:
+							unit_ts = data[unit]*1000.0
+							##binary transform
+							spiketrain = np.histogram(unit_ts,bins=duration,range=(0,duration))
+							spiketrain = spiketrain[0].astype(bool).astype(int)
+							##add to the data
+							spike_data[i,:] = spiketrain
+						except KeyError:
+							print("No "+unit+" for "+unit_type+" in "+animal+" "+session)
+					##now, for each trial, take a window around the trial
+					unit1_traces = get_data_window(spike_data[0,:],all_ts,window[0],window[1])
+					unit2_traces = get_data_window(spike_data[1,:],all_ts,window[0],window[1])
+					##re-define n_trials in case there we dropped any
+					n_trials = unit1_traces.shape[0]
+					##create the dataframe for this session
+					session_data = pd.DataFrame(columns=columns,index=np.arange(n_trials))
+					##now compute the CC and save the data
+					for t in range(n_trials):
+						p1 = unit1_traces[:,t]
+						p2 = unit2_traces[:,t]
+						cc = ss.corr_coef(p1,p2,tau,dt)
+						session_data['trial_type'][t] = trial_ids[t]
+						session_data['animal'][t] = animal
+						session_data['session'][t] = session_id
+						session_data['cc'][t] = cc
+					trial_data.append(session_data)
+				else:
+					print("Only {} units in this file".format(len(unit_ids)))
+			except KeyError:
+				print("No "+unit_type+" for "+animal+" "+session_id)
+	return session_data
+
+
+
 ########################HELPERS~########################
+
+
+
 
 
 """
