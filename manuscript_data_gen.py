@@ -7330,8 +7330,7 @@ def trial_correlations():
 			print("Working on "+animal+" "+session_id)
 			filepath = os.path.join(root_dir,animal,session) ##the file path to the session data
 			##open the file
-			data = plxread.import_file(filepath,AD_channels=range(1,97),save_wf=False,
-				import_unsorted=False,verbose=False)
+			data = plxread.import_file(filepath,AD_channels=list(np.arange(1,97)))
 			##what is the duration of this file
 			duration = None
 			for arr in data.keys():
@@ -7384,14 +7383,14 @@ def trial_correlations():
 					unit1_traces = get_data_window(spike_data[0,:],all_ts,window[0],window[1])
 					unit2_traces = get_data_window(spike_data[1,:],all_ts,window[0],window[1])
 					##re-define n_trials in case there we dropped any
-					n_trials = unit1_traces.shape[0]
+					n_trials = unit1_traces.shape[1]
 					##create the dataframe for this session
 					session_data = pd.DataFrame(columns=columns,index=np.arange(n_trials))
 					##now compute the CC and save the data
 					for t in range(n_trials):
 						p1 = unit1_traces[:,t]
 						p2 = unit2_traces[:,t]
-						cc = ss.corr_coef(p1,p2,tau,dt)
+						cc = ss.corr_coeff(p1,p2,tau,dt)
 						session_data['trial_type'][t] = trial_ids[t]
 						session_data['animal'][t] = animal
 						session_data['session'][t] = session_id
@@ -7401,7 +7400,7 @@ def trial_correlations():
 					print("Only {} units in this file".format(len(unit_ids)))
 			except KeyError:
 				print("No "+unit_type+" for "+animal+" "+session_id)
-	return session_data
+	return trial_data
 
 
 
