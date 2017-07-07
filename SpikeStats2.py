@@ -727,7 +727,7 @@ def event_times_to_binary(eventTrain, duration):
 	duration = float((duration)*1000)
 	##set the number of bins as the next multiple of 100 of the recoding duration;
 	#this value will be equivalent to the number of milliseconds in the recording (plus a bit more)
-	numBins = np.ceil(duration/100)*100
+	numBins = int(np.ceil(duration/100)*100)
 
 	##do a little song and dance to ge the spike train times into a binary format
 	bTrain = np.histogram(eventTrain, bins = numBins, range =(0,numBins))

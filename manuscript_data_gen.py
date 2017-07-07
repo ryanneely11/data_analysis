@@ -34,9 +34,9 @@ def get_performance_data():
 	##don't have a full set of session for my first two animals (R8 and R7), so exclude them from some analyses
 	animal_list2 = ["R13", "R11", "V01", "V02", "V03", "V04", "V05", "V11", "V13"]
 	##the main source file
-	source_file = r"J:\Ryan\processed_data\V1_BMI_final\raw_data\R7_thru_V13_all_data.hdf5"
+	source_file = r"C:\Users\Ryan\Documents\data\R7_thru_V13_all_data.hdf5"
 	##file to save the data
-	save_file = r"J:\Ryan\processed_data\V1_BMI_final\raw_data\R7_thru_V13_learning_event_data_chosen.hdf5"
+	save_file = r"C:\Users\Ryan\Documents\data\R7_thru_V13_learning_event_data2.hdf5"
 	f_out = h5py.File(save_file, 'w-')
 
 	for i in range(len(animal_list)):
@@ -1661,8 +1661,8 @@ def get_cr_data():
 	print("Done!")
 
 def get_light_data():
-	source_file = r"J:\Ryan\processed_data\V1_BMI_final\raw_data\R7_thru_V13_all_data.hdf5"
-	destination_file = r"J:\Ryan\processed_data\V1_BMI_final\raw_data\R7_thru_V13_light_data.hdf5"
+	source_file = r"C:\Users\Ryan\Documents\data\R7_thru_V13_all_data.hdf5"
+	destination_file = r"C:\Users\Ryan\Documents\data\R7_thru_V13_light_data.hdf5"
 	f = h5py.File(source_file, 'r')
 	f_out = h5py.File(destination_file, 'a')
 	animals_list = ["R8", "V02", "V03", "V04", "V05"]
@@ -1998,7 +1998,7 @@ def plot_cr_data():
 
 
 def plot_light_data():
-	f = h5py.File(r"Z:\Data\processed_data\V1_BMI_final\raw_data\R7_thru_V13_light_data.hdf5", 'r')
+	f = h5py.File(r"C:\Users\Ryan\Documents\data\R7_thru_V13_light_data.hdf5", 'r')
 	data = np.asarray(f['chunks_by_session'])
 
 	means = np.array([data[:,0].mean(), data[:,1].mean()])
@@ -7318,12 +7318,16 @@ def trial_correlations():
 	unit_type = 'e1_units'
 	root_dir = r"D:\Ryan\V1_BMI"
 	animal_list = [x for x in ru.animals.keys() if not x.startswith("m")]
-	window = [4000,100] ##trial window
+	window = [1000,100] ##trial window
 	tau = 20
-	dt = 1
-	trial_data = pd.DataFrame()
-	columns = ['animal','session','trial_type','cc']
+	dt = 5
+	master_t1_ccs = []
+	master_t2_ccs = []
+	master_miss_ccs = []
 	for animal in animal_list:
+		animal_t1_ccs = []
+		animal_t2_ccs = []
+		animal_miss_ccs = []
 		session_list = ru.animals[animal][1].keys()
 		for session in session_list:
 			session_id = session[-11:-4]
@@ -7354,15 +7358,193 @@ def trial_correlations():
 				miss_ts = data[miss_id]*1000.0
 			except KeyError:
 				miss_ts = np.array([])
-			##concatenate the trial timestamps, but first label all the trials in the dataframe
-			all_ts = np.concatenate([t1_ts,t2_ts,miss_ts])
-			trial_ids = []
-			for i in range(len(t1_ts)):
-				trial_ids.append('t1')
-			for i in range(len(t2_ts)):
-				trial_ids.append('t2')
-			for i in range(len(miss_ts)):
-				trial_ids.append('miss')
+			try:
+				unit_ids = ru.animals[animal][1][session]['units'][unit_type]
+				##only consider cases where there are 2 units in the ensemble (should be everything)
+				if len(unit_ids) == 2:
+					spike_data = np.zeros((2,duration))
+					t1_ccs = []
+					t2_ccs = []
+					miss_ccs = []
+					for i,unit in enumerate(unit_ids):
+						##get the timestamps for this unit from the datafile
+						try:
+							unit_ts = data[unit]*1000.0
+							##binary transform
+							spiketrain = np.histogram(unit_ts,bins=duration,range=(0,duration))
+							spiketrain = spiketrain[0].astype(bool).astype(int)
+							##add to the data
+							spike_data[i,:] = spiketrain
+						except KeyError:
+							print("No "+unit+" for "+unit_type+" in "+animal+" "+session)
+					events = [t1_ts,t2_ts,miss_ts]
+					ccs = [t1_ccs,t2_ccs,miss_ccs]
+					for event_ts,cc_data in zip(events,ccs):
+						if len(event_ts)>0:
+							##now, for each trial, take a window around the trial
+							unit1_traces = get_data_window(spike_data[0,:],event_ts,window[0],window[1])
+							unit2_traces = get_data_window(spike_data[1,:],event_ts,window[0],window[1])
+							##re-define n_trials in case there we dropped any
+							n_trials = unit1_traces.shape[1]
+							##now compute the CC and save the data
+							for t in range(n_trials):
+								p1 = unit1_traces[:,t]
+								p2 = unit2_traces[:,t]
+								cc_data.append(ss.corr_coeff(p1,p2,tau,dt))
+						else:
+							cc_data.append(np.nan)
+					##now add these data to the global data containers
+					animal_t1_ccs.append(np.nanmean(np.asarray(t1_ccs)))
+					animal_t2_ccs.append(np.nanmean(np.asarray(t2_ccs)))
+					animal_miss_ccs.append(np.nanmean(np.asarray(miss_ccs)))
+				else:
+					print("Only {} units in this file".format(len(unit_ids)))
+			except KeyError:
+				print("No "+unit_type+" for "+animal+" "+session_id)
+				##add data from this animal to the master
+		master_t1_ccs.append(np.asarray(animal_t1_ccs))
+		master_t2_ccs.append(np.asarray(animal_t2_ccs))
+		master_miss_ccs.append(np.asarray(animal_miss_ccs))
+	return master_t1_ccs,master_t2_ccs,master_miss_ccs
+
+def plot_trial_correlations():
+	t1,t2,miss = trial_correlations()
+	t1_by_session = np.concatenate(t1)
+	t2_by_session = np.concatenate(t2)
+	miss_by_session = np.concatenate(miss)
+	t1_by_animal = []
+	t2_by_animal = []
+	miss_by_animal = []
+	for i in range(len(t1)):
+		t1_by_animal.append(np.nanmean(t1[i]))
+	t1_by_animal = np.asarray(t1_by_animal)
+	for i in range(len(t2)):
+		t2_by_animal.append(np.nanmean(t2[i]))
+	t2_by_animal = np.asarray(t2_by_animal)
+	for i in range(len(miss)):
+		miss_by_animal.append(np.nanmean(miss[i]))
+	miss_by_animal = np.asarray(miss_by_animal)
+	##first do it by animal
+	data = np.asarray([t1_by_animal,t2_by_animal,miss_by_animal])
+	means = np.array([np.nanmean(t1_by_animal),np.nanmean(t2_by_animal),np.nanmean(miss_by_animal)])
+	sem = np.array([np.nanstd(t1_by_animal)/np.sqrt(t1_by_animal.size),
+		np.nanstd(t2_by_animal)/np.sqrt(t2_by_animal.size),np.nanstd(miss_by_animal)/np.sqrt(miss_by_animal.size)])
+	tval_t1_t2,pval_t1_t2 = stats.ttest_rel(t1_by_animal, t2_by_animal,nan_policy='omit')
+	tval_t1_miss,pval_t1_miss = stats.ttest_rel(t1_by_animal, miss_by_animal,nan_policy='omit')
+	tval_t2_miss,pval_t2_miss = stats.ttest_rel(t2_by_animal, miss_by_animal,nan_policy='omit')
+	idx = np.arange(3)
+	width = 1.0
+	fig, ax = plt.subplots()
+	bars = ax.bar(idx, means, width, color = ['r','b','k'], yerr = sem, ecolor = 'k', alpha = 0.5)
+	# ax.set_ylim(0,0.03)
+	ax.set_xlim(-0.5, 3.5)
+	ax.set_xticks(idx+0.5)
+	ax.set_xticklabels(("T1", "T2", "Miss"))
+	for i in range(data.shape[1]):
+		plt.plot((idx), data[:,i], alpha = 0.5, color = 'k', marker = 'o', linestyle='none')
+	ax.set_ylabel("Correlation coefficient", fontsize = 14)
+	ax.set_xlabel("Target", fontsize = 14)
+	# ax.text(0.3, 0.03, "p = " + str(p_val_p_cd), fontsize = 12)
+	# ax.text(2.3, 0.03, "p = " + str(p_val_cd_r), fontsize = 12)
+	# ax.text(1.3, 0.03, "p = " + str(p_val_p_r), fontsize = 12)
+	fig.suptitle("CC by animal", fontsize = 16)
+	print("By animal stats")
+	print("pval t1-t2 = "+str(pval_t1_t2))
+	print("tval t1-t2 = "+str(tval_t1_t2))
+	print("pval t1-miss = "+str(pval_t1_miss))
+	print("tval t1-miss = "+str(tval_t1_miss))
+	print("pval t2-miss = "+str(pval_t2_miss))
+	print("tval t2-miss = "+str(tval_t2_miss))
+	print("mean t1 = "+str(means[0]))
+	print("mean t2 = "+str(means[1]))
+	print("mean miss = "+str(means[2]))
+	##next do it by session
+	data = np.asarray([t1_by_session,t2_by_session,miss_by_session])
+	means = np.array([np.nanmean(t1_by_session),np.nanmean(t2_by_session),np.nanmean(miss_by_session)])
+	sem = np.array([np.nanstd(t1_by_session)/np.sqrt(t1_by_session.size),
+		np.nanstd(t2_by_session)/np.sqrt(t2_by_session.size),np.nanstd(miss_by_session)/np.sqrt(miss_by_session.size)])
+	tval_t1_t2,pval_t1_t2 = stats.ttest_rel(t1_by_session, t2_by_session,nan_policy='omit')
+	tval_t1_miss,pval_t1_miss = stats.ttest_rel(t1_by_session, miss_by_session,nan_policy='omit')
+	tval_t2_miss,pval_t2_miss = stats.ttest_rel(t2_by_session, miss_by_session,nan_policy='omit')
+	idx = np.arange(3)
+	width = 1.0
+	fig, ax = plt.subplots()
+	bars = ax.bar(idx, means, width, color = ['r','b','k'], yerr = sem, ecolor = 'k', alpha = 0.5)
+	# ax.set_ylim(0,0.03)
+	ax.set_xlim(-0.5, 3.5)
+	ax.set_xticks(idx+0.5)
+	ax.set_xticklabels(("T1", "T2", "Miss"))
+	for i in range(data.shape[1]):
+		plt.plot((idx), data[:,i], alpha = 0.5, color = 'k', marker = 'o', linestyle = 'none')
+	ax.set_ylabel("Correlation coefficient", fontsize = 14)
+	ax.set_xlabel("Target", fontsize = 14)
+	# ax.text(0.3, 0.03, "p = " + str(p_val_p_cd), fontsize = 12)
+	# ax.text(2.3, 0.03, "p = " + str(p_val_cd_r), fontsize = 12)
+	# ax.text(1.3, 0.03, "p = " + str(p_val_p_r), fontsize = 12)
+	fig.suptitle("CC by session", fontsize = 16)
+	print("By animal stats")
+	print("pval t1-t2 = "+str(pval_t1_t2))
+	print("tval t1-t2 = "+str(tval_t1_t2))
+	print("pval t1-miss = "+str(pval_t1_miss))
+	print("tval t1-miss = "+str(tval_t1_miss))
+	print("pval t2-miss = "+str(pval_t2_miss))
+	print("tval t2-miss = "+str(tval_t2_miss))
+	print("mean t1 = "+str(means[0]))
+	print("mean t2 = "+str(means[1]))
+	print("mean miss = "+str(means[2]))
+
+def correlations_v_performance():
+	##define some gobal parameters
+	unit_type = 'e1_units'
+	root_dir = r"D:\Ryan\V1_BMI"
+	animal_list = [x for x in ru.animals.keys() if not x.startswith("m")]
+	tau = 10
+	dt = 5
+	window = [120000,30000]
+	session_range = np.arange(0,10)
+	all_performance = []
+	all_correlation = []
+	for animal in animal_list:
+		animal_performance = []
+		animal_correlation = []
+		if session_range is None:
+			session_list = ru.animals[animal][1].keys()
+		else: 
+			session_list = [x for x in ru.animals[animal][1].keys() if int(x[-6:-4]) in session_range]
+		for session in session_list:
+			session_id = session[-11:-4]
+			print("Working on "+animal+" "+session_id)
+			filepath = os.path.join(root_dir,animal,session) ##the file path to the session data
+			data = plxread.import_file(filepath,AD_channels=list(np.arange(1,97)))
+			##what is the duration of this file
+			duration = None
+			for arr in data.keys():
+				if arr.startswith('AD') and arr.endswith('_ts'):
+					duration = int(np.ceil((data[arr].max()*1000)/100)*100)+1
+					break
+			else: print("No A/D timestamp data found!!!")
+			##we are going to need the T1, T2, and timeout timestamps fo each file
+			try:
+				t1_id = ru.animals[animal][1][session]['events']['t1'][0] ##the event name in the plexon file
+				t1_ts = data[t1_id]*1000.0
+				t1_ts = np.histogram(t1_ts,bins=duration,range=(0,duration))
+				t1_ts = t1_ts[0].astype(bool).astype(int)
+			except KeyError:
+				t1_ts = np.zeros(duration)
+			try:
+				t2_id = ru.animals[animal][1][session]['events']['t2'][0] ##the event name in the plexon file
+				t2_ts = data[t2_id]*1000.0
+				t2_ts = np.histogram(t2_ts,bins=duration,range=(0,duration))
+				t2_ts = t2_ts[0].astype(bool).astype(int)
+			except KeyError:
+				t2_ts = np.zeros(duration)
+			try:
+				miss_id = ru.animals[animal][1][session]['events']['miss'][0] ##the event name in the plexon file
+				miss_ts = data[miss_id]*1000.0
+				miss_ts = np.histogram(miss_ts,bins=duration,range=(0,duration))
+				miss_ts = miss_ts[0].astype(bool).astype(int)
+			except KeyError:
+				miss_ts = np.zeros(duration)
 			try:
 				unit_ids = ru.animals[animal][1][session]['units'][unit_type]
 				##only consider cases where there are 2 units in the ensemble (should be everything)
@@ -7379,29 +7561,44 @@ def trial_correlations():
 							spike_data[i,:] = spiketrain
 						except KeyError:
 							print("No "+unit+" for "+unit_type+" in "+animal+" "+session)
-					##now, for each trial, take a window around the trial
-					unit1_traces = get_data_window(spike_data[0,:],all_ts,window[0],window[1])
-					unit2_traces = get_data_window(spike_data[1,:],all_ts,window[0],window[1])
-					##re-define n_trials in case there we dropped any
-					n_trials = unit1_traces.shape[1]
-					##create the dataframe for this session
-					session_data = pd.DataFrame(columns=columns,index=np.arange(n_trials))
-					##now compute the CC and save the data
-					for t in range(n_trials):
-						p1 = unit1_traces[:,t]
-						p2 = unit2_traces[:,t]
+					##now we have the spike data, as well as all of the event timestamps in
+					##equal-length binary arrays. Now, we should be able to compute performance
+					##AND correlation coefficients with equal windowing
+					N = duration
+					Nwin = window[0]
+					Nstep = window[1]
+					winstart = np.arange(0,N-Nwin, Nstep)
+					nw = winstart.shape[0]
+					performance = np.zeros(nw)
+					correlation = np.zeros(nw)
+					for n in range(nw):
+						idx = np.arange(winstart[n], winstart[n]+Nwin)
+						t1_counts = t1_ts[idx].sum()
+						t2_counts = t2_ts[idx].sum()
+						miss_counts = miss_ts[idx].sum()
+						total_counts = t1_counts+t2_counts+miss_counts
+						if total_counts>0:
+							perc_correct = t1_counts/total_counts
+						else:
+							perc_correct = 0
+						##now compute the correlation coeff for this chunk
+						p1 = spike_data[0,idx]
+						p2 = spike_data[1,idx]
 						cc = ss.corr_coeff(p1,p2,tau,dt)
-						session_data['trial_type'][t] = trial_ids[t]
-						session_data['animal'][t] = animal
-						session_data['session'][t] = session_id
-						session_data['cc'][t] = cc
-					trial_data = trial_data.append(session_data)
+						##now add to the data arrays
+						performance[n] = perc_correct
+						correlation[n] = cc
+					##okay, now we have these arrays for this session; add them to the animal array
+					animal_performance.append(performance)
+					animal_correlation.append(correlation)
 				else:
 					print("Only {} units in this file".format(len(unit_ids)))
 			except KeyError:
 				print("No "+unit_type+" for "+animal+" "+session_id)
-	return trial_data
-
+		##now equalize these arrays
+		all_performance.append(equalize_arrs(animal_performance))
+		all_correlation.append(equalize_arrs(animal_correlation))
+	return all_performance,all_correlation
 
 
 ########################HELPERS~########################
