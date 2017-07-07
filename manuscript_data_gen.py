@@ -7395,7 +7395,7 @@ def trial_correlations():
 						session_data['animal'][t] = animal
 						session_data['session'][t] = session_id
 						session_data['cc'][t] = cc
-					trial_data.append(session_data)
+					trial_data = trial_data.append(session_data)
 				else:
 					print("Only {} units in this file".format(len(unit_ids)))
 			except KeyError:
