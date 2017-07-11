@@ -1,6 +1,9 @@
 ## this file is a repository for Tkinter code that might be reused.
 
-import tkinter as Tk
+try:
+	import tkinter as Tk
+except ImportError:
+	print("tkinter not imported")
 
 ##a function to create a multi-selection list box, and
 ###return a list of user-selected items.

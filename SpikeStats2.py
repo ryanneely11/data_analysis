@@ -29,11 +29,11 @@ def gauss_convolve(array, sigma):
 	##if the array is 2-D, handle each trial separately
 	try:
 		for trial in range(array.shape[1]):
-			result[:,trial] = gaussian_filter(array[:, trial], sigma = sigma, order = 0, mode = "constant", cval = 0.0)
+			result[:,trial] = gaussian_filter(array[:, trial], sigma = sigma, order = 0, mode = "reflect")
 	##if it's 1-D:
 	except IndexError:
 		if array.shape[0] == array.size:
-			result = gaussian_filter(array, sigma = sigma, order = 0, mode = "constant", cval = 0.0)
+			result = gaussian_filter(array, sigma = sigma, order = 0, mode = "reflect")
 		else:
 			print("Check your array dimenszions!")
 	return result
@@ -734,6 +734,8 @@ def event_times_to_binary(eventTrain, duration):
 	bTrain = bTrain[0].astype(bool).astype(int)
 
 	return bTrain
+
+
 
 """
 A simple function to detect peaks in a signal.

@@ -8,6 +8,7 @@ from scipy import stats
 import multiprocessing as mp
 import spike_field_coherence as SFC
 from scipy.stats.mstats import zscore
+import scipy.io as spio
 #import seaborn as sns
 import pandas as pd
 import collections
@@ -1998,7 +1999,7 @@ def plot_cr_data():
 
 
 def plot_light_data():
-	f = h5py.File(r"C:\Users\Ryan\Documents\data\R7_thru_V13_light_data.hdf5", 'r')
+	f = h5py.File("/Volumes/Untitled/Ryan/V1_BMI/Neuron/R7_thru_V13_light_data.hdf5", 'r')
 	data = np.asarray(f['chunks_by_session'])
 
 	means = np.array([data[:,0].mean(), data[:,1].mean()])
@@ -2707,8 +2708,8 @@ def plot_within_session_light_dark():
 
 
 def plot_light_change_sessions():
-	f = h5py.File(r"Z:\Data\processed_data\V1_BMI_final\raw_data\R7_thru_V13_light_data.hdf5",'r')
-	data = np.asarray(f['scaled_p_correct_all'][0:4])
+	f = h5py.File("/Volumes/Untitled/Ryan/V1_BMI/Neuron/R7_thru_V13_light_data.hdf5",'r')
+	data = np.asarray(f['scaled_p_correct_all'][0:5])
 	f.close()
 	mean = np.nanmean(data,axis=0)
 	std = np.nanstd(data,axis=0)
@@ -3942,7 +3943,7 @@ def plot_within_session_by_animal():
 
 
 def plot_within_session_light_dark2():
-	source_file = r"Z:\Data\processed_data\V1_BMI_final\raw_data\R7_thru_V13_learning_event_data2.hdf5"
+	source_file = "/Volumes/Untitled/Ryan/V1_BMI/Neuron/R7_thru_V13_learning_event_data2.hdf5"
 	f = h5py.File(source_file, 'r')
 	light_animals = ["R13", "R11", "R7", "R8"]
 	dark_animals = ["V01", "V02", "V03", "V04", "V05", "V11", "V13"]
@@ -7316,7 +7317,7 @@ as well as the animal and trial identity.
 """
 def trial_correlations():
 	unit_type = 'e1_units'
-	root_dir = r"D:\Ryan\V1_BMI"
+	root_dir = "/Volumes/Untitled/Ryan/V1_BMI"
 	animal_list = [x for x in ru.animals.keys() if not x.startswith("m")]
 	window = [1000,100] ##trial window
 	tau = 20
@@ -7496,11 +7497,12 @@ def plot_trial_correlations():
 def correlations_v_performance():
 	##define some gobal parameters
 	unit_type = 'e1_units'
-	root_dir = r"D:\Ryan\V1_BMI"
+	root_dir = "/Volumes/Untitled/Ryan/V1_BMI"
+	f_out = h5py.File("/Volumes/Untitled/Ryan/V1_BMI/Neuron/performance_v_correlation_fine.hdf5",'w-')
 	animal_list = [x for x in ru.animals.keys() if not x.startswith("m")]
 	tau = 10
 	dt = 5
-	window = [120000,30000]
+	window = [5000,1000]
 	session_range = np.arange(0,10)
 	all_performance = []
 	all_correlation = []
@@ -7596,9 +7598,471 @@ def correlations_v_performance():
 			except KeyError:
 				print("No "+unit_type+" for "+animal+" "+session_id)
 		##now equalize these arrays
-		all_performance.append(equalize_arrs(animal_performance))
-		all_correlation.append(equalize_arrs(animal_correlation))
-	return all_performance,all_correlation
+		f_out.create_dataset(animal,data=equalize_arrs(animal_performance))
+		f_out.create_dataset(animal,data=equalize_arrs(animal_correlation))
+	# return all_performance,all_correlation
+
+def parse_correlations():
+	f_in = h5py.File("/Volumes/Untitled/Ryan/V1_BMI/Neuron/performance_v_correlation.hdf5",'r')
+	animal_list = list(f_in)
+	pearson_r = []
+	pearson_p = []
+	all_r = []
+	all_p = []
+	for animal in animal_list:
+		print(animal)
+		avg_r = []
+		avg_p = []
+		performance = np.asarray(f_in[animal]['performance'])
+		correlation = np.asarray(f_in[animal]['correlation'])
+		for s in range(performance.shape[0]):
+			try:
+				# print(s)
+				p = stats.zscore(remove_nan(performance[s,:]))
+				c = stats.zscore(remove_nan(correlation[s,:]))
+				# print(p.shape)
+				# print(c.shape)
+				avg_r.append(stats.pearsonr(p,c)[0])
+				avg_p.append(stats.pearsonr(p,c)[1])
+				all_r.append(stats.pearsonr(p,c)[0])
+				all_p.append(stats.pearsonr(p,c)[1])
+			except ValueError:
+				pass
+		pearson_r.append(np.asarray(avg_r))
+		pearson_p.append(np.asarray(avg_p))
+	f_in.close()
+	return np.asarray(all_r),np.asarray(all_p)
+	
+
+
+
+def get_light_change_data2():
+	source_file = "/Volumes/Ryan/Data/processed_data/V1_BMI_final/raw_data/R7_thru_V13_all_data.hdf5"
+	destination_file = "/Volumes/Untitled/Ryan/V1_BMI/Neuron/light_change_data.hdf5"
+	f = h5py.File(source_file, 'r')
+	f_out = h5py.File(destination_file, 'a')
+
+	t1_light_to_dark = []
+	t2_light_to_dark = []
+	miss_light_to_dark = []
+	p_correct_light_to_dark = []
+
+	t1_dark_to_light = []
+	t2_dark_to_light = []
+	miss_dark_to_light = []
+	p_correct_dark_to_light = []
+
+	##R8 D1
+	##light to dark
+	session = f['R8']['BMI_D11.plx']
+	t1,t2,miss,p_correct = get_event_data(session)
+	t1_light_to_dark.append(t1)
+	t2_light_to_dark.append(t2)
+	miss_light_to_dark.append(miss)
+	p_correct_light_to_dark.append(p_correct)
+	##R8 D2
+	##light to dark
+	session = f['R8']['BMI_D17.plx']
+	t1,t2,miss,p_correct = get_event_data(session)
+	t1_light_to_dark.append(t1)
+	t2_light_to_dark.append(t2)
+	miss_light_to_dark.append(miss)
+	p_correct_light_to_dark.append(p_correct)
+
+	##V02
+	##light to dark
+	session1 = f['V02']['BMI_D14.plx']
+	session2 = f['V02']['BMI_D15.plx']
+	t1_1,t2_1,miss_1,p_correct_1 = get_event_data(session1)
+	t1_2,t2_2,miss_2,p_correct_2 = get_event_data(session2)
+
+	t1 = np.concatenate([t1_1[-30:],t1_2[:40]])
+	t2 = np.concatenate([t2_1[-30:],t2_2[:40]])
+	miss = np.concatenate([miss_1[-30:],miss_2[:40]])
+	p_correct = np.concatenate([p_correct_1[-30:],p_correct_2[:40]])
+
+	t1_light_to_dark.append(t1)
+	t2_light_to_dark.append(t2)
+	miss_light_to_dark.append(miss)
+	p_correct_light_to_dark.append(p_correct)
+
+	##V03
+	##light to dark
+	session1 = f['V03']['BMI_D14.plx']
+	session2 = f['V03']['BMI_D15.plx']
+	t1_1,t2_1,miss_1,p_correct_1 = get_event_data(session1)
+	t1_2,t2_2,miss_2,p_correct_2 = get_event_data(session2)
+
+	t1 = np.concatenate([t1_1[-30:],t1_2[:40]])
+	t2 = np.concatenate([t2_1[-30:],t2_2[:40]])
+	miss = np.concatenate([miss_1[-30:],miss_2[:40]])
+	p_correct = np.concatenate([p_correct_1[-30:],p_correct_2[:40]])
+
+	t1_light_to_dark.append(t1)
+	t2_light_to_dark.append(t2)
+	miss_light_to_dark.append(miss)
+	p_correct_light_to_dark.append(p_correct)
+
+	##V04
+	##light to dark
+	session1 = f['V04']['BMI_D14.plx']
+	session2 = f['V04']['BMI_D15.plx']
+	t1_1,t2_1,miss_1,p_correct_1 = get_event_data(session1)
+	t1_2,t2_2,miss_2,p_correct_2 = get_event_data(session2)
+
+	t1 = np.concatenate([t1_1[-30:],t1_2[:40]])
+	t2 = np.concatenate([t2_1[-30:],t2_2[:40]])
+	miss = np.concatenate([miss_1[-30:],miss_2[:40]])
+	p_correct = np.concatenate([p_correct_1[-30:],p_correct_2[:40]])
+
+	t1_light_to_dark.append(t1)
+	t2_light_to_dark.append(t2)
+	miss_light_to_dark.append(miss)
+	p_correct_light_to_dark.append(p_correct)
+
+
+	##V05
+	##light to dark
+	session1 = f['V05']['BMI_D14.plx']
+	session2 = f['V05']['BMI_D15.plx']
+	t1_1,t2_1,miss_1,p_correct_1 = get_event_data(session1)
+	t1_2,t2_2,miss_2,p_correct_2 = get_event_data(session2)
+
+	t1 = np.concatenate([t1_1[-30:],t1_2[:40]])
+	t2 = np.concatenate([t2_1[-30:],t2_2[:40]])
+	miss = np.concatenate([miss_1[-30:],miss_2[:40]])
+	p_correct = np.concatenate([p_correct_1[-30:],p_correct_2[:40]])
+
+	t1_light_to_dark.append(t1)
+	t2_light_to_dark.append(t2)
+	miss_light_to_dark.append(miss)
+	p_correct_light_to_dark.append(p_correct)
+
+	##R8
+	##dark to light
+	session1 = f['R8']['BMI_D11.plx']
+	session2 = f['R8']['BMI_D12.plx']
+	t1_1,t2_1,miss_1,p_correct_1 = get_event_data(session1)
+	t1_2,t2_2,miss_2,p_correct_2 = get_event_data(session2)
+
+	t1 = np.concatenate([t1_1[-30:],t1_2[:40]])
+	t2 = np.concatenate([t2_1[-30:],t2_2[:40]])
+	miss = np.concatenate([miss_1[-30:],miss_2[:40]])
+	p_correct = np.concatenate([p_correct_1[-30:],p_correct_2[:40]])
+
+	t1_dark_to_light.append(t1)
+	t2_dark_to_light.append(t2)
+	miss_dark_to_light.append(miss)
+	p_correct_dark_to_light.append(p_correct)
+
+	##V02
+	##dark to light
+	session = f['V02']['BMI_D14.plx']
+	t1,t2,miss,p_correct = get_event_data(session)
+	t1_dark_to_light.append(t1)
+	t2_dark_to_light.append(t2)
+	miss_dark_to_light.append(miss)
+	p_correct_dark_to_light.append(p_correct)
+
+	##V03
+	##dark to light
+	session = f['V03']['BMI_D14.plx']
+	t1,t2,miss,p_correct = get_event_data(session)
+	t1_dark_to_light.append(t1)
+	t2_dark_to_light.append(t2)
+	miss_dark_to_light.append(miss)
+	p_correct_dark_to_light.append(p_correct)
+
+	##V04
+	##dark to light
+	session = f['V04']['BMI_D14.plx']
+	t1,t2,miss,p_correct = get_event_data(session)
+	t1_dark_to_light.append(t1)
+	t2_dark_to_light.append(t2)
+	miss_dark_to_light.append(miss)
+	p_correct_dark_to_light.append(p_correct)
+
+	##V05
+	##dark to light
+	session = f['V05']['BMI_D14.plx']
+	t1,t2,miss,p_correct = get_event_data(session)
+	t1_dark_to_light.append(t1)
+	t2_dark_to_light.append(t2)
+	miss_dark_to_light.append(miss)
+	p_correct_dark_to_light.append(p_correct)
+
+	f.close()
+
+	##now equalize all the array lenghts
+	t1_dark_to_light = equalize_arrs(t1_dark_to_light)
+	t2_dark_to_light = equalize_arrs(t2_dark_to_light)
+	miss_dark_to_light = equalize_arrs(miss_dark_to_light)
+	p_correct_dark_to_light = equalize_arrs(p_correct_dark_to_light)
+
+	t1_light_to_dark = equalize_arrs(t1_light_to_dark)
+	t2_light_to_dark = equalize_arrs(t2_light_to_dark)
+	miss_light_to_dark = equalize_arrs(miss_light_to_dark)
+	p_correct_light_to_dark = equalize_arrs(p_correct_light_to_dark)
+
+	f_out.create_dataset('t1_light_to_dark',data = t1_light_to_dark)
+	f_out.create_dataset('t2_light_to_dark',data = t2_light_to_dark)
+	f_out.create_dataset('miss_light_to_dark',data = miss_light_to_dark)
+	f_out.create_dataset('p_correct_light_to_dark',data = p_correct_light_to_dark)
+	f_out.create_dataset('t1_dark_to_light',data = t1_dark_to_light)
+	f_out.create_dataset('t2_dark_to_light',data = t2_dark_to_light)
+	f_out.create_dataset('miss_dark_to_light',data = miss_dark_to_light)
+	f_out.create_dataset('p_correct_dark_to_light',data = p_correct_dark_to_light)
+
+	f_out.close()
+	print("Done!")
+
+def plot_light_change2():
+	f = h5py.File("/Volumes/Untitled/Ryan/V1_BMI/Neuron/light_change_data.hdf5",'r')
+	light_dark = np.asarray(f['p_correct_light_to_dark'])
+	dark_light = np.asarray(f['p_correct_dark_to_light'])
+	# for i in range(light_dark.shape[0]):
+	# 	light_dark[i,:] = ss.gauss_convolve(light_dark[i,:],0.3)
+	# for i in range(dark_light.shape[0]):
+	# 	dark_light[i,:] = ss.gauss_convolve(dark_light[i,:],0.3)
+	f.close()
+	duration = max(light_dark.shape[1],dark_light.shape[1])
+	x_axis = np.arange(duration)
+	mean_dl = np.nanmean(dark_light,axis=0)
+	std_dl = np.nanstd(dark_light,axis=0)
+	sem_dl = std_dl/np.sqrt(dark_light.shape[0])
+	mean_ld = np.nanmean(light_dark,axis=0)
+	std_ld = np.nanstd(light_dark,axis=0)
+	sem_ld = std_ld/np.sqrt(light_dark.shape[0])
+
+	fig, (ax1,ax2) = plt.subplots(nrows=1,ncols=2,sharey=True)
+	ax1.plot(x_axis[0:30],mean_dl[0:30],linewidth = 2,color = 'k')
+	ax1.plot(x_axis[30:],mean_dl[30:],linewidth=2,color='yellow')
+	ax2.plot(x_axis[0:30],mean_ld[0:30],linewidth = 2,color = 'yellow')
+	ax2.plot(x_axis[30:mean_ld.size],mean_ld[30:],linewidth=2,color='k')	
+	ax1.fill_between(x_axis[0:30],mean_dl[0:30]-sem_dl[0:30],mean_dl[0:30]+sem_dl[0:30], 
+		alpha=0.5,facecolor='k')
+	ax1.fill_between(x_axis[30:],mean_dl[30:]-sem_dl[30:],mean_dl[30:]+sem_dl[30:], 
+		alpha=0.5,facecolor='yellow')
+	ax2.fill_between(x_axis[30:mean_ld.size],mean_ld[30:]-sem_ld[30:],mean_ld[30:]+sem_ld[30:], 
+		alpha=0.5,facecolor='k')
+	ax2.fill_between(x_axis[0:30],mean_ld[0:30]-sem_ld[0:30],mean_ld[0:30]+sem_ld[0:30], 
+		alpha=0.5,facecolor='yellow')
+	for tick in ax1.xaxis.get_major_ticks():
+		tick.label.set_fontsize(14)
+	for tick in ax1.yaxis.get_major_ticks():
+		tick.label.set_fontsize(14)
+	for tick in ax2.xaxis.get_major_ticks():
+		tick.label.set_fontsize(14)
+	for tick in ax2.yaxis.get_major_ticks():
+		tick.label.set_fontsize(14)
+	ax1.set_xlabel("Time in session, mins", fontsize = 16)
+	ax1.set_ylabel("Percent rewarded", fontsize = 16)
+	ax1.set_ylim((0,1))
+	ax2.set_xlabel("Time in session, mins", fontsize = 16)
+	# ax2.set_ylabel("Percent rewarded", fontsize = 16)
+	ax2.set_ylim((0,1))
+	ax1.set_xlim((0,60))
+	ax2.set_xlim((0,60))
+	ax1.set_title("Train dark/test light", fontsize = 18)
+	ax2.set_title("Train light/test dark", fontsize=18)
+	##now do the comarisons
+	f = h5py.File("/Volumes/Untitled/Ryan/V1_BMI/Neuron/light_change_data.hdf5",'r')
+	light_dark = np.asarray(f['p_correct_light_to_dark'])
+	dark_light = np.asarray(f['p_correct_dark_to_light'])
+	f.close()
+	##first for dark->light
+	train = light_dark[:,0:15].mean(axis=1)
+	test_early = light_dark[:,30:45].mean(axis=1)
+	test_late = light_dark[:,45:60].mean(axis=1)
+	data = np.asarray([train,test_early,test_late]).T
+	means = np.array([np.nanmean(train), np.nanmean(test_early), np.nanmean(test_late)])
+	sem = np.array([np.nanstd(train), np.nanstd(test_early), np.nanstd(test_late)])/np.sqrt(train.shape[0])
+	t_train_early,p_train_early = stats.ttest_rel(train, test_early)
+	t_train_late,p_train_late = stats.ttest_rel(train, test_late)
+	t_early_late,p_early_late = stats.ttest_rel(test_early, test_late)
+	idx = np.arange(3)
+	width = 1.0
+	fig, ax = plt.subplots()
+	bars = ax.bar(idx, means, width, color = ['yellow','k','k'], yerr = sem, ecolor = 'k', alpha = 0.5)
+	ax.set_ylim(0,0.9)
+	ax.set_xlim(-0.5, 3.5)
+	ax.set_xticks(idx+0.5)
+	ax.set_xticklabels(("Train", "Test early", "Test late"))
+	for i in range(train.shape[0]):
+		plt.plot(idx, data[i,:], alpha = 0.5, color = 'k', marker = 'o', linewidth = 2)
+	ax.set_ylabel("Percent correct", fontsize = 14)
+	ax.set_xlabel("Condition", fontsize = 14)
+	ax.text(0.3, 0.81, "p = " + str(p_train_early), fontsize = 12)
+	ax.text(2.3, 0.81, "p = " + str(p_train_late), fontsize = 12)
+	ax.text(1.3, 0.85, "p = " + str(p_early_late), fontsize = 12)
+	fig.suptitle("Performance during light change", fontsize = 16)
+	print("pval train-early = "+str(p_train_early))
+	print("tval train-early = "+str(t_train_early))
+	print("pval train-late = "+str(p_train_late))
+	print("tval train-late = "+str(t_train_late))
+	print("pval early-late = "+str(p_early_late))
+	print("tval early-late = "+str(t_early_late))
+	print("mean train = "+str(means[0]))
+	print("mean early = "+str(means[1]))
+	print("mean late = "+str(means[2]))
+
+	train = dark_light[:,0:15].mean(axis=1)
+	test_early = dark_light[:,30:45].mean(axis=1)
+	test_late = dark_light[:,45:60].mean(axis=1)
+	data = np.asarray([train,test_early,test_late]).T
+	means = np.array([np.nanmean(train), np.nanmean(test_early), np.nanmean(test_late)])
+	sem = np.array([np.nanstd(train), np.nanstd(test_early), np.nanstd(test_late)])/np.sqrt(train.shape[0])
+	t_train_early,p_train_early = stats.ttest_rel(train, test_early)
+	t_train_late,p_train_late = stats.ttest_rel(train, test_late)
+	t_early_late,p_early_late = stats.ttest_rel(test_early, test_late)
+	idx = np.arange(3)
+	width = 1.0
+	fig, ax = plt.subplots()
+	bars = ax.bar(idx, means, width, color = ['k','yellow','yellow'], yerr = sem, ecolor = 'k', alpha = 0.5)
+	ax.set_ylim(0,0.9)
+	ax.set_xlim(-0.5, 3.5)
+	ax.set_xticks(idx+0.5)
+	ax.set_xticklabels(("Train", "Test early", "Test late"))
+	for i in range(train.shape[0]):
+		plt.plot(idx, data[i,:], alpha = 0.5, color = 'k', marker = 'o', linewidth = 2)
+	ax.set_ylabel("Percent correct", fontsize = 14)
+	ax.set_xlabel("Condition", fontsize = 14)
+	ax.text(0.3, 0.81, "p = " + str(p_train_early), fontsize = 12)
+	ax.text(2.3, 0.81, "p = " + str(p_train_late), fontsize = 12)
+	ax.text(1.3, 0.85, "p = " + str(p_early_late), fontsize = 12)
+	fig.suptitle("Performance during light change", fontsize = 16)
+	print("pval train-early = "+str(p_train_early))
+	print("tval train-early = "+str(t_train_early))
+	print("pval train-late = "+str(p_train_late))
+	print("tval train-late = "+str(t_train_late))
+	print("pval early-late = "+str(p_early_late))
+	print("tval early-late = "+str(t_early_late))
+	print("mean train = "+str(means[0]))
+	print("mean early = "+str(means[1]))
+	print("mean late = "+str(means[2]))
+
+def get_stim_v_nostim_frs():
+	root_dir = "/Volumes/Untitled/Ryan/V1_BMI"
+	animal_list = [x for x in ru.animals.keys() if x.startswith("m")]
+	save_file = "/Volumes/Untitled/Ryan/V1_BMI/Neuron/fr_v_stim.hdf5"
+	window = [6000,100]
+	session_range = np.arange(1,8)
+	f_out = h5py.File(save_file,'a')
+	f_out.close()
+	for animal in animal_list:
+		animal_means_stim = []
+		animal_means_off = []
+		f_out = h5py.File(save_file,'a')
+		try:
+			a_group = f_out[animal]
+		except KeyError:
+			a_group = f_out.create_group(animal)
+			#if session_list is None:
+			session_list = [x for x in list(ru.animals[animal][1]) if int(x[-6:-4]) in session_range]
+			for session in session_list:
+				session_group = a_group.create_group(session)
+				stim_rates = []
+				off_rates = []
+				print("Working on "+animal+" "+session)
+				filepath = os.path.join(root_dir,animal,session) ##the file path to the volitional part
+				metapath = os.path.join(root_dir,animal,session[:-4]+".mat")
+				##start with the non-manipulation file
+				data = plxread.import_file(filepath,save_wf=False,
+					import_unsorted=False,verbose=False)
+				##we are going to need the T1 and T2 timestamps fo each file
+				t1_id = ru.animals[animal][1][session]['events']['t1'][0] ##the event name in the plexon file
+				t2_id = ru.animals[animal][1][session]['events']['t2'][0]
+				miss_id = ru.animals[animal][1][session]['events']['miss'][0]
+				try:
+					t1_ts = data[t1_id]*1000
+				except KeyError:
+					t1_ts =np.array([])
+				try:
+					t2_ts = data[t2_id]*1000
+				except KeyError:
+					t2_ts = np.array([])
+				try:
+					miss_ts = data[miss_id]*1000
+				except KeyError:
+					miss_ts = np.array([])
+				trial_ts = np.concatenate([t1_ts,t2_ts,miss_ts])
+				stim_idx,off_idx = parse_stim_data(metapath)
+				stim_idx = [x for x in stim_idx if x < len(trial_ts)]
+				off_idx = [x for x in off_idx if x < len(trial_ts)]
+				stim_trials = trial_ts[stim_idx]
+				off_trials = trial_ts[off_idx]
+				unit_list = ru.animals[animal][1][session]['units']['V1_units']
+				if len(trial_ts)>0:
+					for unit in unit_list:
+						try:
+							spike_ts = data[unit]*1000.0
+							duration = (spike_ts.max()/1000.0)+2
+							spike_data = ss.event_times_to_binary(spike_ts,duration)
+							stim_spikes = get_data_window(spike_data,stim_trials,window[0],window[1])
+							off_spikes = get_data_window(spike_data,off_trials,window[0],window[1])
+							if stim_spikes is not None and off_spikes is not None:
+								n_seconds_stim = len(stim_trials)*(window[0]+window[1])/1000.0
+								n_seconds_off = len(off_trials)*(window[0]+window[1])/1000.0
+								stim_rates.append(stim_spikes.sum()/n_seconds_stim)
+								off_rates.append(off_spikes.sum()/n_seconds_off)
+						except KeyError:
+							pass
+				session_group.create_dataset("stim_rates",data=np.asarray(stim_rates))
+				session_group.create_dataset("off_rates",data=np.asarray(off_rates))
+				animal_means_stim.append(np.mean(stim_rates))
+				animal_means_off.append(np.mean(off_rates))
+			a_group.create_dataset('stim_means',data=np.asarray(animal_means_stim))
+			a_group.create_dataset('off_means',data=np.asarray(animal_means_off))
+	f_out.close()
+	print("Done")
+
+def plot_stim_frs():
+	f = h5py.File("/Volumes/Untitled/Ryan/V1_BMI/Neuron/fr_v_stim.hdf5",'r')
+	##probably just want to compare all units
+	stim_units = []
+	off_units = []
+	animal_list = list(f)
+	for animal in animal_list:
+		sessions = [x for x in list(f[animal]) if x.startswith("BMI")]
+		for session in sessions:
+			stim_rates = np.asarray(f[animal][session]['stim_rates'])
+			off_rates = np.asarray(f[animal][session]['off_rates'])
+			stim_units.append(stim_rates)
+			off_units.append(off_rates)
+	f.close()
+	stim_units = np.concatenate(stim_units)/8.0
+	off_units = np.concatenate(off_units)/8.0
+	stim_mean = np.mean(stim_units)
+	off_mean = np.mean(off_units)
+	stim_sem = stats.sem(stim_units)
+	off_sem = stats.sem(off_units)
+	means = np.array([stim_mean,off_mean])
+	sems = np.array([stim_sem,off_sem])
+	t_val,p_val = stats.ttest_rel(stim_units,off_units)
+
+	fig, ax2 = plt.subplots(1)
+	xr = np.array([0,1])
+	err_x = np.array([0,1])
+	yerr = sems
+	xerr = np.ones(2)*0.1
+	width=0.5
+	# for i in range(rew.shape[1]):
+	# 	ax2.plot(xr,rew[:,i],color='k',linewidth=2,marker='o')
+	bars = ax2.bar(xr, means, width, color = ['red','k'], yerr = sems, ecolor = 'k', alpha = 0.5)
+	# ax2.errorbar(err_x,means,yerr=yerr,xerr=xerr,fmt='none',ecolor='k',capthick=2,elinewidth=2)
+	plt.xticks(np.arange(0,2),['LED on','LED off'])
+	for ticklabel in ax2.get_xticklabels():
+		ticklabel.set_fontsize(14)
+	for ticklabel in ax2.get_yticklabels():
+		ticklabel.set_fontsize(14)
+	ax2.set_xlim(-0.3,1.3)
+	ax2.set_ylim(0,12)
+	ax2.set_title("V1 firing rates, LED on V LED off")
+	print("pval = "+str(p_val))
+	print("tval = "+str(t_val))
+	print("mean LED on = "+str(means[0]))
+	print("mean LED off = "+str(means[1]))
+
 
 
 ########################HELPERS~########################
@@ -7715,3 +8179,49 @@ def get_data_window(trace, centers, pre_win, post_win):
 		for n, idx in enumerate(clean_centers):
 			traces[:,n] = data[idx-pre_win:idx+post_win]
 	return traces
+
+"""
+Returns counts of events for one session, binned by minutes in the session
+"""
+def get_event_data(root_loc):
+	e1_units = [x for x in list(root_loc['e1_units']) if not x.endswith('wf')]
+	duration = int(np.ceil(root_loc['e1_units'][e1_units[0]].shape[1]/1000.0/60.0))
+	t1_ts = np.asarray(root_loc['event_arrays']['t1'])/1000.0/60.0
+	try:
+		t2_ts = np.asarray(root_loc['event_arrays']['t2'])/1000.0/60.0
+	except KeyError:
+		t2_ts = np.array([])
+	miss_ts = np.asarray(root_loc['event_arrays']['miss'])/1000.0/60.0
+	t1 = np.histogram(t1_ts,bins=duration,range=(0,duration))[0]
+	t2 = np.histogram(t2_ts,bins=duration,range=(0,duration))[0]
+	miss = np.histogram(miss_ts,bins=duration,range=(0,duration))[0]
+	p_correct = np.nan_to_num(t1/(t1+t2+miss))
+	return t1,t2,miss,p_correct
+
+"""
+A function to remove NaNs from the end of an array
+"""
+def remove_nan(array):
+	##find the first index of nan
+	allnans = np.argwhere(np.isnan(array))
+	if len(allnans)>0:
+		firstnan = allnans.min()
+		array = array[:firstnan]
+	return array
+
+"""
+gets indices of stim trials or non-stim trials from 
+a matlab file
+"""
+def parse_stim_data(matfile):
+	data = spio.loadmat(matfile)
+	stream = data['stim_trial_stream'].squeeze()
+	sel_idx = np.where(np.logical_or(stream==0, stream==1))[0]
+	stim_order = stream[sel_idx]
+	stim_idx = np.where(stim_order==1)[0]
+	off_idx = np.where(stim_order==0)[0]
+	return stim_idx,off_idx
+
+
+
+
