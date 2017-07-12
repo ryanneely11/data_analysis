@@ -8,6 +8,7 @@ from scipy import stats
 import multiprocessing as mp
 import spike_field_coherence as SFC
 from scipy.stats.mstats import zscore
+from scipy.ndimage.filters import gaussian_filter
 import scipy.io as spio
 #import seaborn as sns
 import pandas as pd
@@ -8063,7 +8064,345 @@ def plot_stim_frs():
 	print("mean LED on = "+str(means[0]))
 	print("mean LED off = "+str(means[1]))
 
+def parse_dms_locked2():
+	datafile = r"C:\Users\Ryan\Documents\data\t1_triggered.hdf5"
+	savefile = r"D:\Ryan\V1_BMI\Neuron\dms_t1_locked2.hdf5"
+	f = h5py.File(datafile,'r')
+	f_out = h5py.File(savefile,'w-')
+	early_session_range = np.arange(0,4)
+	late_session_range = np.arange(7,15)
+	early_sessions = [x for x in list(f) if int(x[-2:]) in early_session_range]
+	late_sessions = [x for x in list(f) if int(x[-2:]) in late_session_range]
+	early_spikes = []
+	late_spikes = []
+	for s in early_sessions:
+		try: 
+			spike_data = np.asarray(f[s]['Str_units']) ##shape trials x time x units
+			for u in range(spike_data.shape[2]):
+				unit_data = spike_data[:,:,u] ##shape trials x bins
+				smoothed = smooth_spikes(unit_data,smooth_method='both',smooth_width=[80,40]) #still trials x bins
+				avg = np.nanmean(smoothed,axis=0) ##avg all trials, now shape is (bins,)
+				early_spikes.append(zscore(avg))				
+		except KeyError:
+			pass
+	for s in late_sessions:
+		try: 
+			spike_data = np.asarray(f[s]['Str_units']) ##shape trials x time x units
+			for u in range(spike_data.shape[2]):
+				unit_data = spike_data[:,:,u] ##shape trials x bins
+				smoothed = smooth_spikes(unit_data,smooth_method='both',smooth_width=[80,40]) #still trials x bins
+				avg = np.nanmean(smoothed,axis=0) ##avg all trials, now shape is (bins,)
+				late_spikes.append(zscore(avg))				
+		except KeyError:
+			pass
+	f.close()
+	group = f_out.create_group("across_days")
+	group.create_dataset("early",data=np.asarray(early_spikes))
+	group.create_dataset("late",data=np.asarray(late_spikes))
+	##now repeat, but look at WithIN session differences
+	datafile = r"C:\Users\Ryan\Documents\data\t1_triggered.hdf5"
+	f = h5py.File(datafile,'r')
+	session_range = np.arange(0,12)
+	sessions = [x for x in list(f) if int(x[-2:]) in session_range]
+	early_spikes = []
+	late_spikes = []
+	for s in sessions:
+		try: 
+			spike_data = np.asarray(f[s]['Str_units']) ##shape trials x time x units
+			for u in range(spike_data.shape[2]):
+				unit_data = spike_data[:,:,u] ##shape trials x bins
+				smoothed = smooth_spikes(unit_data,smooth_method='both',smooth_width=[80,40]) #still trials x bins
+				##Now get the early trials (first 25%)
+				total_trials = smoothed.shape[0]
+				chunk_size = int(np.ceil(total_trials*0.25))
+				early_trials_avg = np.nanmean(smoothed[0:chunk_size,:],axis=0)
+				late_trials_avg = np.nanmean(smoothed[-chunk_size:,:],axis=0)
+				early_spikes.append(zscore(early_trials_avg))
+				late_spikes.append(zscore(late_trials_avg))				
+		except KeyError:
+			pass
+	f.close()
+	group = f_out.create_group("within_session_all")
+	group.create_dataset("early",data=np.asarray(early_spikes))
+	group.create_dataset("late",data=np.asarray(late_spikes))
+	early = np.asarray(early_spikes)
+	late = np.asarray(late_spikes)
+	early_mean = np.nanmean(early,axis=0)
+	early_sem = np.nanstd(early,axis=0)/np.sqrt(early.shape[0])
+	late_mean = np.nanmean(late,axis=0)
+	late_sem = np.nanstd(late,axis=0)/np.sqrt(late.shape[0])
+	fig,ax = plt.subplots(1)
+	x = np.linspace(-6,2,early.shape[1])
+	ax.plot(x,early_mean,color='cyan',linewidth=2,label='early sessions')
+	ax.plot(x,late_mean,color='blue',linewidth=2,label='late sessions')
+	ax.fill_between(x,early_mean-early_sem,early_mean+early_sem,color='cyan',alpha=0.5)
+	ax.fill_between(x,late_mean-late_sem,late_mean+late_sem,color='blue',alpha=0.5)
+	ax.set_ylabel("z-score",fontsize=14)
+	ax.set_xlabel("Time to target, s",fontsize=14)
+	ax.set_title("DMS modulation within sessions, all sessions")
+	##now do within session early
+	datafile = r"C:\Users\Ryan\Documents\data\t1_triggered.hdf5"
+	f = h5py.File(datafile,'r')
+	session_range = np.arange(0,4)
+	sessions = [x for x in list(f) if int(x[-2:]) in session_range]
+	early_spikes = []
+	late_spikes = []
+	for s in sessions:
+		try: 
+			spike_data = np.asarray(f[s]['Str_units']) ##shape trials x time x units
+			for u in range(spike_data.shape[2]):
+				unit_data = spike_data[:,:,u] ##shape trials x bins
+				smoothed = smooth_spikes(unit_data,smooth_method='both',smooth_width=[80,40]) #still trials x bins
+				##Now get the early trials (first 25%)
+				total_trials = smoothed.shape[0]
+				chunk_size = int(np.ceil(total_trials*0.25))
+				early_trials_avg = np.nanmean(smoothed[0:chunk_size,:],axis=0)
+				late_trials_avg = np.nanmean(smoothed[-chunk_size:,:],axis=0)
+				early_spikes.append(zscore(early_trials_avg))
+				late_spikes.append(zscore(late_trials_avg))				
+		except KeyError:
+			pass
+	f.close()
+	group = f_out.create_group("within_session_early")
+	group.create_dataset("early",data=np.asarray(early_spikes))
+	group.create_dataset("late",data=np.asarray(late_spikes))
+	early = np.asarray(early_spikes)
+	late = np.asarray(late_spikes)
+	early_mean = np.nanmean(early,axis=0)
+	early_sem = np.nanstd(early,axis=0)/np.sqrt(early.shape[0])
+	late_mean = np.nanmean(late,axis=0)
+	late_sem = np.nanstd(late,axis=0)/np.sqrt(late.shape[0])
+	fig,ax = plt.subplots(1)
+	x = np.linspace(-6,2,early.shape[1])
+	ax.plot(x,early_mean,color='cyan',linewidth=2,label='early sessions')
+	ax.plot(x,late_mean,color='blue',linewidth=2,label='late sessions')
+	ax.fill_between(x,early_mean-early_sem,early_mean+early_sem,color='cyan',alpha=0.5)
+	ax.fill_between(x,late_mean-late_sem,late_mean+late_sem,color='blue',alpha=0.5)
+	ax.set_ylabel("z-score",fontsize=14)
+	ax.set_xlabel("Time to target, s",fontsize=14)
+	ax.set_title("DMS modulation within sessions, early sessions")
+	##Now within session late
+	datafile = r"C:\Users\Ryan\Documents\data\t1_triggered.hdf5"
+	f = h5py.File(datafile,'r')
+	session_range = np.arange(7,12)
+	sessions = [x for x in list(f) if int(x[-2:]) in session_range]
+	early_spikes = []
+	late_spikes = []
+	for s in sessions:
+		try: 
+			spike_data = np.asarray(f[s]['Str_units']) ##shape trials x time x units
+			for u in range(spike_data.shape[2]):
+				unit_data = spike_data[:,:,u] ##shape trials x bins
+				smoothed = smooth_spikes(unit_data,smooth_method='both',smooth_width=[80,40]) #still trials x bins
+				##Now get the early trials (first 25%)
+				total_trials = smoothed.shape[0]
+				chunk_size = int(np.ceil(total_trials*0.25))
+				early_trials_avg = np.nanmean(smoothed[0:chunk_size,:],axis=0)
+				late_trials_avg = np.nanmean(smoothed[-chunk_size:,:],axis=0)
+				early_spikes.append(zscore(early_trials_avg))
+				late_spikes.append(zscore(late_trials_avg))				
+		except KeyError:
+			pass
+	f.close()
+	group = f_out.create_group("within_session_late")
+	group.create_dataset("early",data=np.asarray(early_spikes))
+	group.create_dataset("late",data=np.asarray(late_spikes))
+	early = np.asarray(early_spikes)
+	late = np.asarray(late_spikes)
+	early_mean = np.nanmean(early,axis=0)
+	early_sem = np.nanstd(early,axis=0)/np.sqrt(early.shape[0])
+	late_mean = np.nanmean(late,axis=0)
+	late_sem = np.nanstd(late,axis=0)/np.sqrt(late.shape[0])
+	fig,ax = plt.subplots(1)
+	x = np.linspace(-6,2,early.shape[1])
+	ax.plot(x,early_mean,color='cyan',linewidth=2,label='early sessions')
+	ax.plot(x,late_mean,color='blue',linewidth=2,label='late sessions')
+	ax.fill_between(x,early_mean-early_sem,early_mean+early_sem,color='cyan',alpha=0.5)
+	ax.fill_between(x,late_mean-late_sem,late_mean+late_sem,color='blue',alpha=0.5)
+	ax.set_ylabel("z-score",fontsize=14)
+	ax.set_xlabel("Time to target, s",fontsize=14)
+	ax.set_title("DMS modulation within sessions, late sessions")
+	f_out.close()
 
+def plot_dms_locked2():
+	datafile = r"D:\Ryan\V1_BMI\Neuron\DMS_T1_locked.hdf5"
+	f = h5py.File(datafile,'r')
+	group = f['across_days']
+	early = np.asarray(group['early'])
+	late = np.asarray(group['late'])
+	early_mean = np.nanmean(early,axis=0)
+	early_sem = np.nanstd(early,axis=0)/np.sqrt(early.shape[0])
+	late_mean = np.nanmean(late,axis=0)
+	late_sem = np.nanstd(late,axis=0)/np.sqrt(late.shape[0])
+	mod_depth_early = np.abs(np.nanmax(early[:,125:175],axis=1)-np.nanmin(early[:,125:175],axis=1))
+	mod_depth_late = np.abs(np.nanmax(late[:,125:175],axis=1)-np.nanmin(late[:,125:175],axis=1))
+	fig,(ax1,ax2) = plt.subplots(ncols=2,nrows=1)
+	x = np.linspace(-6,2,early.shape[1])
+	ax1.plot(x,early_mean,color='cyan',linewidth=2,label='early sessions')
+	ax1.plot(x,late_mean,color='blue',linewidth=2,label='late sessions')
+	ax1.fill_between(x,early_mean-early_sem,early_mean+early_sem,color='cyan',alpha=0.5)
+	ax1.fill_between(x,late_mean-late_sem,late_mean+late_sem,color='blue',alpha=0.5)
+	ax1.set_ylabel("z-score",fontsize=14)
+	ax1.set_xlabel("Time to target, s",fontsize=14)
+	# ax1.set_title("Across days",fontsize=14)
+	##now plot the modulation depth
+	means = np.array([np.nanmean(mod_depth_early),np.nanmean(mod_depth_late)])
+	serr = np.array([np.nanstd(mod_depth_early)/np.sqrt(mod_depth_early.shape[0]),
+		np.nanstd(mod_depth_late)/np.sqrt(mod_depth_late.shape[0])])
+	##now do the plotting
+	x2 = np.array([0,1])
+	err_x = np.array([0.2,0.2])
+	# for i in range(all_mod.shape[1]):
+	# 	ax2.plot(x2,all_mod[:,i],color='k',linewidth=2,marker='o')
+	# ax2.errorbar(x2,means,yerr=serr,xerr=err_x,fmt='none',ecolor='k',capthick=2,elinewidth=2)
+	bars = ax2.bar(x2,means,0.5,color = ['cyan','blue'],yerr=serr,ecolor='k',alpha=1)
+	plt.xticks(np.arange(0,2),['Early','Late'])
+	for ticklabel in ax2.get_xticklabels():
+		ticklabel.set_fontsize(14)
+	for ticklabel in ax2.get_yticklabels():
+		ticklabel.set_fontsize(14)
+	ax2.set_xlim(-0.5,1.5)
+	# ax2.set_ylim(0,5.5)
+	ax2.set_ylabel("Modulation depth",fontsize=14)
+	ax2.set_title("Modulation depth",fontsize=14)
+	fig.suptitle("Across days",fontsize=14)
+	tval,pval = stats.ttest_ind(mod_depth_early,mod_depth_late,nan_policy='omit')
+	ax2.text(0,3.4,"p={}".format(pval))
+	ax2.text(0,3.6,"t={}".format(tval))
+	plt.tight_layout()
+	##repeat for within sesssions
+	group = f['within_session_all']
+	early = np.asarray(group['early'])
+	late = np.asarray(group['late'])
+	early_mean = np.nanmean(early,axis=0)
+	early_sem = np.nanstd(early,axis=0)/np.sqrt(early.shape[0])
+	late_mean = np.nanmean(late,axis=0)
+	late_sem = np.nanstd(late,axis=0)/np.sqrt(late.shape[0])
+	mod_depth_early = np.abs(np.nanmax(early[:,125:175],axis=1)-np.nanmin(early[:,125:175],axis=1))
+	mod_depth_late = np.abs(np.nanmax(late[:,125:175],axis=1)-np.nanmin(late[:,125:175],axis=1))
+	fig,(ax1,ax2) = plt.subplots(ncols=2,nrows=1)
+	x = np.linspace(-6,2,early.shape[1])
+	ax1.plot(x,early_mean,color='cyan',linewidth=2,label='early sessions')
+	ax1.plot(x,late_mean,color='blue',linewidth=2,label='late sessions')
+	ax1.fill_between(x,early_mean-early_sem,early_mean+early_sem,color='cyan',alpha=0.5)
+	ax1.fill_between(x,late_mean-late_sem,late_mean+late_sem,color='blue',alpha=0.5)
+	ax1.set_ylabel("z-score",fontsize=14)
+	ax1.set_xlabel("Time to target, s",fontsize=14)
+	# ax1.set_title("Within sessions",fontsize=14)
+	##now plot the modulation depth
+	means = np.array([np.nanmean(mod_depth_early),np.nanmean(mod_depth_late)])
+	serr = np.array([np.nanstd(mod_depth_early)/np.sqrt(mod_depth_early.shape[0]),
+		np.nanstd(mod_depth_late)/np.sqrt(mod_depth_late.shape[0])])
+	##now do the plotting
+	x2 = np.array([0,1])
+	err_x = np.array([0.2,0.2])
+	# for i in range(all_mod.shape[1]):
+	# 	ax2.plot(x2,all_mod[:,i],color='k',linewidth=2,marker='o')
+	# ax2.errorbar(x2,means,yerr=serr,xerr=err_x,fmt='none',ecolor='k',capthick=2,elinewidth=2)
+	bars = ax2.bar(x2,means,0.5,color = ['cyan','blue'],yerr=serr,ecolor='k',alpha=1)
+	plt.xticks(np.arange(0,2),['Early','Late'])
+	for ticklabel in ax2.get_xticklabels():
+		ticklabel.set_fontsize(14)
+	for ticklabel in ax2.get_yticklabels():
+		ticklabel.set_fontsize(14)
+	ax2.set_xlim(-0.5,1.5)
+	# ax2.set_ylim(0,5.5)
+	ax2.set_ylabel("Modulation depth",fontsize=14)
+	ax2.set_title("Modulation depth",fontsize=14)
+	fig.suptitle("Within sessions",fontsize=14)
+	tval,pval = stats.ttest_rel(mod_depth_early,mod_depth_late,nan_policy='omit')
+	ax2.text(0,3.4,"p={}".format(pval))
+	ax2.text(0,3.6,"t={}".format(tval))
+	plt.tight_layout()
+	##repeat for within session early
+	group = f['within_session_early']
+	early = np.asarray(group['late'])
+	late = np.asarray(group['early'])
+	early_mean = np.nanmean(early,axis=0)
+	early_sem = np.nanstd(early,axis=0)/np.sqrt(early.shape[0])
+	late_mean = np.nanmean(late,axis=0)
+	late_sem = np.nanstd(late,axis=0)/np.sqrt(late.shape[0])
+	mod_depth_early = np.abs(np.nanmax(early[:,135:152],axis=1)-np.nanmin(early[:,125:175],axis=1))
+	mod_depth_late = np.abs(np.nanmax(late[:,135:152],axis=1)-np.nanmin(late[:,125:175],axis=1))
+	fig,(ax1,ax2) = plt.subplots(ncols=2,nrows=1)
+	x = np.linspace(-6,2,early.shape[1])
+	ax1.plot(x,early_mean,color='cyan',linewidth=2,label='early sessions')
+	ax1.plot(x,late_mean,color='blue',linewidth=2,label='late sessions')
+	ax1.fill_between(x,early_mean-early_sem,early_mean+early_sem,color='cyan',alpha=0.5)
+	ax1.fill_between(x,late_mean-late_sem,late_mean+late_sem,color='blue',alpha=0.5)
+	ax1.set_ylabel("z-score",fontsize=14)
+	ax1.set_xlabel("Time to target, s",fontsize=14)
+	# ax1.set_title("Within sessions",fontsize=14)
+	##now plot the modulation depth
+	means = np.array([np.nanmean(mod_depth_early),np.nanmean(mod_depth_late)])
+	serr = np.array([np.nanstd(mod_depth_early)/np.sqrt(mod_depth_early.shape[0]),
+		np.nanstd(mod_depth_late)/np.sqrt(mod_depth_late.shape[0])])
+	##now do the plotting
+	x2 = np.array([0,1])
+	err_x = np.array([0.2,0.2])
+	# for i in range(all_mod.shape[1]):
+	# 	ax2.plot(x2,all_mod[:,i],color='k',linewidth=2,marker='o')
+	# ax2.errorbar(x2,means,yerr=serr,xerr=err_x,fmt='none',ecolor='k',capthick=2,elinewidth=2)
+	bars = ax2.bar(x2,means,0.5,color = ['cyan','blue'],yerr=serr,ecolor='k',alpha=1)
+	plt.xticks(np.arange(0,2),['Early','Late'])
+	for ticklabel in ax2.get_xticklabels():
+		ticklabel.set_fontsize(14)
+	for ticklabel in ax2.get_yticklabels():
+		ticklabel.set_fontsize(14)
+	ax2.set_xlim(-0.5,1.5)
+	# ax2.set_ylim(0,5.5)
+	ax2.set_ylabel("Modulation depth",fontsize=14)
+	ax2.set_title("Modulation depth",fontsize=14)
+	fig.suptitle("Within early sessions",fontsize=14)
+	tval,pval = stats.ttest_rel(mod_depth_early,mod_depth_late,nan_policy='omit')
+	ax2.text(0,2.4,"p={}".format(pval))
+	ax2.text(0,2.6,"t={}".format(tval))
+	plt.tight_layout()
+	##repeat for within session late
+	group = f['within_session_late']
+	early = np.asarray(group['early'])
+	late = np.asarray(group['late'])
+	early_mean = np.nanmean(early,axis=0)
+	early_sem = np.nanstd(early,axis=0)/np.sqrt(early.shape[0])
+	late_mean = np.nanmean(late,axis=0)
+	late_sem = np.nanstd(late,axis=0)/np.sqrt(late.shape[0])
+	mod_depth_early = np.abs(np.nanmax(early[:,125:175],axis=1)-np.nanmin(early[:,125:175],axis=1))
+	mod_depth_late = np.abs(np.nanmax(late[:,125:175],axis=1)-np.nanmin(late[:,125:175],axis=1))
+	fig,(ax1,ax2) = plt.subplots(ncols=2,nrows=1)
+	x = np.linspace(-6,2,early.shape[1])
+	ax1.plot(x,early_mean,color='cyan',linewidth=2,label='early sessions')
+	ax1.plot(x,late_mean,color='blue',linewidth=2,label='late sessions')
+	ax1.fill_between(x,early_mean-early_sem,early_mean+early_sem,color='cyan',alpha=0.5)
+	ax1.fill_between(x,late_mean-late_sem,late_mean+late_sem,color='blue',alpha=0.5)
+	ax1.set_ylabel("z-score",fontsize=14)
+	ax1.set_xlabel("Time to target, s",fontsize=14)
+	# ax1.set_title("Within sessions",fontsize=14)
+	##now plot the modulation depth
+	means = np.array([np.nanmean(mod_depth_early),np.nanmean(mod_depth_late)])
+	serr = np.array([np.nanstd(mod_depth_early)/np.sqrt(mod_depth_early.shape[0]),
+		np.nanstd(mod_depth_late)/np.sqrt(mod_depth_late.shape[0])])
+	##now do the plotting
+	x2 = np.array([0,1])
+	err_x = np.array([0.2,0.2])
+	# for i in range(all_mod.shape[1]):
+	# 	ax2.plot(x2,all_mod[:,i],color='k',linewidth=2,marker='o')
+	# ax2.errorbar(x2,means,yerr=serr,xerr=err_x,fmt='none',ecolor='k',capthick=2,elinewidth=2)
+	bars = ax2.bar(x2,means,0.5,color = ['cyan','blue'],yerr=serr,ecolor='k',alpha=1)
+	plt.xticks(np.arange(0,2),['Early','Late'])
+	for ticklabel in ax2.get_xticklabels():
+		ticklabel.set_fontsize(14)
+	for ticklabel in ax2.get_yticklabels():
+		ticklabel.set_fontsize(14)
+	ax2.set_xlim(-0.5,1.5)
+	# ax2.set_ylim(0,5.5)
+	ax2.set_ylabel("Modulation depth",fontsize=14)
+	ax2.set_title("Modulation depth",fontsize=14)
+	fig.suptitle("Within late sessions",fontsize=14)
+	tval,pval = stats.ttest_rel(mod_depth_early,mod_depth_late,nan_policy='omit')
+	ax2.text(0,3.4,"p={}".format(pval))
+	ax2.text(0,3.6,"t={}".format(tval))
+	plt.tight_layout()
+	f.close()
 
 ########################HELPERS~########################
 
@@ -8100,6 +8439,46 @@ def bin_spikes(data,bin_width):
 		bin_vals.append(data[idx:idx+bin_width].sum())
 		idx += bin_width
 	return np.asarray(bin_vals)
+
+"""
+A function to convolve data with a gaussian kernel of width sigma.
+Inputs:
+	array: the data array to convolve. Will work for multi-D arrays;
+		shape of data should be samples x trials
+	sigma: the width of the kernel, in samples
+"""
+def gauss_convolve(array, sigma):
+	##remove singleton dimesions and make sure values are floats
+	array = array.squeeze().astype(float)
+	##allocate memory for result
+	result = np.zeros(array.shape)
+	##if the array is 2-D, handle each trial separately
+	try:
+		for trial in range(array.shape[1]):
+			result[:,trial] = gaussian_filter(array[:,trial],sigma=sigma,order=0,
+				mode="constant",cval = 0.0)
+	##if it's 1-D:
+	except IndexError:
+		if array.shape[0] == array.size:
+			result = gaussian_filter(array,sigma=sigma,order=0,mode="mirror")
+		else:
+			print("Check your array input to gaussian filter")
+	return result
+
+"""
+A helper function to bin arrays already in binary format
+Inputs:
+	data:1-d binary spike train
+	bin_width: with of bins to use
+Returns:
+	1-d binary spike train with spike counts in each bin
+"""
+def bin_spikes(data,bin_width):
+	n_bins = int(data.size/bin_width)
+	bin_vals = np.zeros(n_bins)
+	for i in range(n_bins):
+		bin_vals[i] = data[i*bin_width:(i+1)*bin_width].sum()
+	return bin_vals
 
 """
 a function to equalize the length of different-length arrays
@@ -8221,6 +8600,43 @@ def parse_stim_data(matfile):
 	stim_idx = np.where(stim_order==1)[0]
 	off_idx = np.where(stim_order==0)[0]
 	return stim_idx,off_idx
+
+"""
+A helper function to do spike smoothing. 
+Inputs: 
+	X: 2-d data array in the shape units x timebins (assuming 1 ms bins here),
+		and value of each bin is a spike count)
+	smooth_method: type of smoothing to use; choose 'bins', 'gauss', 'both', or 'none'
+	smooth_width: size of the bins or gaussian kernel in ms. If both, input should be a list
+		with index 0 being the gaussian width and index 1 being the bin width
+	Returns: 
+		X: smoothed version of X
+"""
+def smooth_spikes(X,smooth_method,smooth_width):
+	if smooth_method == 'bins':
+		Xbins = []
+		for a in range(X.shape[0]):
+			Xbins.append(bin_spikes(X[a,:],smooth_width))
+		X = np.asarray(Xbins)
+	elif smooth_method == 'gauss':
+		for a in range(X.shape[0]):
+			X[a,:] = gauss_convolve(X[a,:],smooth_width)
+	elif smooth_method == 'both':
+		##first smooth with a kernel 
+		for a in range(X.shape[0]):
+			X[a,:] = gauss_convolve(X[a,:],smooth_width[0])
+		##now bin the data
+		Xbins = []
+		for a in range(X.shape[0]):
+			Xbins.append(bin_spikes(X[a,:],smooth_width[1]))
+		X = np.asarray(Xbins)
+	elif smooth_method == 'none':
+		pass
+	else:
+		raise KeyError("Unrecognized bin method")
+		X = None
+	return X
+
 
 
 
