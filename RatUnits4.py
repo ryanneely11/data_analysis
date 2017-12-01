@@ -14,7 +14,7 @@ import os
 global animals
 from sys import platform as _platform
 if _platform == "darwin":
-  prefix = "/Volumes/Untitled/Ryan"
+  prefix = "/Volumes/data/V1_BMI"
 elif _platform == 'win32':
   prefix = "L:/Ryan/V1_BMI"
 
@@ -2455,7 +2455,7 @@ animals = {
 'units':{
 'e2_units':['sig002a', 'sig014a'],
 'e1_units':['sig001a', 'sig005a'], 
-'V1_units':['sig001b', 'sig010a', 'sig013a', 'sig013b', 'sig016a', 'sig015a', 'sig009a', 'sig006a', 'sig009b', 'sig006b'],  
+'V1_units':['sig001b', 'sig010a', 'sig013a', 'sig013b', 'sig016a', 'sig015a', 'sig006a', 'sig009b', 'sig006b'],  
 'Str_units':['sig017a', 'sig020a', 'sig032a', 'sig031a', 'sig024a', 'sig023a', 'sig022a', 'sig021b', 'sig021a']},
       'lfp':{
       'V1_lfp':['AD001','AD002','AD003','AD004','AD005','AD006','AD007','AD008','AD009','AD010','AD011','AD012','AD013','AD014','AD015','AD016'],  
@@ -2467,7 +2467,7 @@ animals = {
 'units':{
 'e2_units':['sig002a', 'sig014a'],
 'e1_units':['sig001a', 'sig005a'], 
-'V1_units':['sig013b', 'sig015a', 'sig016a', 'sig013a', 'sig012a', 'sig010a', 'sig011a', 'sig009b', 'sig009a', 'sig006b', 'sig006a', 'sig004a', 'sig003a', 'sig001b', 'sig009c'],  
+'V1_units':['sig013b', 'sig015a', 'sig016a', 'sig013a', 'sig012a', 'sig010a', 'sig011a', 'sig006b', 'sig006a', 'sig004a', 'sig003a', 'sig001b', 'sig009c'],  
 'Str_units':['sig020a', 'sig021a', 'sig025a', 'sig029a', 'sig031a', 'sig032a'], 'e2_units': ['sig002a', 'sig014a']},
       'lfp':{
       'V1_lfp':['AD001','AD002','AD003','AD004','AD005','AD006','AD007','AD008','AD009','AD010','AD011','AD012','AD013','AD014','AD015','AD016'],  
@@ -2479,7 +2479,7 @@ animals = {
 'units':{
 'e2_units':['sig002a', 'sig014a'],
 'e1_units':['sig001a', 'sig005a'], 
-'V1_units':['sig006b', 'sig009a', 'sig009b', 'sig010a', 'sig011a', 'sig010b', 'sig013a', 'sig013b', 'sig015a', 'sig016a', 'sig016b', 'sig006a', 'sig005b', 'sig004a', 'sig003b', 'sig003a'],  
+'V1_units':['sig006b', 'sig009a', 'sig009b', 'sig010a', 'sig011a', 'sig010b', 'sig013a', 'sig013b', 'sig015a', 'sig016a', 'sig006a', 'sig005b', 'sig004a', 'sig003b', 'sig003a'],  
 'Str_units':['sig018a', 'sig020a', 'sig017a', 'sig021a', 'sig022a', 'sig032a', 'sig025a']},
       'lfp':{
       'V1_lfp':['AD001','AD002','AD003','AD004','AD005','AD006','AD007','AD008','AD009','AD010','AD011','AD012','AD013','AD014','AD015','AD016'],  
@@ -2616,7 +2616,7 @@ animals = {
 'units':{
 'e2_units':['sig013a', 'sig017a'],
 'e1_units':['sig012a', 'sig004a'], 
-'V1_units':['sig001a', 'sig005a', 'sig0019a', 'sig010a', 'sig002a', 'sig018a', 'sig027a', 'sig016a', 'sig011b', 'sig011a', 'sig025a', 'sig009a', 'sig014a', 'sig026a'],  
+'V1_units':['sig001a', 'sig005a', 'sig010a', 'sig002a', 'sig018a', 'sig027a', 'sig016a', 'sig011b', 'sig011a', 'sig025a', 'sig009a', 'sig014a', 'sig026a'],  
 'Str_units':['sig038a']},
       'lfp':{
       'V1_lfp':['AD001','AD002','AD003','AD004','AD005','AD006','AD007','AD008','AD009','AD010','AD011','AD012','AD013','AD014','AD015','AD016','AD017','AD018','AD019','AD020','AD021','AD022','AD023','AD024','AD025','AD026','AD027','AD028','AD029','AD030','AD031','AD032'],  

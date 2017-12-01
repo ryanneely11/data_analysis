@@ -2414,8 +2414,8 @@ def plot_fr_data():
 	ax.set_xlabel("Condition", fontsize = 14)
 
 def get_ensemble_correlations():
-	path_in = r"C:\Users\Ryan\Documents\data\R7_thru_V13_all_data.hdf5"
-	path_out = r"C:\Users\Ryan\Documents\data\R7_thru_V13_ensemble_correlations.hdf5"
+	path_in = "/Volumes/Ryan/Data/processed_data/V1_BMI_final/raw_data/R7_thru_V13_all_data.hdf5"
+	path_out = "/Volumes/data/V1_BMI/Neuron/data/correlations_5ms.hdf5"
 
 	f_out = h5py.File(path_out, 'a')
 
@@ -2427,7 +2427,7 @@ def get_ensemble_correlations():
 	longest = 0
 	for animal in animal_list:
 		print("Select "+animal)
-		within_e1, within_e2, between_e1_e2 = ds.ensemble_correlations(path_in)
+		within_e1, within_e2, between_e1_e2 = ds.ensemble_correlations(path_in,dt=5)
 		f_out.create_group(animal)
 		f_out[animal].create_dataset("all_within_e1", data = within_e1)
 		f_out[animal].create_dataset("all_within_e2", data = within_e2)
@@ -6809,12 +6809,12 @@ def plot_dms_locked():
 
 
 def get_timelocked_frs():
-	unit_types = ['e1_units','e2_units','V1_units'] ##the type of units to look at on
-	root_dir = r"D:\Ryan\V1_BMI"
+	unit_types = ['Str_units'] ##the type of units to look at on
+	root_dir = "/Volumes/data/V1_BMI"
 	animal_list = [x for x in ru.animals.keys() if not x.startswith("m")]
 	session_list = None
-	window = [4000,4000]
-	save_file = r"D:\Ryan\V1_BMI\NatureNeuro\rebuttal\data\rat_spikes_t1_t2.hdf5"
+	window = [10000,4000]
+	save_file = "/Volumes/data/V1_BMI/Neuron/data/dms_projection_units_t1"
 	f_out = h5py.File(save_file,'a')
 	f_out.close()
 	for animal in animal_list:
@@ -8404,6 +8404,790 @@ def plot_dms_locked2():
 	plt.tight_layout()
 	f.close()
 
+def get_ensemble_correlations_new(dt=1):
+	##define some gobal parameters
+	animal_list = ["R13", "R11", "V01", "V02", "V03", "V04", "V05", "V11", "V13", "R7", "R8"]
+	##range of sessions that are valid for this particular analysis (ie no CD testing)
+	ranges = [[0,8], [0,13], [0,11], [0,11], [0,11], [0,11], [0,11], [0,8], [0,7], [5,8], [5,8]] 
+	##window to smooth over
+	early_win = [0,5*60*1000]
+	late_win = [-15*60*1000:-10*60*1000]
+	sig_type = "units"
+	root_dir = "/Volumes/data/V1_BMI"
+	save_file = "/Volumes/data/V1_BMI/Neuron/data/correlations_1ms.hdf5"
+	if animal_list is None:
+		animal_list = ru.animals.keys()
+	for r,animal in enumerate(animal_list):
+		session_list = [x for x in ru.animals[animal][1].keys() if int(x[-6:-4]) in range(ranges[r][0],ranges[r][1])]
+		for session in session_list:
+			f_out = h5py.File(save_file,'a')
+			try:
+				a_group = f_out[animal]
+			except KeyError:
+				a_group = f_out.create_group(animal)
+			try:
+				s_group = a_group[session]
+				f_out.close()
+			except KeyError:
+				f_out.close()
+				##this should be the path to the plexon file
+				plxfile = os.path.join(root_dir,animal,session)
+				##try to get the list of names for the signals and the targets
+				try:
+					e1_list = ru.animals[animal][1][session][sig_type]["e1_units"]
+				except KeyError:
+					e1_list = []
+				try:
+					e2_list = ru.animals[animal][1][session][sig_type]["e2_units"]
+				except KeyError:
+					e2_list = []
+				try:
+					ind_list = ru.animals[animal][1][session][sig_type]["V1_units"]
+				except KeyError:
+					ind_list = []
+				##if we do have everything we need, continue
+				if (len(e1_list)>0 and len(e2_list)>0 and len(ind_list)>0):
+					print("working on "+animal+" "+session)
+					##open the raw plexon data file
+					raw_data = plxread.import_file(plxfile,AD_channels=range(0,96),save_wf=False,
+						import_unsorted=False,verbose=False)
+					##this will be our list of correlation timecourses
+					e1_data_early = []
+					e1_data_late = []
+					e2_data_early = []
+					e2_data_late = []
+					ind_data_early = []
+					ind_data_late = []
+					##get the info about the duration of this session
+					lfp_id = ru.animals[animal][1][session]['lfp']['V1_lfp'][0]
+					duration = int((np.ceil(raw_data[lfp_id+'_ts'].max()*1000)/100)*100)+1
+					##now process each set of units for this session
+					##starting with E1 units:
+					##a list of tuples containing all the pairwise combinations of e1 units
+					##(necessary because some sessions have more than 2 ensemble units)
+					unit_combinations = list(itertools.combinations(e1_list,2))
+					for c in unit_combinations:
+						##extract and process the data from the datafile
+						unit1 = raw_data[c[0]]*1000.0
+						unit1 = np.histogram(unit1,bins=duration,range=(0,duration))
+						unit1 = unit1[0].astype(bool).astype(int)
+						####
+						unit2 = raw_data[c[1]]*1000.0
+						unit2 = np.histogram(unit2,bins=duration,range=(0,duration))
+						unit2 = unit2[0].astype(bool).astype(int)
+						##now do a correlation analysis on the early and late chunks
+						result_early = ss.corr_coeff2(unit1[early_win[0]:early_win[1]],
+							unit2[early_win[0]:early_win[1]],dt)
+						result_late = ss.corr_coeff2(unit1[late_win[0]:late_win[1]],
+							unit2[late_win[0]:late_win[1]])
+						e1_data_early.append(result_early)
+						e1_data_late.append(result_late)
+					##repeat for e2 units
+					unit_combinations = list(itertools.combinations(e2_list,2))
+					for c in unit_combinations:
+						##extract and process the data from the datafile
+						unit1 = raw_data[c[0]]*1000.0
+						unit1 = np.histogram(unit1,bins=duration,range=(0,duration))
+						unit1 = unit1[0].astype(bool).astype(int)
+						####
+						unit2 = raw_data[c[1]]*1000.0
+						unit2 = np.histogram(unit2,bins=duration,range=(0,duration))
+						unit2 = unit2[0].astype(bool).astype(int)
+						##now do a correlation analysis on the early and late chunks
+						result_early = ss.corr_coeff2(unit1[early_win[0]:early_win[1]],
+							unit2[early_win[0]:early_win[1]],dt)
+						result_late = ss.corr_coeff2(unit1[late_win[0]:late_win[1]],
+							unit2[late_win[0]:late_win[1]])
+						e2_data_early.append(result_early)
+						e2_data_late.append(result_late)
+					##repeat for indirect units
+					unit_combinations = list(itertools.combinations(ind_list,2))
+					for c in unit_combinations:
+						##extract and process the data from the datafile
+						unit1 = raw_data[c[0]]*1000.0
+						unit1 = np.histogram(unit1,bins=duration,range=(0,duration))
+						unit1 = unit1[0].astype(bool).astype(int)
+						####
+						unit2 = raw_data[c[1]]*1000.0
+						unit2 = np.histogram(unit2,bins=duration,range=(0,duration))
+						unit2 = unit2[0].astype(bool).astype(int)
+						##now do a correlation analysis on the early and late chunks
+						result_early = ss.corr_coeff2(unit1[early_win[0]:early_win[1]],
+							unit2[early_win[0]:early_win[1]],dt)
+						result_late = ss.corr_coeff2(unit1[late_win[0]:late_win[1]],
+							unit2[late_win[0]:late_win[1]])
+						ind_data_early.append(result_early)
+						ind_data_late.append(result_late)
+					f_out = h5py.File(save_file,'a')
+					a_group = f_out[animal]	
+					s_group = a_group.create_group(session)
+					s_group.create_dataset("E1_early",data = np.asarray(e1_data_early))
+					s_group.create_dataset("E1_late",data = np.asarray(e1_data_late))
+					s_group.create_dataset("E2_early",data = np.asarray(e2_data_early))
+					s_group.create_dataset("E2_late",data = np.asarray(e2_data_late))
+					s_group.create_dataset("indirect_early",data = np.asarray(ind_data_early))
+					s_group.create_dataset("indirect_late",data = np.asarray(ind_data_late))
+					f_out.close()
+	print("Done!")
+
+
+def plot_correlations_new():
+	##here we want to do 2 types of plots. 
+	#1) mean corr across sessions
+	#2) corr within sessions for jaws and non-jaws days
+	##star by opening the data file 
+	source_file = "/Volumes/data/V1_BMI/Neuron/data/correlations_10ms.hdf5"
+	dt = "10 ms bins"
+	f = h5py.File(source_file,'r')
+	##create some lists to store the different types of data
+	all_e1 = []
+	all_e2 = []
+	all_indirect = []
+	animal_e1 = []
+	animal_e2 = []
+	animal_indirect = []
+	across_sessions_e1 = []
+	across_sessions_e2 = []
+	across_sessions_indirect = []
+	for animal in f.keys():
+		e1_means = []
+		e2_means = []
+		indirect_means = []
+		e1_sessions = []
+		e2_sessions = []
+		indirect_sessions = []
+		sessions = f[animal].keys()
+		for session in sessions:
+			e1_data = np.asarray(f[animal][session]['E1']).squeeze()
+			e2_data = np.asarray(f[animal][session]['E2']).squeeze()
+			indirect_data = np.asarray(f[animal][session]['indirect']).squeeze()
+			##get the mean over the whole session
+			e1_means.append(e1_data.mean())
+			e2_means.append(e2_data.mean())
+			indirect_means.append(indirect_data.mean())
+			##get the mean across the session
+			if len(e1_data.shape) > 1:
+				e1_sessions.append(e1_data.mean(axis=0))
+				all_e1.append(e1_data.mean(axis=0))
+			else:
+				e1_sessions.append(e1_data)
+				all_e1.append(e1_data)
+				##
+			if len(e2_data.shape) > 1:
+				e2_sessions.append(e2_data.mean(axis=0))
+				all_e2.append(e2_data.mean(axis=0))
+			else:
+				e2_sessions.append(e2_data)
+				all_e2.append(e2_data)
+				##
+			if len(indirect_data.shape) > 1:
+				indirect_sessions.append(indirect_data.mean(axis=0))
+				all_indirect.append(indirect_data.mean(axis=0))
+			else:
+				indirect_sessions.append(indirect_data)
+				all_indirect.append(indirect_data)
+		##add this data to the master lists
+		across_sessions_e1.append(np.asarray(e1_means))
+		across_sessions_e2.append(np.asarray(e2_means))
+		across_sessions_indirect.append(np.asarray(indirect_means))
+		animal_e1.append(np.asarray(equalize_arrs(e1_sessions)).mean(axis=0))
+		animal_e2.append(np.asarray(equalize_arrs(e2_sessions)).mean(axis=0))
+		animal_indirect.append(np.asarray(equalize_arrs(indirect_sessions)).mean(axis=0))
+	f.close()
+	##now we need to equalize the lengths of our arrays
+	all_e1 = np.asarray(equalize_arrs(all_e1))
+	all_e2 = np.asarray(equalize_arrs(all_e2))
+	all_indirect = np.asarray(equalize_arrs(all_indirect))
+	animal_e1 = np.asarray(equalize_arrs(animal_e1))
+	animal_e2 = np.asarray(equalize_arrs(animal_e2))
+	animal_indirect = np.asarray(equalize_arrs(animal_indirect))
+	across_sessions_e1 = np.asarray(equalize_arrs(across_sessions_e1))
+	across_sessions_e2 = np.asarray(equalize_arrs(across_sessions_e2))
+	across_sessions_indirect = np.asarray(equalize_arrs(across_sessions_indirect))
+	###finally, we can plot these things
+	session_data = [all_e1,all_e2,all_indirect]
+	animal_data = [animal_e1,animal_e2,animal_indirect]
+	across_data = [across_sessions_e1,across_sessions_e2,across_sessions_indirect]
+	colors = ['g','b','k']
+	labels = ['E1','E2','Indirect']
+	##start with the within session data
+	x = np.linspace(0,60,all_e1.shape[1])
+	fig,ax = plt.subplots(1)
+	for i, dataset in enumerate(session_data):
+		mean = np.nanmean(dataset,axis=0)
+		sem = np.nanstd(dataset,axis=0)/np.sqrt(dataset.shape[0])
+		ax.plot(x,mean,linewidth=2,color=colors[i],label=labels[i])
+		ax.fill_between(x,mean-sem,mean+sem,color=colors[i],alpha=0.5)
+	ax.set_xlabel("Time in session, mins",fontsize=16)
+	ax.set_ylabel("Correlation coefficient",fontsize=16)
+	for tick in ax.xaxis.get_major_ticks():
+		tick.label1.set_fontsize(16)
+	for tick in ax.yaxis.get_major_ticks():
+		tick.label.set_fontsize(16)
+	ax.legend()
+	fig.suptitle("Correlations by session, "+dt)
+	##now look at it by animal
+	x = np.linspace(0,60,animal_e1.shape[1])
+	fig,ax = plt.subplots(1)
+	for i, dataset in enumerate(animal_data):
+		mean = np.nanmean(dataset,axis=0)
+		sem = np.nanstd(dataset,axis=0)/np.sqrt(dataset.shape[0])
+		ax.plot(x,mean,linewidth=2,color=colors[i],label=labels[i])
+		ax.fill_between(x,mean-sem,mean+sem,color=colors[i],alpha=0.5)
+	ax.set_xlabel("Time in session, mins",fontsize=16)
+	ax.set_ylabel("Correlation coefficient",fontsize=16)
+	for tick in ax.xaxis.get_major_ticks():
+		tick.label1.set_fontsize(16)
+	for tick in ax.yaxis.get_major_ticks():
+		tick.label.set_fontsize(16)
+	ax.legend()
+	fig.suptitle("Correlations by animal, "+dt)
+	##now do the across session plot
+	fig,ax = plt.subplots(1)
+	for i, dataset in enumerate(across_data):
+		x = np.arange(1,dataset.shape[1]+1)
+		mean = np.nanmean(dataset,axis=0)
+		sem = np.nanstd(dataset,axis=0)/np.sqrt(dataset.shape[0])
+		ax.plot(x,mean,linewidth=2,color=colors[i],label=labels[i])
+		ax.fill_between(x,mean-sem,mean+sem,color=colors[i],alpha=0.5)
+	ax.set_xlabel("Traning day",fontsize=16)
+	ax.set_ylabel("Mean correlation coefficient",fontsize=16)
+	for tick in ax.xaxis.get_major_ticks():
+		tick.label1.set_fontsize(16)
+	for tick in ax.yaxis.get_major_ticks():
+		tick.label.set_fontsize(16)
+	ax.legend()
+	ax.set_title("Correlations across training, "+dt,fontsize=16)
+	ax.plot(np.arange(1,8),np.ones(7)*-0.045,linewidth=4,color='r')
+	ax.text(3,-0.04,"Jaws",fontsize=14)
+	ax.set_xlim(0,13)
+
+## a function to plot the performance of DLS animals
+def plot_DLS_performance():
+	##open the matlab file from Aaron
+	datafile = "/Volumes/data/V1_BMI/Neuron/data/DLS_performance_all.mat"
+	datamat = spio.loadmat(datafile)
+	##convert this in to a recognizeable array
+	data = np.zeros([4,7])
+	##the names of the animals' data in this matrix
+	vectors = [x for x in list(datamat) if x.startswith('a')]
+	##add to data array
+	for i,v in enumerate(vectors):
+		data[i,:] = datamat[v][0,:]
+	##start with across days
+	mean = data.mean(axis=0)
+	sem = stats.sem(data,axis=0)
+	x_axis = np.arange(1,8)
+	fig, ax = plt.subplots(1)
+	ax.errorbar(x_axis,mean,yerr=sem,linewidth=2,color='orange')
+	ax.set_xlabel("Training day",fontsize=14)
+	ax.set_ylabel("Percentage correct",fontsize=14)
+	ax.set_title("DLS inhibition")
+	ax.set_xlim(0,9)
+	for animal in range(data.shape[0]):
+		plt.plot(x_axis,data[animal,:],color='orange',
+			linewidth=1,alpha=0.5)
+	##now we do the line plot version
+	early = data[:,0:3].mean(axis=1)
+	late = data[:,4:7].mean(axis=1)
+	means = np.array([early.mean(),late.mean()])
+	sems = np.array([early.std()/2,late.std()/2])
+	labels = ["DLS early","DLS late"]
+	fig, ax2 = plt.subplots(1)
+	DLS = np.vstack((early,late))
+	xd = np.array([0,1])
+	for i in range(early.shape[0]):
+		ax2.plot(xd,DLS[:,i],color='orange',linewidth=2,marker='o')
+	err_x = np.arange(0,2)
+	yerr=sems
+	xerr=np.ones(2)*0.25
+	ax2.errorbar(err_x,means,yerr=yerr,fmt='none',ecolor='k',capthick=2,elinewidth=2)
+	plt.xticks(np.arange(0,2),labels)
+	for ticklabel in ax2.get_xticklabels():
+		ticklabel.set_fontsize(14)
+	for ticklabel in ax2.get_yticklabels():
+		ticklabel.set_fontsize(14)
+	ax2.set_xlim(-0.35,1.35)
+	ax2.set_ylim(0.0,1)
+	ax2.set_ylabel("percentage correct", fontsize = 14)
+	ax2.set_xlabel("Training period", fontsize = 14)
+	##get the stats
+	t_earlyLate,p_earlyLate = stats.ttest_rel(early,late)	
+	##now print the stats
+	print("mean early = "+str(means[0]))
+	print("mean late = "+str(means[1]))
+	print("P-val early vs late= "+str(p_earlyLate))
+	print("T-val early vs late= "+str(t_earlyLate))
+
+##totally redo-ing the DMS analysis because they might be interneurons. UGH!
+def fetch_DMS_triggered():
+	unit_type = 'Str_units' ##the type of units to look at on
+	##data location
+	root_dir = "/Volumes/data/V1_BMI"
+	##define some gobal parameters
+	animal_list = ["R13", "R11", "V01", "V02", "V03", "V04", "V05", "V11", "V13"]
+	##range of sessions that are valid for this particular analysis (ie no CD testing)
+	ranges = [[0,8], [0,13], [0,11], [0,11], [0,11], [0,11], [0,11], [0,8], [0,7]] 
+	##size of analysis window, in ms
+	window = [10000,4000]
+	##range of spike rates to allow in analysis
+	cutoff_hz = [10,100]
+	save_file = "/Volumes/data/V1_BMI/Neuron/Neuron_V2/data/triggered_dms_interneurons.hdf5"
+	##create blank file
+	f_out = h5py.File(save_file,'a')
+	f_out.close()
+	for r,animal in enumerate(animal_list):
+		session_list = [x for x in ru.animals[animal][1].keys() if int(x[-6:-4]) in range(ranges[r][0],ranges[r][1])]
+		for session in session_list:
+			##reopen the save file
+			f_out = h5py.File(save_file,'a')
+			#see if a group exists for this animal
+			try:
+				a_group = f_out[animal]
+			##if not, create it
+			except KeyError:
+				a_group = f_out.create_group(animal)
+			##see if a session group exists for this animal
+			try:
+				##if so, move on to the next session
+				s_group = a_group[session]
+				f_out.close()
+			except KeyError:
+				##if not, close the file while we do the analysis
+				f_out.close()
+				print("Working on "+animal+" "+session)
+				filepath = os.path.join(root_dir,animal,session) ##the file path to the session data
+				##open the file
+				data = plxread.import_file(filepath,AD_channels=range(1,97),save_wf=False,
+					import_unsorted=False,verbose=False)
+				##what is the duration of this file
+				duration = None
+				for arr in data.keys():
+					if arr.startswith('AD') and arr.endswith('_ts'):
+						duration = int(np.ceil((data[arr].max()*1000)/100)*100)+1
+						break
+				else: print("No A/D timestamp data found!!!")
+				##we are going to need the T1 timestamps fo each file
+				try:
+					t1_id = ru.animals[animal][1][session]['events']['t1'][0] ##the event name in the plexon file
+					t1_ts = data[t1_id]*1000.0
+				except KeyError:
+					t1_ts = np.array([])
+				try:
+					t2_id = ru.animals[animal][1][session]['events']['t2'][0] ##the event name in the plexon file
+					t2_ts = data[t2_id]*1000.0
+				except KeyError:
+					t2_ts = np.array([])
+				##now try to get data for the appropriate unit type
+				try:
+					unit_ids = ru.animals[animal][1][session]['units'][unit_type]
+					##create a container for the unit data
+					dataset_t1 = []
+					dataset_t2 = []
+					n_in_range = 0 ##keep track of how many units are within the rate requirements
+					for unit in unit_ids:
+						##get the timestamps for this unit from the datafile
+						unit_ts = data[unit]*1000.0
+						##binary transform
+						spiketrain = np.histogram(unit_ts,bins=duration,range=(0,duration))
+						spiketrain = spiketrain[0].astype(bool).astype(int)
+						##perform the rate check
+						if (get_spike_rate(spiketrain) > cutoff_hz[0] and get_spike_rate(spiketrain) < cutoff_hz[1]):
+							n_in_range += 1
+							##now get the triggered data for this unit
+							if len(t1_ts)>0:
+								traces_t1 = get_data_window(spiketrain,t1_ts,
+									window[0],window[1])
+								if traces_t1 is not None:
+									dataset_t1.append(traces_t1)
+							if len(t2_ts)>0:
+								traces_t2 = get_data_window(spiketrain,t2_ts,
+									window[0],window[1])
+								if traces_t2 is not None:
+									dataset_t2.append(traces_t2)
+					##now turn the dataset into an array, with first axis = n_units
+					dataset_t1 = np.asarray(dataset_t1)
+					dataset_t2 = np.asarray(dataset_t2)
+					##if there is actually data here, add it to the save file
+					if n_in_range > 0:
+						##reopen the save file, now that it is safe (we have the data; plxread won't cause a crash)
+						f_out = h5py.File(save_file,'a')
+						##we already made sure an animal group exists, so get a handle
+						a_group = f_out[animal]
+						#we also know that a session group does NOT exist, so create it
+						s_group = a_group.create_group(session)
+						##now save the datasets to the file
+						if len(dataset_t1>0):
+							s_group.create_dataset('t1',data=dataset_t1)
+						if len(dataset_t2)>0:
+							s_group.create_dataset("t2",data=dataset_t2)
+						f_out.close()
+					else:
+						print("No units in range for this session")
+				except KeyError:
+					print("No "+unit_type+" for "+animal+" "+session)
+	print('Done')
+
+## a function to re-plot the triggered DMS spike rates, separated by putative unit type
+def parse_dms_triggered_new():
+	##file path of projection units
+	f_projection = "/Volumes/data/V1_BMI/Neuron/Neuron_V2/data/triggered_dms_projection_neurons.hdf5"
+	##file path of interneurons
+	f_interneuron = "/Volumes/data/V1_BMI/Neuron/Neuron_V2/data/triggered_dms_interneurons.hdf5"
+	##the file to save the data in
+	save_file = "/Volumes/data/V1_BMI/Neuron/Neuron_V2/data/processed_dms_interneurons_raw.hdf5"
+	##data ranges to use for early and late
+	early_session_range = np.arange(0,4)
+	late_session_range = np.arange(7,15)
+	##selection of data type to use
+	datafile = f_interneuron
+	##open the data file 
+	f = h5py.File(datafile,'r')
+	##create the save file
+	f_out = h5py.File(save_file,'a')
+	f_out.close()
+	##get the list of animals for this data file
+	animal_list = list(f)
+	for animal in animal_list:
+		##first check if there is any data for this animal
+		session_list = list(f[animal])
+		if len(session_list) > 0:
+			##split sessions into early and late
+			early_list = [x for x in session_list if int(x[-6:-4]) in early_session_range]
+			late_list = [x for x in session_list if int(x[-6:-4]) in late_session_range]
+			##if there is data for both early and late, open the save file and create a data group
+			if (len(early_list)>0 and len(late_list)>0):
+				f_out = h5py.File(save_file,'a')
+				a_group = f_out.create_group(animal)
+				##now run through data from each session period
+				##container for processed mean traces for all units recorded in the early period
+				early_traces = []
+				late_traces = []
+				for session in early_list:
+					##get the dataset; shape is units x bins(ms) x trials
+					data = np.asarray(f[animal][session]['t1'])
+					##now we want to get the mean smoothed trace for each unit.
+					for unit in range(data.shape[0]):
+						unit_data = data[unit,:,:] ##shape bins x trials
+						##now we do the smoothing; need to invert here to be compatible
+						smoothed = smooth_spikes(unit_data.T,smooth_method='both',smooth_width=[80,40]).T
+						##data  here is still bins x trials (but now many fewer bins)
+						#now take the mean across trials for this unit and add to the dataset
+						early_traces.append(smoothed.mean(axis=1))
+				##now convert to an array
+				early_traces = np.asarray(early_traces)
+				for session in late_list:
+					##get the dataset; shape is units x bins(ms) x trials
+					data = np.asarray(f[animal][session]['t1'])
+					##now we want to get the mean smoothed trace for each unit.
+					for unit in range(data.shape[0]):
+						unit_data = data[unit,:,:] ##shape bins x trials
+						##now we do the smoothing; need to invert here to be compatible
+						smoothed = smooth_spikes(unit_data.T,smooth_method='both',smooth_width=[80,40]).T
+						##data  here is still bins x trials (but now many fewer bins)
+						#now take the mean across trials for this unit and add to the dataset
+						late_traces.append(smoothed.mean(axis=1))
+				##now convert to an array
+				late_traces = np.asarray(late_traces)
+				##now save these data
+				a_group.create_dataset("early_traces",data=early_traces)
+				a_group.create_dataset("late_traces",data=late_traces)
+				f_out.close()
+	print("Done!")
+
+##plot the data we gathered in the previous 2 functions
+def plot_dms_locked_2():
+	datafile = "/Volumes/data/V1_BMI/Neuron/Neuron_V2/data/processed_dms_projection_neurons_zscore.hdf5"
+	unit_type = "DMS projection neurons"
+	f = h5py.File(datafile,'r')
+	animal_list = list(f)
+	##containers for mean data for each animal
+	early = []
+	late = []
+	for animal in animal_list:
+		# early.append(np.asarray(f[animal]['early_traces']))
+		# late.append(np.asarray(f[animal]['late_traces']))
+		early.append(np.asarray(f[animal]['early_traces']).mean(axis=0))
+		late.append(np.asarray(f[animal]['late_traces']).mean(axis=0))
+	f.close()
+	early = np.asarray(early)
+	late = np.asarray(late)
+	# early = np.vstack(early)
+	# late = np.vstack(late)
+	early_mean = np.nanmean(early,axis=0)
+	early_sem = np.nanstd(early,axis=0)/np.sqrt(early.shape[0])
+	late_mean = np.nanmean(late,axis=0)
+	late_sem = np.nanstd(late,axis=0)/np.sqrt(late.shape[0])
+	mod_depth_early = np.abs(np.nanmax(early[:,215:255],axis=1)-np.nanmin(early[:,255:],axis=1))
+	mod_depth_late = np.abs(np.nanmax(late[:,215:255],axis=1)-np.nanmin(late[:,255:],axis=1))
+	fig,(ax1,ax2) = plt.subplots(ncols=2,nrows=1)
+	x = np.linspace(-10,4,early.shape[1])
+	ax1.plot(x,early_mean,color='orange',linewidth=2,label='early sessions')
+	ax1.plot(x,late_mean,color='red',linewidth=2,label='late sessions')
+	ax1.fill_between(x,early_mean-early_sem,early_mean+early_sem,color='orange',alpha=0.5)
+	ax1.fill_between(x,late_mean-late_sem,late_mean+late_sem,color='red',alpha=0.5)
+	ax1.set_ylabel("Spike rate, Z-score",fontsize=14)
+	ax1.set_xlabel("Time to target, s",fontsize=14)
+	##now plot the modulation depth
+	means = np.array([np.nanmean(mod_depth_early),np.nanmean(mod_depth_late)])
+	serr = np.array([np.nanstd(mod_depth_early)/np.sqrt(mod_depth_early.shape[0]),
+		np.nanstd(mod_depth_late)/np.sqrt(mod_depth_late.shape[0])])
+	##now do the plotting
+	x2 = np.array([0,1])
+	err_x = np.array([0.2,0.2])
+	# for i in range(all_mod.shape[1]):
+	# 	ax2.plot(x2,all_mod[:,i],color='k',linewidth=2,marker='o')
+	# ax2.errorbar(x2,means,yerr=serr,xerr=err_x,fmt='none',ecolor='k',capthick=2,elinewidth=2)
+	bars = ax2.bar(x2,means,0.5,color = ['orange','red'],yerr=serr,ecolor='k',alpha=1)
+	plt.xticks(np.arange(0,2),['Early','Late'])
+	for ticklabel in ax2.get_xticklabels():
+		ticklabel.set_fontsize(14)
+	for ticklabel in ax2.get_yticklabels():
+		ticklabel.set_fontsize(14)
+	ax2.set_xlim(-0.5,1.5)
+	# ax2.set_ylim(0,5.5)
+	ax2.set_ylabel("Modulation depth",fontsize=14)
+	ax2.set_title("Modulation depth",fontsize=14)
+	fig.suptitle(unit_type,fontsize=14)
+	tval,pval = stats.ttest_ind(mod_depth_early,mod_depth_late,nan_policy='omit')
+	ax2.text(0.6,means[0]/2.0,"p={}".format(pval))
+	ax2.text(0.6,means[0]/2.0+0.1,"t={}".format(tval))
+	plt.tight_layout()
+
+##re-do the linear regression, but now place controls on the range of spike rates to use in the 
+##analysis from the DMS unit side of things. This allows separation of interneurons and projection neurons
+def linear_regression_dms():
+	direct_types = ['e1_units','e2_units']
+	unit_type = 'Str_units' ##the type of units to look at on
+	##data location
+	root_dir = "/Volumes/data/V1_BMI"
+	##define some gobal parameters
+	animal_list = ["R13", "R11", "V01", "V02", "V03", "V04", "V05", "V11", "V13"]
+	##range of sessions that are valid for this particular analysis (ie no CD testing)
+	ranges = [[0,8], [0,13], [0,11], [0,11], [0,11], [0,11], [0,11], [0,8], [0,7]] 
+	window = [400,0]
+	bin_width = 50
+	##make some dictionaries to store the results
+	results = {}
+	##we should be able to run regression for each session as a whole.
+	##first, we need to get two arrays: X; the data matrix of spike data
+	##in dimensions trials x units x bins, and then y; the binary matrix
+	## of target 1 and target 2 values.
+	cutoff_hz = [0,10]
+	save_file = "/Volumes/data/V1_BMI/Neuron/Neuron_V2/data/linear_regression_dms_projection_neurons.hdf5"
+	##create blank file
+	f_out = h5py.File(save_file,'a')
+	f_out.close()
+	for r,animal in enumerate(animal_list):
+		session_list = [x for x in ru.animals[animal][1].keys() if int(x[-6:-4]) in range(ranges[r][0],ranges[r][1])]
+		for session in session_list:
+			##check to see if data for this session already exists
+			try:
+				f_out = h5py.File(save_file,'a')
+				session_exists = f_out[animal][session]
+				print(animal+" "+session+" data exists; moving to next file")
+				f_out.close()
+			except KeyError:
+				f_out.close()
+				print("analyzing data from "+animal+" "+session)
+				try:
+					t1_id = ru.animals[animal][1][session]['events']['t1'][0]
+				except KeyError:
+					t1_id = None
+				try:
+					t2_id = ru.animals[animal][1][session]['events']['t2'][0]
+				except KeyError:
+					t2_id = None
+				##continue only if there are 2 targets for this file
+				if t2_id is not None and t1_id is not None:
+					##see if the correct unit types are present in this file
+					unit_list = []
+					try:
+						unit_ids = ru.animals[animal][1][session]['units'][unit_type]
+						for ui in unit_ids:
+							unit_list.append(ui)
+					except KeyError:
+						print("No "+ut+" present in this file")
+					direct_list = []
+					for ut in direct_types:
+						try:
+							unit_ids = ru.animals[animal][1][session]['units'][ut]
+							for ui in unit_ids:
+								direct_list.append(ui)
+						except KeyError:
+							print("No "+ut+" present in this file")
+					##continue only if there are units to analyze
+					if len(unit_list)>0 and len(direct_list)>0:
+						plxfile = os.path.join(root_dir,animal,session)
+						##load the plx file
+						raw_data = plxread.import_file(plxfile,AD_channels=range(1,97),save_wf=False,
+								import_unsorted=False,verbose=False)
+						duration = None
+						for arr in raw_data.keys():
+							if arr.startswith('AD') and arr.endswith('_ts'):
+								duration = int(np.ceil((raw_data[arr].max()*1000)/100)*100)+1
+								break
+						else: print("No A/D timestamp data found!!!")
+						##make sure that this file had at least 20 trials of each type
+						try:
+							t1_ts = raw_data[t1_id]*1000.0
+						except KeyError:
+							t1_ts = np.array([])
+						try: 
+							t2_ts = raw_data[t2_id]*1000.0
+						except KeyError:
+							t2_ts = np.array([])
+						if (t1_ts.size >= 1) and (t2_ts.size >= 1):
+						##now load the data arrays for each direct unit
+							y = []
+							for unit in direct_list:
+								try:
+									spiketrain = raw_data[unit]*1000.0 #timestamps in ms
+									##convert to binary array
+									spiketrain = np.histogram(spiketrain,bins=duration,range=(0,duration))
+									spiketrain = spiketrain[0].astype(bool).astype(int)
+									spike_windows_t1 = get_data_window(spiketrain,t1_ts,window[0],window[1])
+									spike_windows_t2 = get_data_window(spiketrain,t2_ts,window[0],window[1]) ##size bins x trials
+									y.append(np.concatenate((spike_windows_t1,spike_windows_t2),axis=1)) ##concatenate trials
+								except KeyError:
+									print("Can't find "+unit+" in this file")
+							##repeat for the other units
+							X = []
+							for unit in unit_list:
+								try:
+									spiketrain = raw_data[unit]*1000.0 #timestamps in ms
+									##convert to binary array
+									spiketrain = np.histogram(spiketrain,bins=duration,range=(0,duration))
+									spiketrain = spiketrain[0].astype(bool).astype(int)
+									##here is where we perform the spike rate check
+									if (get_spike_rate(spiketrain) > cutoff_hz[0] and get_spike_rate(spiketrain) < cutoff_hz[1]):
+										spike_windows_t1 = get_data_window(spiketrain,t1_ts,window[0],window[1])
+										spike_windows_t2 = get_data_window(spiketrain,t2_ts,window[0],window[1]) ##size bins x trials
+										X.append(np.concatenate((spike_windows_t1,spike_windows_t2),axis=1)) ##concatenate trials
+								except KeyError:
+									print("Can't find "+unit+" in this file")
+							##make sure we still have more than 0 units
+							if len(X)>0 and len(y)>0:
+								X = np.asarray(X) ##shape should now be units x bins x trials
+								y = np.asarray(y)
+								##add the number of total units to the data array
+								total_units = X.shape[0]
+								##sum the spike counts over the interval, and transpose into trials x units
+								X = X.sum(axis=1).T
+								y = y.sum(axis=1).T
+								##FINALLY, we can run the linear regression
+								R2s,pvals = lin2.permutation_test_multi(X,y,n_iter_cv=5,n_iter_p=500)
+								##now save these data
+								f_out = h5py.File(save_file,'a')
+								try:
+									a_group = f_out[animal]
+								except KeyError:
+									a_group = f_out.create_group(animal)
+								s_group = a_group.create_group(session)
+								s_group.create_dataset('pvals',data=pvals)
+								s_group.create_dataset('R2s',data=R2s)
+								f_out.close()
+	print("Done")
+
+##function to plot the results from the above function
+def plot_lin_regression():
+	datafile = "/Volumes/data/V1_BMI/Neuron/Neuron_V2/data/linear_regression_dms_projection_neurons.hdf5"
+	f = h5py.File(datafile,'r')
+	animal_list = f.keys()
+	##store the means of all the animals
+	totals = []
+	sig_vals = []
+	var_explained = []
+	for a in animal_list:
+		tot = []
+		r2 = []
+		sig = []
+		for s in f[a].keys():
+			r2.append(np.asarray(f[a][s]['R2s']).mean())
+			sig.append((np.asarray(f[a][s]['pvals'])<0.05).sum())
+			tot.append(np.asarray(f[a][s]['R2s']).size)
+		totals.append(np.asarray(tot))
+		sig_vals.append(np.asarray(sig))
+		var_explained.append(np.asarray(r2))
+	f.close()
+	totals = equalize_arrs(totals)
+	sig_vals = equalize_arrs(sig_vals)
+	var_explained = equalize_arrs(var_explained)
+	x_axis = np.arange(1,totals.shape[1]+1)
+	sig_perc = sig_vals/totals
+	##now do the plots
+	fig,(ax1,ax2,ax3) = plt.subplots(3,sharex=True)
+	mean_total = np.nanmean(totals,axis=0)
+	serr_total = np.nanstd(totals,axis=0)/np.sqrt(totals.shape[0])
+	mean_var = np.nanmean(var_explained,axis=0)
+	serr_var = np.nanstd(var_explained,axis=0)/np.sqrt(var_explained.shape[0])
+	mean_sig = np.nanmean(sig_perc,axis=0)
+	serr_sig = np.nanstd(sig_perc,axis=0)/np.sqrt(sig_perc.shape[0])
+	ax1.set_ylabel("R2",fontsize=14)
+	ax2.set_ylabel("Number\n of units",fontsize=14)
+	ax3.set_ylabel("Percent\n significant",fontsize=14)
+	ax3.set_xlabel("Training day",fontsize=14)
+	ax1.set_title("Variance of direct units explained by DMS units",fontsize=14)
+	ax2.set_title ("Total number of DMS units",fontsize=14)
+	ax3.set_title("Percent direct units with significant prediction by indirect units",fontsize=14)
+	ax1.errorbar(x_axis,mean_var,yerr=serr_var,color='k',linewidth=2)
+	ax2.errorbar(x_axis,mean_total,yerr=serr_total,color='k',linewidth=2)
+	ax3.errorbar(x_axis,mean_sig,yerr=serr_sig,color='k',linewidth=2)
+	for tick in ax1.xaxis.get_major_ticks():
+		tick.label.set_fontsize(14)
+	for tick in ax1.yaxis.get_major_ticks():
+		tick.label.set_fontsize(14)
+	for tick in ax2.xaxis.get_major_ticks():
+		tick.label.set_fontsize(14)
+	for tick in ax2.yaxis.get_major_ticks():
+		tick.label.set_fontsize(14)
+	for tick in ax3.xaxis.get_major_ticks():
+		tick.label.set_fontsize(14)
+	for tick in ax3.yaxis.get_major_ticks():
+		tick.label.set_fontsize(14)
+	for i in range(totals.shape[0]):
+		ax1.plot(x_axis,var_explained[i,:],alpha=0.5,color='k')
+		ax2.plot(x_axis,totals[i,:],alpha=0.5,color='k')
+		ax3.plot(x_axis,sig_perc[i,:],alpha=0.5,color='k')
+	##now let's get the summary for all days
+	x = np.array([1,2])
+	err_x = np.array([0.1])
+	labels = ['mean R2','perc sig']
+	ps_summ = np.nanmean(sig_perc,axis=1)
+	r2_summ = np.nanmean(var_explained,axis=1)
+	ps_mean = ps_summ.mean()
+	ps_err = stats.sem(ps_summ)
+	r2_mean = r2_summ.mean()
+	r2_err = stats.sem(r2_summ)
+	fig,ax = plt.subplots(1)
+	ax2 = ax.twinx()
+	ax2.errorbar(x[0],ps_mean,yerr=ps_err,xerr=err_x,fmt='none',ecolor='k',capthick=2,elinewidth=2)
+	ax.errorbar(x[1],r2_mean,yerr=r2_err,xerr=err_x,fmt='none',ecolor='k',capthick=2,elinewidth=2)
+	for i in range(ps_summ.shape[0]):
+		ax2.plot(x[0],ps_summ[i],marker='o',color='k')
+	for i in range(r2_summ.shape[0]):
+		ax.plot(x[1],r2_summ[i],marker='o',color='k')
+	ax.set_xticks([1,2])
+	ax.set_xticklabels(labels)
+	ax.set_ylabel("R2",fontsize=14)
+	ax2.set_ylabel("Percent significant",fontsize=14)
+	ax.set_title("Direct unit activity predicted by indirect units",fontsize=14)
+	for tick in ax.yaxis.get_major_ticks():
+		tick.label.set_fontsize(14)
+	for tick in ax2.yaxis.get_major_ticks():
+		tick.label.set_fontsize(14)
+	for tick in ax.xaxis.get_major_ticks():
+		tick.label.set_fontsize(14)
+	# ax1.set_xlim(0,12)
+	#ax1.set_ylim(-1,0.4)
+	# ax2.set_xlim(0,12)
+	# ax3.set_xlim(0,12)
+
+
+
+
+
+
 ########################HELPERS~########################
 
 
@@ -8637,6 +9421,18 @@ def smooth_spikes(X,smooth_method,smooth_width):
 		X = None
 	return X
 
+"""
+A helper function to compute the spike rate of a binary spike train in Hz
+(assumes input is binned into 1ms bins)
+"""
+def get_spike_rate(spiketrain):
+	##total ms length of spiketrain
+	duration_ms = spiketrain.size
+	##total number of seconds for the recording
+	duration_s = duration_ms/1000.0
+	##now the total number of spikes per second
+	spikerate = spiketrain.sum()/duration_s
+	return spikerate
 
 
 
